@@ -11,6 +11,7 @@ def arg1_changed():
 
 # Use below example to create a button
 act1 = Act('act1_changed()', 'click me') 
+act2 = Act('other_test', 'other') 
 def act1_changed():
     print 'act1 clicked'
     
