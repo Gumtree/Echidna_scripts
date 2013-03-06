@@ -5,22 +5,31 @@ from org.gumtree.gumnix.sics.io import SicsProxyListenerAdapter
 from org.eclipse.swt.events import DisposeListener
 from org.eclipse.swt.widgets import TypedListener
 #from org.gumtree.util.messaging import EventHandler
-from Internal.lib import sicsext
+import sys, os
+sys.path.append(str(os.path.dirname(get_project_path('Internal'))))
+from Internal import sicsext, HISTORY_KEY_WORDS
+from Internal.sicsext import *
 from au.gov.ansto.bragg.nbi.ui.scripting import ConsoleEventHandler
 from org.eclipse.swt.widgets import Display
 from java.lang import Runnable
 from java.lang import System
 from java.io import File
 from time import strftime, localtime
-import traceback, sys
+import traceback
 
 sics.ready = False
 __script__.title = 'Initialised'
 __script__.version = ''
-__script__.dict_path = gumtree_root + '/Internal/path_table'
 __data_folder__ = 'W:/data/current'
 __export_folder__ = 'W:/data/current/reports'
+__buffer_log_file__ = __export_folder__
+Dataset.__dicpath__ = get_absolute_path('/Internal/path_table')
 System.setProperty('sics.data.path', __data_folder__)
+
+try:
+    __dispose_all__(None)
+except:
+    pass
 
 def get_prof_value(name):
     value = __UI__.getPreference(name)
@@ -30,7 +39,11 @@ def get_prof_value(name):
         value = str(value)
     return value
 
-__buffer_log_file__ = __export_folder__ + '/exp' + get_prof_value('taipan.experiment.id')
+def set_prof_value(name, value):
+    if value == None:
+        value = ''
+    __UI__.setPreference(name, value)
+
 fi = File(__buffer_log_file__)
 if not fi.exists():
     if not fi.mkdir():
@@ -45,11 +58,6 @@ while sics.getSicsController() == None:
     time.sleep(1)
 
 time.sleep(3)
-
-try:
-    __dispose_all__(None)
-except:
-    pass
 
 __scan_status_node__ = sics.getSicsController().findComponentController('/commands/scan/runscan/feedback/status')
 __scan_variable_node__ = sics.getSicsController().findComponentController('/commands/scan/runscan/scan_variable')
@@ -117,30 +125,21 @@ __save_count_node__.addComponentListener(__saveCountListener__)
 
 def update_buffer_log_folder():
     global __buffer_log_file__, __export_folder__, __buffer_logger__, __history_log_file__, __history_logger__
-    __buffer_log_file__ = __export_folder__ + '/exp' + get_prof_value('taipan.experiment.id')
+    __buffer_log_file__ = __export_folder__
     fi = File(__buffer_log_file__)
     if not fi.exists():
         if not fi.mkdir():
             print 'Error: failed to make directory: ' + __buffer_log_file__
     __history_log_file__ = __buffer_log_file__ + '/History.txt'
     __buffer_log_file__ += '/LogFile.txt'
+    if __buffer_logger__:
+        __buffer_logger__.close()
     __buffer_logger__ = open(__buffer_log_file__, 'a')
+    if __history_logger__:
+         __history_logger__.close()
     __history_logger__ = open(__history_log_file__, 'a')
 
 
-def get_prof_value(name):
-    value = __UI__.getPreference(name)
-    if value == None:
-        value = ''
-    else:
-        value = str(value)
-    return value
-
-def set_prof_value(name, value):
-    if value == None:
-        value = ''
-    __UI__.setPreference(name, value)
-    
 def __run_script__(dss):
     pass
 
@@ -154,10 +153,6 @@ class __State_Monitor__(IStateMonitorListener):
         print infoMessage
         pass
 
-__ei_node__ = sics.getDeviceController('ei')
-__ei_listener__ = __State_Monitor__()
-#__ei_listener__.valueChanged = q_changed
-sics.getSicsController().addStateMonitor('/sample/ei', __ei_listener__)
 
 def __dispose__():
     pass
@@ -252,11 +247,17 @@ def next_step():
 
 def logBook(text):
     global __buffer_logger__
+    global __history_logger__
     try:
         tsmp = strftime("[%Y-%m-%d %H:%M:%S]", localtime())
         __buffer_logger__.write(tsmp + ' ' + text + '\n')
         __buffer_logger__.flush()
+        for item in HISTORY_KEY_WORDS:
+            if text.startswith(item):
+                __history_logger__.write(tsmp + ' ' + text + '\n')
+                __history_logger__.flush()
     except:
+        traceback.print_exc(file=sys.stdout)
         print 'failed to log'
     
 def slog(text):
@@ -325,6 +326,11 @@ def __dispose_all__(event):
     __sics_console_event_handler_sent__.deactivate()
     __sics_console_event_handler_received__.deactivate()
     __save_count_node__.removeComponentListener(__saveCountListener__)
+    if __buffer_logger__:
+        __buffer_logger__.close()
+    if __history_logger__:
+         __history_logger__.close()
+    
 
 __dispose_listener__ = __Dispose_Listener__()
 __dispose_listener__.widgetDisposed = __dispose_all__

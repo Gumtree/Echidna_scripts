@@ -4,14 +4,15 @@ import os
 import time
 from org.gumtree.gumnix.sics.io import SicsCallbackAdapter
 from org.gumtree.gumnix.sics.control import ServerStatus
+from org.gumtree.gumnix.sics.batch.ui.util import SicsBatchUIUtils
 import traceback
 import sys
 
 def runbmonscan(scan_variable, scan_start, scan_increment, NP, mode, preset, channel, comm = None):
-    scan('bmonscan', scan_variable, scan_start, scan_increment, NP, mode, preset, channel, comm)
+    rawscan('bmonscan', scan_variable, scan_start, scan_increment, NP, mode, preset, channel, comm)
 
 def runhmscan(scan_variable, scan_start, scan_increment, NP, mode, preset, channel, comm = None):
-    scan('hmscan', scan_variable, scan_start, scan_increment, NP, mode, preset, channel, comm)
+    rawscan('hmscan', scan_variable, scan_start, scan_increment, NP, mode, preset, channel, comm)
 
 def runscan(scan_variable, scan_start, scan_stop, numpoints, mode, preset, comm = None, force = False):
     # Initialisation
@@ -41,16 +42,15 @@ def runscan(scan_variable, scan_start, scan_stop, numpoints, mode, preset, comm 
     # Run scan
     print 'Scan started'
 #    scanController.asyncExecute()
-    print 'hset ' + cpath + ' start'
     execute('hset ' + cpath + ' start')
     
     # Monitor initial status change
     try:
         timeOut = False
         counter = 0;
+        print 'Waiting for scan to start'
         while (scanController.getCommandStatus().equals(CommandStatus.IDLE)):
             time.sleep(0.1)
-            print 'IDLE'
             counter += 0.1
             if (counter >= 5):
                 timeOut = True
@@ -58,6 +58,7 @@ def runscan(scan_variable, scan_start, scan_stop, numpoints, mode, preset, comm 
                 break
                 
         # Enter into normal sequence
+        print 'Scan started'
         if (timeOut == False):
             scanpoint = -1;
             scanPointController = sicsController.findComponentController(scanController, '/feedback/scanpoint')
@@ -77,9 +78,9 @@ def runscan(scan_variable, scan_start, scan_stop, numpoints, mode, preset, comm 
                         except:
                             pass
                         try:
-                            if (float(scanpoint) / 3) == (int(scanpoint) /3) :
+#                            if (float(scanpoint) / 3) == (int(scanpoint) /3) :
                                 comm()
-                                print '\tupdate plot'
+#                                print '\tupdate plot'
                         except:
                             traceback.print_exc(file = sys.stdout)
                 time.sleep(0.1)
@@ -105,7 +106,7 @@ def runscan(scan_variable, scan_start, scan_stop, numpoints, mode, preset, comm 
         traceback.print_exc(file = sys.stdout)
         raise Exception, 'failed to run the scan'
 
-def scan(type, scan_variable, scan_start, scan_increment, NP, mode, preset, channel, comm):
+def rawscan(type, scan_variable, scan_start, scan_increment, NP, mode, preset, channel, comm):
     # Initialisation
     clearInterrupt()
 #    scan_variable = 'dummy_motor'
@@ -167,7 +168,7 @@ def scan(type, scan_variable, scan_start, scan_increment, NP, mode, preset, chan
                         except:
                             pass
                         try:
-                            if (float(scanpoint) / 3) == (int(scanpoint) /3) :
+#                            if (float(scanpoint) / 3) == (int(scanpoint) /3) :
                                 exec(comm)
                                 print '\tupdate plot'
                         except:
@@ -195,7 +196,6 @@ def scan(type, scan_variable, scan_start, scan_increment, NP, mode, preset, chan
         traceback.print_exc(file = sys.stdout)
         raise Exception, 'failed to run the scan'
         
-
         
 def getBaseFilename():
     return os.path.basename(str(getFilename()))
@@ -229,6 +229,15 @@ class __SICS_Callback__(SicsCallbackAdapter):
             traceback.print_exc(file = sys.stdout)
             self.setCallbackCompleted(True)
 
+def getDrivables():
+    arr = SicsBatchUIUtils.getSicsDrivableIds()
+    res = []
+    for i in xrange(len(arr)):
+        item = arr[i]
+        if not item is None:
+            res.append(item)
+    return res
+    
 def runCommand(cmd):
     global __status__
     __status__ = None
@@ -242,3 +251,5 @@ def runCommand(cmd):
         raise Exception, 'time out in running the command'
     return __status__
 
+def scan(device, start, stop, NP, mode, preset, force = False):
+    runscan(device, start, stop, NP, mode, preset, None, force)
