@@ -14,7 +14,7 @@
 #	norm_attr
 ######################################################
 
-experiment_title = $entry/experiment/title
+experiment_title = $entry/experiment/title 
 user_name = $entry/user/name
 user_email = $entry/user/email
 user_phone = $entry/user/phone
