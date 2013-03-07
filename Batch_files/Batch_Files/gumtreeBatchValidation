@@ -1,0 +1,24 @@
+user vep
+email vep@ansto.gov.au
+phone x9401
+title Cu3BTC2 20K
+samplename Cu3BTC2 20K
+sampledescription mtth120-noPC-noSC-SampCh
+tc1 tolerance 2
+tc1 controlsensor sensorA
+run tc1 310
+wait 30
+runscan stth 4 5.2 25 time 10 nosave
+runscan stth 4 5.2 25 time 10 nosave
+user vep
+email vep@ansto.gov.au
+phone x9401
+title Cu3BTC2 40K
+samplename Cu3BTC2 40K
+sampledescription mtth120-noPC-noSC-SampCh
+tc1 tolerance 2
+tc1 controlsensor sensorA
+run tc1 315
+wait 30
+runscan stth 4 5.2 25 time 10 nosave
+runscan stth 4 5.2 25 time 10 nosave

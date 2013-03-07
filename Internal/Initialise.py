@@ -20,8 +20,8 @@ import traceback
 sics.ready = False
 __script__.title = 'Initialised'
 __script__.version = ''
-__data_folder__ = 'W:/data/current'
-__export_folder__ = 'W:/data/current/reports'
+__data_folder__ = 'W:'
+__export_folder__ = 'W:/reports'
 __buffer_log_file__ = __export_folder__
 Dataset.__dicpath__ = get_absolute_path('/Internal/path_table')
 System.setProperty('sics.data.path', __data_folder__)

@@ -1,0 +1,103 @@
+<workflow>
+  <task classname="au.gov.ansto.bragg.echidna.exp.task.HeaderInformationBlockTask">
+    <parameters/>
+    <dataModel class="org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock">
+      <commands>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>drive sc</sicsVariable>
+          <value>1</value>
+          <isQuoted>false</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>title</sicsVariable>
+          <value>Proposal 968</value>
+          <isQuoted>true</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>sampledescription</sicsVariable>
+          <value>mtth120-noPC-SC10-Ge331</value>
+          <isQuoted>true</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>user</sicsVariable>
+          <value>Paul Saines</value>
+          <isQuoted>true</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+      </commands>
+    </dataModel>
+  </task>
+  <task classname="au.gov.ansto.bragg.echidna.exp.task.OneTempScanTask">
+    <parameters/>
+    <dataModel class="org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock">
+      <commands>
+        <au.gov.ansto.bragg.echidna.exp.command.OneTempCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Mn succinate</sampname>
+          <temp>6.0</temp>
+          <tot__time>4.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.OneTempCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.OneTempCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Mn succinate</sampname>
+          <temp>8.0</temp>
+          <tot__time>4.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.OneTempCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.OneTempCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Mn succinate</sampname>
+          <temp>10.0</temp>
+          <tot__time>4.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.OneTempCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.OneTempCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Mn succinate</sampname>
+          <temp>12.0</temp>
+          <tot__time>4.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.OneTempCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.OneTempCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Mn succinate</sampname>
+          <temp>14.0</temp>
+          <tot__time>4.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.OneTempCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.OneTempCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Mn succinate</sampname>
+          <temp>16.0</temp>
+          <tot__time>4.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.OneTempCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.OneTempCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Mn succinate</sampname>
+          <temp>20.0</temp>
+          <tot__time>4.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.OneTempCommand>
+      </commands>
+    </dataModel>
+  </task>
+  <context>
+    <org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+      <org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+        <blocks>
+          <org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock reference="../../../../../task/dataModel"/>
+          <org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock reference="../../../../../task[2]/dataModel"/>
+        </blocks>
+      </org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+    </org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+  </context>
+  <parameters/>
+</workflow>

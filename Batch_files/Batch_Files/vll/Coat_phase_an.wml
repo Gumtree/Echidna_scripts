@@ -1,0 +1,128 @@
+<workflow>
+  <task classname="au.gov.ansto.bragg.echidna.exp.task.HeaderInformationBlockTask">
+    <parameters/>
+    <dataModel class="org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock">
+      <commands>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>drive sc</sicsVariable>
+          <value>0</value>
+          <isQuoted>false</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>title</sicsVariable>
+          <value>MI</value>
+          <isQuoted>true</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>sampledescription</sicsVariable>
+          <value>Miscelaneous RT</value>
+          <isQuoted>true</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>user</sicsVariable>
+          <value>Vladimir Luzin</value>
+          <isQuoted>true</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+      </commands>
+    </dataModel>
+  </task>
+  <task classname="au.gov.ansto.bragg.echidna.exp.task.DoRTScanTask">
+    <parameters/>
+    <dataModel class="org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock">
+      <commands>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Al7075 bulk</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>11</sampposNumber>
+          <tot__time>4.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Al6061 bulk</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>12</sampposNumber>
+          <tot__time>4.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Al7075 powder</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>13</sampposNumber>
+          <tot__time>2.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Al6061powder</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>14</sampposNumber>
+          <tot__time>2.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Al N2 700 bulk</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>15</sampposNumber>
+          <tot__time>2.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Al He 200 bulk</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>16</sampposNumber>
+          <tot__time>2.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Al He 400 bulk</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>17</sampposNumber>
+          <tot__time>2.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Zn bulk</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>18</sampposNumber>
+          <tot__time>2.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Ni bulk</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>19</sampposNumber>
+          <tot__time>1.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+      </commands>
+    </dataModel>
+  </task>
+  <context>
+    <org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+      <org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+        <blocks>
+          <org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock reference="../../../../../task/dataModel"/>
+          <org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock reference="../../../../../task[2]/dataModel"/>
+        </blocks>
+      </org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+    </org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+  </context>
+  <parameters/>
+</workflow>

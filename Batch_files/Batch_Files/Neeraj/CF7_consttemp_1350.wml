@@ -1,0 +1,57 @@
+<workflow>
+  <task classname="au.gov.ansto.bragg.echidna.exp.task.HeaderInformationBlockTask">
+    <parameters/>
+    <dataModel class="org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock">
+      <commands>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>drive sc</sicsVariable>
+          <value>0</value>
+          <isQuoted>false</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>title</sicsVariable>
+          <value>P1350</value>
+          <isQuoted>true</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>sampledescription</sicsVariable>
+          <value>mtth140-noPC-noSC-CF7-Ge335</value>
+          <isQuoted>true</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>user</sicsVariable>
+          <value>Neeraj Sharma</value>
+          <isQuoted>true</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+      </commands>
+    </dataModel>
+  </task>
+  <task classname="au.gov.ansto.bragg.echidna.exp.task.DoTempScanTask">
+    <parameters/>
+    <dataModel class="org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock">
+      <commands>
+        <au.gov.ansto.bragg.echidna.exp.command.DoTempCommand>
+          <startang>2.75</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Fe</sampname>
+          <starttemp>4.0</starttemp>
+          <finishtemp>94.0</finishtemp>
+          <notempsteps>10</notempsteps>
+          <tot__time>2.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoTempCommand>
+      </commands>
+    </dataModel>
+  </task>
+  <context>
+    <org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+      <org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+        <blocks>
+          <org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock reference="../../../../../task/dataModel"/>
+          <org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock reference="../../../../../task[2]/dataModel"/>
+        </blocks>
+      </org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+    </org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+  </context>
+  <parameters/>
+</workflow>

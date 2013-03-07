@@ -1,0 +1,3144 @@
+manager ansto
+exe exp.tcl
+logoff
+manager ansto
+exe exp.tcl
+opal list
+opal list
+manager ansto
+pcx interest
+logoff
+manager ansto
+pcx interest
+INT1712 2
+logoff
+manager ansto
+pcx interest
+pcr
+logoff
+manager ansto
+mom
+run mom 60.35
+mom
+opal list
+run stth 5.25
+stth
+stth
+stth
+stth interest
+manager ansto
+sat
+oat
+getinfo sics
+sat_table
+logoff
+logoff
+manager ansto
+my
+my
+mx interest
+my interest
+pcr
+pcx
+mtth
+mom
+run mom 60.447
+mom
+ØÝ
+Ømom
+mom
+logoff
+manager ansto
+mchi
+mtth
+mom
+pcx
+pcr
+som
+sx
+sy
+mx
+my
+run mx 5
+status
+status
+sample
+samplename
+stth
+status
+sicsdatanumber
+INT1712 2
+status
+logoff
+manager ansto
+status
+mtth
+mchi
+mx
+run mx 5
+mx 
+my
+run my -5
+,u
+my
+logoff
+manager ansto
+mchi list
+logoff
+manager ansto
+stth interest
+exe mchi_hmscan.tcl
+logoff
+manager ansto
+mchi
+exe mchi_hmscan.tcl
+run mchi 88
+mchi
+mchi
+samplename
+samplename NACmchi88
+runscan stth 4 5.225 50 time 60
+INT1712 2
+mchi
+mchi
+mchi
+run mchi 89.5
+mchi
+samplename NACmchi88_5
+runscan stth 4 5.225 50 time 60
+INT1712 2
+status
+mx
+my
+stth
+mtth
+mom
+mchi
+bmonscan clear
+bmonscan add mchi 89.5 0.2
+bmonscan run 11 timer 60
+mchi
+run mchi 90
+mx
+my
+mom
+opal list
+bmonscan clear
+bmonscan add mchi 89.5 0.2
+runscan
+runscan stth 4 5.225 50 monitor_1 12000
+INT1712 2
+status
+bm
+bm list
+bm getinfo
+bm count
+runscan stth 4 5.225 50 monitor_1 10
+INT1712 2
+stth interest
+status
+bm getcounts
+bm getcounts
+runscan stth 4 5.225 50 time 10
+INT1712 2
+bm getcounts
+sics_exitus
+manager ansto
+bm getcount
+bm getcounts
+manager ansto
+email
+samplename
+sampedescription
+sampledescription
+cat hmscan_max.tcl 
+logoff
+manager ansto
+phone
+pcr
+pcx
+stth
+status
+sampletitle
+user
+pcr
+pcx
+bm getcounts
+opal list
+opal TG
+status
+pcx interest
+manager ansto
+pcx interest
+exe hmscan_max.tcl
+status
+INT1712 2
+status
+status
+mom
+sx
+sy
+mx
+my
+mchi
+mtth
+pcx
+pcr
+exe hmscan_max.tcl
+manager ansto
+logoff
+manager ansto
+stth interest
+manager ansto
+stth interest
+manager ansto
+stth interest
+sc
+sx
+sy
+mx
+my
+logoff
+manager ansto
+stth interest
+manager ansto
+stth interest
+manager ansto
+status
+stth
+stth interest
+manager ansto
+pcr
+pcx
+mom
+mtth
+stth
+exe hmscan_max_Al2O3.tcl
+manager ansto
+mtth interest
+mom
+mtth
+logoff
+manager ansto
+schi
+run schi 0
+run schi 90
+drive schi 90
+pcx interest
+pcr interest
+pcx
+schi
+sx
+sy
+mx
+mi
+my
+mchi
+mom
+mtth
+pcx
+pcr
+STATUS
+stth
+run stth 4
+stth interest
+manager ansto
+mtth
+run mtth 80
+exe air_test.tcl
+getinfo sics
+INT1712 3
+status
+exe air_test.tcl
+status
+status
+INT1712 3
+status
+mtth
+run mtth 90
+status
+status
+stopexe mtth
+stopexe all
+status
+mtth
+run mtth 90
+mtth
+mtth
+status
+mtth stop
+stopexe mtth
+stopexe all
+getinfo sics
+status
+INT1712 1
+mtth state
+logoff
+manager ansto
+exe robot.tcl
+INT1712 2
+INT1712 3
+logoff
+manager ansto
+status
+logoff
+manager ansto
+stth interest
+logoff
+manager ansto
+samplename
+title
+logoff
+manager ansto
+exe hmscan.tcl
+INT1712 3
+logoff
+manager ansto
+exe hmscan.tcl
+INT1712 3
+logoff
+manager ansto
+stth
+status
+tc1
+status
+stth
+stth interest
+logoff
+manager ansto
+stth 
+stth 
+stth
+tc1
+tc2
+tc1
+tc1
+logoff
+manager ansto
+stth
+INT1712 3
+stth
+status
+INT1712 3
+stth
+status
+exe hmscan.tcl
+INT1712 3
+status
+status
+manager ansto
+stth
+stth
+logoff
+manager ansto
+stth
+status
+INT1712 3
+status
+status
+dir
+data_run_number
+datafilename
+instname
+getinfo
+getinfo sampletitle
+status
+status
+tc1
+tc1
+tc1
+tc1
+tc1
+tc1
+stth
+stth
+datafilename
+stth
+stth
+tc1
+tc1
+stth
+stth
+stth
+stth
+status
+tc1
+status
+stth
+tc1
+status
+tc1
+tc1
+tc1
+tc1
+status
+INT1712 3
+status
+status
+stth
+tc1
+INT1712 3
+status
+pcr
+pcx
+run pcx 135
+pcr
+pcx interest
+stth
+status
+status
+stth
+stth
+stth
+stth
+stth
+status
+tc1
+tc1
+tc1
+stth
+tc1
+tc1
+tc1
+tc1
+TC1
+stth
+TC1
+stth
+tc1
+tc1
+stth
+INT1712 3
+stth
+status
+tc1
+tc1
+tc1
+tc1
+tc1
+tc1
+tc1
+tc1
+stth
+tc1
+tc1
+status
+stth
+sx
+sy
+drive sx -5
+drive sx -6
+mtth
+mom
+status
+status
+tc1
+stth
+stth
+tc1
+tc1
+tc1
+tc1
+stth
+tc1
+status
+pcx
+tc1
+tc1 list
+stth
+stth
+tc1 list
+tc1
+status
+opal list
+logoff
+manager ansto
+bm1
+logoff
+manager ansto
+exe hmscan.tcl 
+opal list
+INT1712 3
+status
+logoff
+manager ansto
+stth
+status
+status
+logoff
+manager ansto
+exe hmscan_max_SC.tcl
+manager ansto
+stth
+stth
+status
+logoff
+stth
+manager ansto
+stth
+stth
+logoff
+manager ansto
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+status
+status
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+pcr
+mx
+my
+mchi
+stth
+status
+mx
+manager ansto
+stth
+status
+mom
+mchi
+mx
+my
+sx
+sy
+schi
+sphi
+run sphi 0
+l
+sphi
+mtth
+mom
+exe hmscan_max_SC.tcl
+robby send SampToBeam(A,4,1)
+samplename Al2O3
+title Calibration
+user Max
+runscan stth 2.75 5.2 50 time 72
+status
+robby send SampRtn(B,4,1)
+pcx
+exe hmscan_max_SC.tcl
+stth
+samplename
+INT1712 3
+status
+logoff
+manager ansto
+runscan stth 2.75 5.2 50 time 124
+stth
+stth
+status
+stth
+stth
+stth
+status
+status
+datafilename
+samplename
+datafilename
+manager ansto
+samplename
+logoff
+logoff
+manager ansto
+stth
+status
+status
+status
+logoff
+manager ansto9
+manager ansto
+samplename
+status
+status
+stth
+stth interest
+manager ansto
+status
+samplename
+status
+samplename "Cu0.01FeSe0.85"
+user "Taiwan"
+runscan stth 2.75 5.2 50 time 52
+samplename
+runscan stth 2.75 5.2 50 time 52
+samplename
+samplename "Cu0.1Fe0.9Se0.85 No2"
+runscan stth 2.75 5.2 50 time 52
+samplename
+samplename "Mn0.1Fe0.9Sc0.85 No3"
+runscan stth 2.75 5.2 50 time 52
+status
+INT1712 3
+stth
+runscan stth 2.75 5.2 50 time 52
+stth
+stth
+manager ansto
+exe west400.tcl
+INT1712 3
+exe west400.tcl
+status
+stth
+tc1 list
+stth
+status
+stth
+status
+tc1 list
+tc1
+status
+stth
+stth
+status
+tc1
+tc1 list
+datafilename
+INT1712 3
+status
+drive tc1 30
+tc1 list
+samplename
+stth
+stth
+stth
+stth
+tc1
+tc1
+stth
+stth
+status
+status
+stth
+stth
+status
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+status
+manager ansto
+stth
+drive stth 5.3
+stth interest
+status
+exe west400_2.tcl
+INT1712 3
+status
+exe west400_2.tcl
+spy 007
+stth
+stth
+stth
+histmem mode
+logoff
+spy 007
+stth
+logoff
+manager ansto
+status
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+status
+stth
+tc1 list
+status
+stth
+tc1 list
+status
+stth
+stth
+stth
+stth list
+status
+stth
+stth
+stth
+status
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+status
+stth
+stth
+status
+stth
+tc1 list
+tc1 list
+stth
+runscan stth 2.75 5.2 50 time 844
+manager ansto
+statu
+status
+stth
+INT1712 3
+status
+logoff
+manager ansto
+runscan stth 2.75 5.2 50 time 844
+status
+manager ansto
+status
+samplename
+stth
+logoff
+exit
+manager ansto
+logoff
+manager ansto
+status
+stth
+manager ansto
+stth
+status
+logoff
+manager ansto
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+status
+tc1 list
+status
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+status
+tc1 list
+tc1 list
+tc1 list
+status
+tc1 list
+status
+tc1 list
+tc1 list
+status
+tc1 list
+tc1 list
+status
+status
+tc1 list
+status
+tc1 list
+status
+tc1 list
+status
+tc1 list
+status
+tc1 list
+status
+tc1 list
+status
+tc1 list
+tc1 list
+status
+tc1 list
+tc1 list
+logoff
+manager ansto
+tc1 list
+manager ansto
+status
+stth
+stth
+manager ansto
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+INT1712 3
+status
+tc1 list
+tc1 list
+tc1 controlsensor sensorB
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+status
+status
+status
+stth
+stth
+stth
+status
+status
+tc1 list
+status
+exe hmscan.tcl
+tc1 list
+manager ansto
+status
+status
+stth
+stth
+stth
+status
+tc1 list
+tc1 list
+status
+tc1 list
+tc1 list
+tc1 list
+stth
+stth
+status
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+stth
+status
+status
+tc1 list
+tc1 list
+tc1 range 4
+tc1 list
+stth
+tc1 list
+tc1 range 5
+tc1 list
+tc1 list
+tc1 list
+INT1712 3
+status
+INT1712 3
+status
+logoff
+manager ansto
+tc1 lsit
+tc1 list
+exe hmscan.tcl
+tc1 list
+tc1 list
+manager ansto
+tc1 list
+manager ansto
+stth
+status
+tc1 list
+logoff
+manager ansto
+INT1712 3
+status
+INT1712 3
+status
+INT1712 2
+status
+logoff
+manager ansto
+INT1712 3
+status
+logoff
+vim ../DataNumber 
+logoff
+manager ansto
+logoff
+manager ansto
+stth
+tc1 list
+exe hmscan.tcl
+stth
+manager ansto
+mom
+mtth
+stth
+pcr
+pcx
+som
+mchi
+schi
+logoff
+manager ansto
+stth
+logoff
+manager ansto
+stth
+status
+status
+logoff
+manager ansto
+stth
+status
+stth
+stth
+stth
+stth
+stth
+stth
+logoff
+manager ansto
+pcr
+pcx
+status
+run pcx 178.3
+run pcr 178.3
+stth
+stth
+stth
+status
+tc1 list
+manager ansto
+status
+stth
+stth
+stth
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+stth
+samplename
+INT1712 3
+tc1 list
+tc1 list
+status
+tc1 list
+datafilename
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+status
+stth
+manager ansto
+tc1 list
+tc1 list
+tc1 list
+manager ansto
+datafilename
+logoff
+manager ansto
+hismem preset
+histmem preset
+tc1 list
+stth
+status
+status
+opal list
+tc1 list
+manager ansto
+status
+stth
+logoff
+manager ansto
+opal list
+logoff
+manager ansto
+stth
+stth
+stth
+status
+stth
+status
+datafilename
+tc1 list
+sicsdatanumber
+status
+sicsdatanumber
+sicsdatanumber
+stth
+tc1 list
+mchi
+mom
+mpi
+mphi
+opal list
+opal list
+status
+stth
+tc1 list
+stth
+stth
+stth
+stth
+status
+status
+sth
+stth
+logoff
+manager ansto
+tc1 list
+opal list
+opal list
+logoff
+manager ansto
+SampToVac(A,1,1)
+robby send SampToVac(A,1,1)
+robby send VacRtn(A,1,1)
+exe hmscan_max_SC.tcl
+status
+INT1712 3
+status
+status
+pcx
+run pcx 0
+pcx
+pcx
+VacRtn(A,1,1)
+robby send VacRtn(A,1,1)
+pcx
+pcx
+pcx
+pcx
+pcx
+status
+exe hmscan_max_SC.tcl
+stth
+status
+INT1712 3
+INT1712 2
+INT1712 1
+msd list
+status
+datafilename
+robby send VacRtn(A,10,1)
+pcx
+run pcx 0
+robby send SampToVac(B,2,1)
+user "Margaret Elcombe"
+title "Friendly users"
+samplename "Au7Cu5.3"
+runscan stth 2.75 5.2 50 time 196
+sample
+status
+stth
+histmem preset
+status
+stth
+status
+status
+exe hmscan_max_SC.tcl
+status
+exe hmscan_max_SC.tcl
+samplename
+INT1712 3
+status
+stth
+logoff
+manager ansto
+stth
+INT1712 3
+status
+histmem preset
+logoff
+manager ansto
+logoff
+manager ansto
+exe hmscan.tcl
+samplename
+manager ansto
+stth
+status
+tc1 list
+logoff
+manager ansto
+stth
+status
+tc1 list
+logoff
+manager ansto
+status
+tc1 list
+tc2 list
+status
+status
+INT1712 2
+status
+tc1 list
+tc2 lsit
+tc2 list
+drive tc1 100
+drive tc2 100
+status
+INT1712 3
+tc1 list
+tc2 list
+status
+tc1 list
+tc2 list
+exe hmscan.exe
+exe hmscan.tcl
+INT1712 3
+status
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc2
+exe hmscan.tcl
+stth
+INT1712 3
+stth
+status
+tc1 list
+tc2 list
+exe hmscan.tcl
+status
+INT1712 3
+tc1 list
+status
+tc1 list
+tc2 list
+tc1 list
+tc2 list
+exe hmscan.tcl
+status
+status
+stth
+runsics
+runscan
+histmem mode
+histmem mode mo
+histmem mode
+histmem mode monitor1
+histmem mode
+histmem mode monitor_1
+histmem mode
+histmem list
+histmem
+histmem mode
+logoff
+manager ansto
+status
+stth
+stth
+stth
+tc1 list
+tc2 lsit
+tc2 list
+tc1 list
+tc2 list
+stth
+stth
+histmem preset
+histmem mode
+stth
+stth
+status
+status
+status
+status
+stth
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+manager ansto
+status
+stth
+stth
+stth
+status
+manager ansto
+status
+samplename
+status
+logoff
+manager ansto
+tc1
+tc1
+tc1
+tc1
+exe west400.tcl
+INT1712 3
+logoff
+manager ansto
+tc1
+tc1 list
+exe west400.tcl
+manager ansto
+tc1
+histmem preset
+manager ansto
+stth
+status
+tc1 list
+stth interest
+status
+tc1 list
+manager ansto
+tc1
+tc1 lsit
+tc1 list
+logoff
+manager ansto
+tc1
+manager ansto
+stth
+tc1
+drive tc1 700
+INT1712 2
+tc1 interest
+tc1
+tc1 list
+tc1
+tc1
+tc1
+tc1
+tc1
+tc1
+tc1
+tc1
+tc1
+tc1
+logoff
+manager ansto
+tc1
+manager ansto
+tc1
+stth interest
+opal list
+stth
+stth
+stth
+status
+tc1
+manager ansto
+sampelname
+samplename
+anager ansto
+manager ansto
+stth
+status
+logoff
+exit
+manager ansto
+logoff
+manager ansto
+stth
+stth
+status
+status
+stth
+stth
+stth
+status
+stth
+stth
+manager ansto
+status
+stth
+runscan stth 5.200232 5.20032 0 time 60 
+runscan stth 5.200232 5.20032 1 time 60 
+INT1712 2
+histmem mode
+histmem preset
+histmem mode
+histmem mode unlimited
+histmem mode
+newfile HISTOGRAM_XY scratch
+sy
+histmem start
+histmem pause
+save
+exe test.tcl
+INT1712 3
+newfile HISTOGRAM_XY scratch
+exe test.tcl
+manager ansto
+status
+sy
+status
+INT1712 3
+INT1712 2
+INT1712 1
+status
+exe test.tcl
+sy
+status
+INT1712 3
+status
+INT1712 2
+status
+runscan sy -20 20 41 time 60 savetype nosave datatype HISTOGRAM_Y force true
+status
+sx
+runscan sx -20 20 41 time 60 datatype HISTOGRAM_XY force true
+INT1712 2
+sy
+INT1712 2
+status
+INT1712 3
+sy
+run sy 0
+sx
+runscan sx -20 20 41 time 60 datatype HISTOGRAM_XY force true
+manager ansto
+status
+sy
+sy
+sx
+sx
+status
+sx
+status
+status
+status
+status
+status
+sx
+sy
+sx
+sy
+status
+logoff
+manager ansto
+tx
+sx
+sy
+sx
+sy
+logoff
+manager ansto
+sx
+sy
+sy
+sy
+sy
+sy
+sy
+sx
+sy
+sx
+sy
+sx
+sx
+logoff
+manager ansto
+stth
+sx
+sy
+sy
+logoff
+manager ansto
+stth
+status
+status
+tc1
+tc1 list
+tc1 list
+tc1 list
+status
+tc1 list
+INT1712 3
+status
+tc1 range 3
+tc1 controlsensor sensorB
+tc1 list
+drive tc1 25
+tc1 list
+tc1 list
+manager ansto
+samplename
+exe samplename.tcl
+grep expr *
+logoff
+manager ansto
+status
+samplename
+logoff
+manager ansto
+status
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 range 5
+tc1 list
+tc1 list
+tc1 list
+status
+samplename
+logoff
+manager ansto
+statu
+status
+tc1 list
+tc1 list
+samplename
+tc1 list
+status
+status
+tc1 list
+tc1 list
+status
+status
+tc1 list
+logoff
+manager ansto
+tc
+tc1
+tc1
+tc1
+tc1
+tc1_asyncq send "HTR?"
+tc1
+tc1
+manager ansto
+status
+stth
+stth
+status
+status
+stth
+stth
+status
+tc1
+tc1 lis
+tc1 list
+tc2 list
+stth
+tc1 list
+tc2 list
+tc1 list
+tc2 list
+stth
+stth
+stth
+status
+histmem preset
+status
+stth
+tc1 list
+tc2 list
+manager ansto
+samplename
+logoff
+manager ansto
+sicslist samplename
+logoff
+manager ansto
+status
+config listen 1
+samplename
+logoff
+manager ansto
+samplename
+logoff
+manager ansto
+robby send SampToVac(B,41,)
+exe SC.tcl
+status
+INT1712 3
+stth
+status
+samplename 
+samplename CaAlSi
+user
+sx
+run sx 2
+run sx -2
+run sx -4
+run sx 0
+run mtth 120
+mtth
+mom
+run mom 60.4
+mtth
+mtth
+mtth
+mtth
+mtth
+mom
+run sx 4
+run sx -4
+run sx 0
+mom
+run mom 60
+run mom 60.8
+run mom 60.4
+run mtth 120
+mtth
+mom
+run mom 60.4
+run mtth 120
+mom
+mtth
+mtth
+mtth
+runscan stth 2.75 5.2 50 time 80
+INT1712 2
+runscan stth 4 5.2 time 190
+runscan stth 4 5.2 25 time 190
+robby send SampToVac(B,1,1)
+manager ansto
+robby send SampToVac(B,1,1)
+manager ansto
+user
+drive sx 20
+logoff
+sx
+sx
+sx
+sx
+logoff
+manager ansto
+runscan sy -20 20 9 time 20 savetype save datatype HISTOGRAM_X force true
+status
+sy
+sx
+sx
+sy
+opal list
+status
+sx
+sy
+logoff
+manager ansto
+runscan sy -20 20 9 time 20 savetype save datatype HISTOGRAM_X force true
+manager ansto
+mtth
+mom
+run mom 45.4
+run mtth 90
+run mtth 90
+mtth
+mtth interest
+run mtth 118
+INT1712 2
+run mtth 120
+INT1712 2
+status
+run mtth 90
+run mtth 90
+run mtth 90
+run mtth 90
+mtth
+mom
+tc1
+tc2
+tc1 list
+tc2 list
+tc1 heateron 0
+tc2 heateron 0
+tc1 list
+tc1 list
+tc2 list
+exe CF1.tcl
+INT1712 3
+exe CF1.tcl
+stth
+tc2
+opal list
+opal thermal
+run stth 4
+opal therma
+opal list
+samplename
+samplename NiFe2O4 mixture, 300 K
+tc2 list
+tc1 list
+runscan stth 4 5.2 25 time 120
+stth
+status
+samplename
+samplename Si
+user
+user Max Avdeev
+title
+title Calibration
+msd
+sc
+runscan stth 4 5.2 25 time 120
+INT1712 2
+sampledescription
+sampledescription mtth90-noPC-noSC-Stick
+runscan stth 4 5.2 25 time 120
+manager ansto
+stth decel
+q
+logoff
+manager ansto
+tc1
+tc1 lsit
+tc1 list
+tc2 list
+exe CF1.tcl
+status
+stth
+tc1 list
+tc2 list
+mom
+run mom 60.4
+mtthj
+mtth
+run mtth 120
+mtth interest
+run mtth 120
+run mtth 120
+status
+run mtth 120
+mtth list
+mtth
+mtth precision 0.005
+run mtth 120
+drive msd 2500
+drive sc 0
+sampledescription "mtth90-noPC-noSC-SampCh"
+sampletitle ""
+sampledescription
+sampledescription mtth120-noPC-noSC-Stick
+samplename La9.33(SiO4)6O2
+user
+user Tim White
+title
+title Friendly user
+runscan stth 2.75 5.2 50 time 120
+status
+stth
+mtth
+mom
+user
+pcr
+pcx
+run pcx 135
+interest pcx
+pcx interest
+tc1
+tc2
+tc2
+opal list
+tc1 list
+tc2 list
+pcx
+pcr
+bmonscan add pcr 177 0.1
+bmonscan run 31 time 60
+bmonscan run 31 timer 60
+status
+status
+stth
+status
+stth
+stth
+status
+status
+stth
+stth
+status
+drive tc1 300
+INT1712 2
+tc2 list
+exe CF1.tcl
+stth
+pcr
+pcr
+drive msd 2500
+drive sc 0
+sampledescription "mtth120-PC10-SC10-SC"
+manager ansto
+user
+user Tim White
+drive msd 2500
+drive sc 1
+sampletitle ""
+title "Friendly user"
+sampledescription mtth120-PC10-SC10-SC
+pcr
+pcx
+runscan stth 2.75 5.2 25 time 120
+status
+runscan stth 2.75 5.2 25 time 120
+INT1712 3
+INT1712 2
+INT1712 1
+runscan stth 2.75 5.2 50 time 120
+manager ansto
+stth
+status
+stth
+INT1712 2
+INT1712 3
+pcx
+run pcx 0
+msd
+drive sc 0
+sampletitle
+user
+samplename
+samplename Ba2TiSi2O8
+mom
+runscan stth 4 5.2 25 time 790
+user
+user Brendan Kennedy
+samplename
+Bi4Mn0.2Ti2.8O12
+samplename Bi4Mn0.2Ti2.8O12
+drive msd 2500
+drive sc 0
+sampledescription "mtth120-noPC-noSC-SC"
+sampletitle ""
+runscan stth 2.75 5.2 50 time 118
+mtth
+run mtth 116
+mtth interest
+run mtth 116
+run mtth 116
+run mtth 116
+run mtth 116
+run mtth 116.05
+run mtth 116.0
+run mtth 116.0
+run mtth 116.0
+run mtth 116.0
+run mtth 116.0
+run mtth 116.005
+run mtth 116.01
+mtth
+user
+user Max Avdeev
+samplename
+samplename D-Ba4Nb2O9 quenched from 1300C
+runscan stth 2.75 5.2 50 time 226
+INT1712 3
+INT1712 2
+runscan stth 2.75 5.2 50 time 154
+INT1712 2
+mtth
+mom
+runscan stth 2.75 5.2 50 time 154
+stth
+status
+user
+user Tim White
+samplename
+Ba2TiSi2O8
+samplename Ba2TiSi2O8
+runscan stth 2.75 5.2 50 time 154
+run mtth 120
+run mtth 120
+run mtth 120
+run mtth 120
+run mtth 120
+run mtth 120.01
+run mtth 120.03
+run mtth 120.0
+mtth
+mom
+stth
+logoff
+manager ansto
+tc1
+tc1 list
+mom
+mtth
+status
+exe west400_BaNb.tcl
+tc1
+drive tc1 400
+tc1
+status
+tc1 list
+manager ansto
+tc1
+tc1 list
+tc1
+exe west400_BaNb.tcl
+INT1712 3
+exe west400_BaNb.tcl
+manager ansto
+stth
+status
+tc1
+tc1
+stth
+manager ansto
+tc1
+stth
+status
+stth
+datafilename
+stth
+status
+stth
+status
+status
+stth
+status
+status
+status
+stth
+stth
+tc1 list
+status
+stth
+tc1 list
+exe west400_BaNb.tcl
+stth
+logoff
+manager ansto
+tc1
+tc1 list
+status
+stth
+stth
+status
+stth
+status
+stth
+stth
+stth
+status
+samplename
+status
+status
+logoff
+manager ansto
+stth
+stth
+status
+manager ansto
+status
+stth
+stth
+INT1712 3
+status
+logoff
+manager ansto
+status
+stth
+stth
+stth
+INT1712 3
+tc1 
+tc1 list
+manager ansto
+tc1 list
+exe west400_BaNb.tcl
+status
+status
+tc1
+status
+drive tc1 1050
+tc1 list
+logoff
+runsics stop
+manager ansto
+exe west400_BaNb.tcl
+manager ansto
+tc1
+status
+stth
+stth
+INT1712 3
+manager ansto
+stth list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 heateron 0
+tc1 heateron 1
+tc1 list
+tc1 heateron 0
+tc1 list
+tc1 heateron 1
+manager ansto
+tc2 list
+tc2 controlsensor sensorB
+drive tc2 160
+tc1 heateron 0
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+ssth list
+stth list
+tc1 list
+tc1 list
+tc2 list
+runscan stth 4 5.2 25 mon 5000
+runscan stth 4 5.2 25 mon 5000
+INT1712 3
+INT1712 2
+drive tc2 80
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+mon list
+monitor_1 list
+det list
+detector list
+mom list
+stth list
+mtth list
+manager ansto
+tc1 list
+tc2 list
+tc2 controlsensor sensorB
+bmonscan interest
+bmonscan uninterest
+histmem mode
+histmem preset
+status
+stth
+stth
+tc2 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+drive tc2 50
+tc1 list
+INT1712 1
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+mtths list
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+drive tc2 280
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+drive tc2 400
+INT1712 1
+drive tc2 400
+tc2 list
+stth list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc1 
+tc1 
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+stth list
+stth list
+tc1 list
+tc2 list
+tc2 list
+status
+drive tc2 430
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+tc2 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+INT1712 2
+drive tc2 450
+INT1712 2
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+drive tc2 220
+INT1712 1
+tc2 list
+status
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+drive tc2 430
+drive tc12 430
+drive tc2 430
+INT1712 1
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc2 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+status
+status
+tc2 list
+tc1 list
+tc2 list
+drive tc2 420
+drive tc2 220
+INT1712 1
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc2 list
+tc2 list
+tc2 heateron 0
+tc2 list
+tc2 list
+tc1 list
+tc2 list
+tc2 list
+status
+tc2 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+drive tc2 100
+tc2 list
+INT1712 1
+tc2 list
+tc2 heateron 0
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc2 list
+tc1 list
+tc2 list
+tc1 list
+tc2 list
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc2 list
+drive tc2 220
+INT1712 1
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+drive tc2 230
+INT1712 1
+tc2 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+drive tc2 240
+INT1712 1
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+drive tc2 250
+tc2 list
+INT1712 1
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+drive tc2 230
+tc1 list
+INT1712 1
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc2 heateron 0
+tc2 list
+tc2 list
+drive tc2 240
+INT1712 1
+tc2 list
+tc2 heateron 0
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc2 heateron 1
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+drive tc2 245
+INT1712
+tc2 list
+drive tc2 245
+tc2 list
+INT1712 1
+tc2 list
+tc1 list
+tcl list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc2 ;ist
+tc2 list
+tc1 list
+tc2 list
+yc2 heateron 0
+tc2 heateron 0
+tc2 list
+tc1 list
+tc2 list
+status
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc2 list
+status
+tc2 list
+tc2 heateron 1
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc2 list
+tc2 list
+tc2 list
+drive tc2 100
+INT1712 3
+tc2 heateron 0
+tc2 heateron 1
+tc2 heateron 0
+drive tc2 95
+INT1712 1
+drive tc2 100
+INT1712 1
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc2 list
+tc2 list
+tc1 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+drive tc2 105
+INT1712 1
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc2 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+tc1 list
+list tc2
+tc2 list
+tc2 heateron 0
+tc2 list
+tc2
+tc1
+tc1
+tc2
+logoff
+manager ansto
+tc1
+tc1 list
+logoff
+manager ansto
+tc1
+som
+sx
+sy
+tc1
+tc1 list
+logoff
+manager ansto
+drive msd 2500
+drive sc 0
+sampledescription "mtth140-noPC-noSC-SC"
+sampletitle ""
+samplename
+samplename Al2O3
+user Max Avdeev
+title Calibration
+robby send SampToVac(B,41,1)
+runscan stth 4.0 5.2 25 time 118
+drive mtth 120.0
+drive mtth 120.0
+drive mom 60.4
+vacrtn(b,41,1)
+VacRtn(B,41,1)
+robby send vacrtn(b,41,1)
+robby send VacRtn(B,41,1)
+robby send SampToVac(A,41,)
+samplename
+samplename YBaCoO8.3
+user
+runscan 2.75 5.2 50 time 118
+runscan stth 2.75 5.2 50 time 118
+logoff
+manager ansto
+manager ansto
+mom
+stth
+stth
+stth
+mtth
+mom
+mtth
+run mtth 90
+run mom 45.4
+mtth
+run mtth 90
+mtth
+run mtth 90
+mtth
+run mtth 90
+mom
+mtth
+mtth
+mtth
+run mtth 90
+mtth
+run mtth 90
+mtth
+mtth
+mtth
+mtth
+mtth
+run mtth 120
+mom
+run mom 60.4
+mtth
+run mtth 120
+mom
+mtth
+mtth
+run mtth 120
+mom
+mtth
+drive msd 2500
+drive sc 0
+sampledescription "mtth120-noPC-noSC-Stick"
+sampletitle ""
+user "El'ad Caspi"
+samplename "Tb75"
+title "Proposal"
+runscan stth 2.75 5.2 50 time 120
+bmonscan clear
+bmonscan add pcr 177.5 0.1
+bmonscan run 21 timer 60
+logoff
+manager ansto
+histmem mode
+tc1
+tc1 list
+exe CF4.tcl
+status
+stth
+pcx
+run pcx 0
+pcx
+run pcx 135
+pcx
+pcx
+pcx
+status
+manager ansto
+robby send SampToVac(B,41,1)
+drive msd 2500
+drive sc 0
+sampledescription "mtth120-noPC-noSC-SC"
+sampletitle ""
+sampledescription "mtth120-PC10-SC10-SC"
+samplename Al2O3
+user Max Avdeev
+title Calibration
+runscan stth 2.75 5.2 50 time 190
+robby send VacRtn(A,41,1)
+pcx
+run pcx 0
+samplename
+samplename empty P1100
+sampledescription "mtth120-noPC-SC10-P1100"
+drive sc 0
+drive sc 1
+msd
+runscan 4 5.2 25 time 118
+runscan stth 4 5.2 25 time 118
+INT1712 2
+stth
+status
+runscan stth 4 5.2 25 time 118
+runscan stth 4 5.2 25 time 118
+samplename
+samplename empty P1100 + snout
+runscan stth 4 5.2 25 time 118
+runscan stth 4 5.2 25 time 118
+histmem status
+samplename empty P1100 + snout + Al2O3
+runscan stth 4 5.2 25 time 118
+stth
+INT1712 2
+samplename empty P1100 + snout + NaCl
+runscan stth 4 5.2 25 time 118
+robby 
+robby send SampToVac(A,42,1)
+pcx
+robby send VacRtn(A,42,10
+robby send SampToVac(B,2,
+robby send VacRtn(B,2,
+samplename empty D-Sitinakite
+user Gordon Thorogood
+pcx
+histmem preset
+msd
+sc
+drive sc 0
+sampledescription
+sampledescription mtth120-noPC-noSC-SC
+runscan stth 2.75 5.2 50 time 190
+status
+stth
+INT1712 3
+logoff
+manager ansto
+tc1
+tc1 heateron 0
+drive tc1 4
+tc1 list
+tc1 list
+pcx
+run pcx 135
+status
+exe CF4.tcl
+status
+opal list
+opal list
+stth
+stth
+stth
+status
+histmem preset
+status
+sy
+run sy 5
+run sy 10
+user
+user Max Avdeev
+samplename Al2O3
+runscan stth 4 5.2 25 time 177
+pcx
+run pcx 0
+logoff
+manager ansto
+robby send SampToVac(B,2,)
+robby send VacRtn(B,2,)
+robby send SampToVac(A,41,)
+sx
+sy
+drive msd 2500
+drive sc 0
+sampledescription "mtth120-noPC-noSC-SC"
+sampletitle ""
+samplename
+samplename Ba4Nb2O9 1300C O2/D2O quenched
+user Chris Ling
+title "Friendly user"
+runscan stth 2.75 5.2 50 time 190
+stth
+status
+histmem preset
+INT1712 3
+robby send VacRtn(A,42)
+stth
+logoff
+manager ansto
+tc1_asyncq send "RELAY 2,2,1"
+tc1_asyncq send "RELAY 2,2,0"
+tc1
+tc1_asyncq send "RELAY 2,2,1"
+tc1_asyncq send "RELAY 2,2,0"
+tc1_asyncq send "RELAY 2,2,0"
+tc1_asyncq send "RELAY 2,2,1"
+tc1_asyncq send "RELAY 2,2,0"
+tc1_asyncq send "RELAY 2,2,1"
+tc1_asyncq send "RELAY 2,2,0"
+tc1_asyncq send "RELAY 2,2,0"
+tc1_asyncq send "RELAY 2,2,1"
+tc1_asyncq send "RELAY 2,2,0"
+tc1
+pcx
+run pcx 135
+pcx
+pcr
+tc1 list
+mom
+mtth
+stth
+sx
+sy
+pcr
+pcx
+mchi
+schi
+mx
+my
+tc1 list
+exe CF4.tcl
+status
+stth
+tc1 list
+histmem preset
+sratus
+status
+mtth
+run mtth 90
+run mtth 90
+run mtth 90
+mtth
+rum mom 45.39
+run mom 45.39
+pcx
+mom
+user
+samplename La2ZnIrO6
+title
+title Feasibility Experiment
+runscan stth 2.75 5.2 50 time 154
+runscan stth 4 5.2 25 time 334
+runscan stth 4 5.2 25 time 334
+runscan stth 4 5.2 25 time 334
+stth
+status
+mtth
+mom
+run mtth 120
+mtth
+stth
+mom
+run mom 60.39
+status
+tc1 list
+mom
+run mom 60
+run mom 60.8
+run mom 60.39
+logoff
+manager ansto
+tc1
+tc1 list
+histmem preset
+mom
+tc1
+exe west400_BaNb.tcl
+INT 1712 3
+INT1712 3
+stth
+stth
+stth
+stth
+pcx
+run pcx 0
+pcx
+pcx
+mom
+mtth
+stth
+mx
+my
+sx
+sy
+schi
+sphi
+run sphi 0
+sphi
+pcx
+pcx
+pcx
+pcx
+status
+exe west400_BaNb.tcl
+INT1712 3
+exe west400_BaNb.tcl
+INT1712 3
+staus
+status
+exe west400_BaNb.tcl
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+status
+tc1 list
+logoff
+manager ansto
+robby list
+robby send SampToVac(A,41,1)
+drive msd 2500
+drive sc 0
+sampledescription "mtth120-noPC-noSC-SC"
+sampletitle ""
+#drive pcx 135
+user Gordon Thorogood
+samplename D-sitinakite
+title
+title Feasibility experiment
+runscan stth 2.75 5.2 50 time 190
+stth
+status
+robby send VacRtn(A,41,)
+robby send SampToVac(A,44,)
+user Chris Ling
+samplename Ba4Nb2O9 after furnace run
+runscan stth 2.75 5.2 50 time 118
+status
+VacRtn(A,44)
+robby send VacRtn(A,44)
+robby send SampToVac(A,41,1)
+robby send VacRtn(A,41,1)
+robby send SampToVac(A,42,1)
+user
+samplename
+samplename alpha-Ba4Ta2O9 rod
+title
+msd
+sc
+runscan stth 4 5.2 25 time 118
+exe SC.tcl
+INT1712 3
+status
+robby send VacRtn(A,43,1)
+run mtth 90.0
+mtth
+run mtth 90.0
+mtth
+run mom 45.4
+mom
+pcr
+pcx
+run pcx 135
+pcx
+run pcr 178.16734
+pcr
+pcr
+pcr
+run pcr 178.16734
+pcr
+run pcr 178.157364
+pcr
+pcr
+run pcr 178.157364
+pcr
+monitor_1
+bmonscan clear
+MONITOR_1 getcounts
+manager ansto
+tc1
+tc1
+tc1
+tc1
+tc1
+tc1 heateron 0
+mtth
+run mtth 110
+mtth
+run mtth 100
+mtth
+run mtth 100
+mtth
+run mtth 90
+mtth
+run mtth 90
+mtth
+run mtth 90
+mtth
+run mom 45.39
+status
+status
+pcx
+run pcx 0.0
+manager ansto
+tc1
+tc1
+status
+tc1
+tc1
+tc1
+stth
+stth
+status
+stth
+stth
+stth
+status
+stth
+stth
+stth
+stth
+stth
+stth
+status
+stth
+stth
+stth
+stth
+stth
+stth
+status
+status
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+status
+stth
+status
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+status
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+stth
+status
+status
+stth
+INT1712 3
+status
+stth
+stth
+stth
+manager ansto
+exe west400.tcl
+stth interest
+manager ansto
+stth interest
+manager ansto
+opal list
+status
+histmem preset
+status
+robby send VacRtn(B,12,1)
+stth
+status
+hmm_t get 1
+hmm_t get 1
+hlist /experiment
+hget /experiment/currpoint
+hget /experiment/save_count
+hmm_t get 1
+status
+INT1712 3
+status
+exe SC.tcl
+INT1712 3
+status
+plc shutter close
+status
+exe SC.tcl
+INT1712 3
+status
+
+exe SC.tcl
+logoff

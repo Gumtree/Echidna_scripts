@@ -1,0 +1,82 @@
+drive msd 2500
+drive sc 0
+sampletitle ""
+#---------------
+config rights manager ansto
+#--------------
+#title "MI"
+#sampledescription "mtth140-noPC-noSC-rotator-Ge335"
+#user "Vladimir Luzin"
+#samplename g-Fe/Cu Ge335
+#runscan stth 4.0 5.2 25 time 120
+
+#--------------
+#robby send SampToVac(B,11,1)
+#wait 60
+#samplename Al7075 bulk
+#robby send ROTATE(30,598,)
+runscan stth 4 5.2 25 time 550
+robby send VacRtn(B,11,1)
+wait 60
+#--------------
+robby send SampToVac(B,12,1)
+wait 60
+samplename Al6061 bulk
+robby send ROTATE(30,598,)
+runscan stth 4 5.2 25 time 550
+robby send VacRtn(B,12,1)
+wait 60
+#--------------
+robby send SampToVac(B,13,1)
+wait 60
+samplename Al7075 powder
+runscan stth 4 5.2 25 time 262
+robby send VacRtn(B,13,1)
+wait 60
+#--------------
+robby send SampToVac(B,14,1)
+wait 60
+samplename Al6061 powder
+runscan stth 4 5.2 25 time 262
+robby send VacRtn(B,14,1)
+wait 60
+#--------------
+robby send SampToVac(B,15,1)
+wait 60
+samplename Al N2 700 bulk
+robby send ROTATE(30,298,)
+runscan stth 4 5.2 25 time 262
+robby send VacRtn(B,15,1)
+wait 60
+#--------------
+robby send SampToVac(B,16,1)
+wait 60
+samplename Al He 200 bulk
+robby send ROTATE(30,298,)
+runscan stth 4 5.2 25 time 262
+robby send VacRtn(B,16,1)
+wait 60
+#--------------
+robby send SampToVac(B,17,1)
+wait 60
+samplename Al He 400 bulk
+robby send ROTATE(30,298,)
+runscan stth 4 5.2 25 time 262
+robby send VacRtn(B,17,1)
+wait 60
+#--------------
+robby send SampToVac(B,18,1)
+wait 60
+samplename Zn bulk
+robby send ROTATE(30,298,)
+runscan stth 4 5.2 25 time 262
+robby send VacRtn(B,18,1)
+wait 60
+#--------------
+robby send SampToVac(B,19,1)
+wait 60
+samplename Ni bulk
+robby send ROTATE(30,148,)
+runscan stth 4 5.2 25 time 118
+robby send VacRtn(B,19,1)
+wait 60

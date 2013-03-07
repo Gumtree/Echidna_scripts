@@ -1,0 +1,8 @@
+#Max's templates
+hset sample/tc1/control/tolerance1 1
+hset sample/tc1/control/tolerance2 1
+hset sample/tc1/heater/heaterrange_1 3
+hset sample/tc1/heater/heaterrange_2 3
+drive tc1_driveable 3.5 tc1_driveable2 3.5
+samplename Ba2CuTeO6 , 3.5K
+runscan stth 4 5.2 25 time 550

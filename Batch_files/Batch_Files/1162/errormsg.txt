@@ -1,0 +1,29 @@
+[2010-11-08 02:08:16] (::nexus::save 74) (::nexus::save_collection -index 74) (::nexus::save_data 74 oldfile) {(::nexus::savetree sample 74 oldfile) {(::nexus::savetree sample/tempone 74 oldfile) {(::nexus::macro::getset_save ::environment::tc1_setpoint ::environment::tc1_setpoint /sample/tempone/setpoint float oldfile point 74) Object tc2 not found}}}
+[2010-11-08 02:08:18] histmem stopped
+[2010-11-08 02:08:18] Change of Authorisation Acknowledged
+[2010-11-08 02:08:18] Change of Authorisation Acknowledged
+[2010-11-08 02:08:47] Change of Authorisation Acknowledged
+[2010-11-08 02:08:48] Change of Authorisation Acknowledged
+[2010-11-08 02:09:17] You cannot set variables while a scan is running
+[2010-11-08 02:09:17] ERROR: cannot initialize HM while running
+[2010-11-08 02:09:17] Change of Authorisation Acknowledged
+[2010-11-08 02:09:17] You cannot set variables while a scan is running
+[2010-11-08 02:09:17] Unable to insert sample B44 as sample B18 already inserted
+[2010-11-08 02:09:17] If this is not true, set variable samp_in_vac to None
+[2010-11-08 02:09:17] You cannot set variables while a scan is running
+[2010-11-08 02:09:18] ERROR: cannot initialize HM while running
+[2010-11-08 02:09:18] Change of Authorisation Acknowledged
+[2010-11-08 02:09:18] You cannot set variables while a scan is running
+[2010-11-08 02:09:18] Unable to insert sample B1 as sample B18 already inserted
+[2010-11-08 02:09:18] If this is not true, set variable samp_in_vac to None
+[2010-11-08 02:09:18] You cannot set variables while a scan is running
+[2010-11-08 02:09:18] ERROR: cannot initialize HM while running
+[2010-11-08 02:09:18] Change of Authorisation Acknowledged
+[2010-11-08 02:09:18] You cannot set variables while a scan is running
+[2010-11-08 02:09:18] Unable to insert sample B44 as sample B18 already inserted
+[2010-11-08 02:09:18] If this is not true, set variable samp_in_vac to None
+[2010-11-08 02:09:18] You cannot set variables while a scan is running
+[2010-11-08 02:09:18] ERROR: cannot initialize HM while running
+[2010-11-08 02:09:18] You cannot set variables while a scan is running
+[2010-11-08 02:09:18] ERROR: cannot initialize HM while running
+[2010-11-08 02:09:18] OK

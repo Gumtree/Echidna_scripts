@@ -1,0 +1,110 @@
+<workflow>
+  <task classname="au.gov.ansto.bragg.echidna.exp.task.HeaderInformationBlockTask">
+    <parameters/>
+    <dataModel class="org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock">
+      <commands>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>drive sc</sicsVariable>
+          <value>0</value>
+          <isQuoted>false</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>title</sicsVariable>
+          <value>P1533</value>
+          <isQuoted>true</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>sampledescription</sicsVariable>
+          <value>Ellestadite l=1.30A</value>
+          <isQuoted>true</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>user</sicsVariable>
+          <value>Fang Yanan</value>
+          <isQuoted>true</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+      </commands>
+    </dataModel>
+  </task>
+  <task classname="au.gov.ansto.bragg.echidna.exp.task.DoRTScanTask">
+    <parameters/>
+    <dataModel class="org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock">
+      <commands>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>2.75</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>x=1</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>11</sampposNumber>
+          <tot__time>4.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>2.75</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>x=2</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>12</sampposNumber>
+          <tot__time>4.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>2.75</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>x=3</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>13</sampposNumber>
+          <tot__time>4.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>2.75</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>x=4</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>14</sampposNumber>
+          <tot__time>4.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>2.75</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>x=5</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>15</sampposNumber>
+          <tot__time>4.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>2.75</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>x=6</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>16</sampposNumber>
+          <tot__time>4.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <startang>4.0</startang>
+          <finishang>5.2</finishang>
+          <stepsize>0.05</stepsize>
+          <sampname>Si 1.30A</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>2</sampposNumber>
+          <tot__time>1.0</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+      </commands>
+    </dataModel>
+  </task>
+  <context>
+    <org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+      <org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+        <blocks>
+          <org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock reference="../../../../../task/dataModel"/>
+          <org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock reference="../../../../../task[2]/dataModel"/>
+        </blocks>
+      </org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+    </org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+  </context>
+  <parameters/>
+</workflow>

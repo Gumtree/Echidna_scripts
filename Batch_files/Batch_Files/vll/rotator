@@ -1,0 +1,12 @@
+drive msd 2500
+drive sc 0
+sampletitle "BJK"
+#---------------
+config rights manager ansto
+#--------------
+title "MI"
+sampledescription "mtth140-noPC-noSC-Vac-Ge335"
+user "Vladimir Luzin"
+samplename BJK Ge335
+runscan stth 4.0 5.2 25 time 260
+

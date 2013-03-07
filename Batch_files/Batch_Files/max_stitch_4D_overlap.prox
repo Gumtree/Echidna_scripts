@@ -1,0 +1,69 @@
+;4D data set is assumed to be loaded to w1; w40 - temporary for efficiencies and then y-offsets; w39 - x1; w38 - angular offsets; w37 - 2D x-values for y-pixels in all the tubes
+
+;copying real 2thetas
+f=1000 & g="_" & w39=dblarr(n_elements(x1)) & w39=double(x1)
+
+;number of stth steps (b)
+a=size(w1) & b=a[4] & show,b
+
+;stth nominal step
+c=float(round(1000*(x1[b-1]-x1[0])/(b-1)))/1000 & show,c
+
+;nominal 2theta_min
+d=float(round(mean(w39)*1000))/1000-(float(b)-1)/2*c & show,d
+
+;normalizing for monitor
+w1=double(w1) & n1=double(n1) & for i=0,b-1 do w1[*,*,i]*=mean(n1)/n1[i] & see,w1
+
+;y offsetting
+openr,u,'ech_y_off',/get_lun & w40=dblarr(128) & readf,u,w40 & free_lun,u & see,w40
+for i=0,127 do w1[i,10+w40[i]:117+w40[i],*]=w1[i,10:117,*] & see,w1
+
+;efficiency correction
+openr,u,'ech_eff',/get_lun & w40=dblarr(128,128) & readf,u,w40 & free_lun,u & see,w40
+for i=  0,b-1 do w1[*,*,i]*=w40[*,*] & see,w1
+
+;assigning 2theta to each tube
+w37=dblarr(128,b) & for i=0,127 do w37[i,*]=w39+1.25*i & see,w37
+
+;applying angular correction
+openr, u, 'ech_ang', /GET_LUN & w38=dblarr(128) & readf,u,w38 & free_lun,u & see,w38
+for i=0,127 do w37[i,*]+=w38[i] & see,w37        
+;1D interpolation of 128*b arrays: i - tube No, j - 2theta trace of jth y pixel
+for i=0,127 do begin for j=0,127 do begin w1[i,j,*] = interpol(w1[i,j,*],w37[i,*],findgen(b)*c+d+1.25*i); endfor endfor & see,w1
+
+;3d->2d
+w2=dblarr(1,128,1.25/c*(128-1)+b) & for i=0,127 do w2[0,*,1.25/c*i:(1.25/c*i+b-1)]+=w1[i,*,*] & w2=transpose(w2) & see,w2
+
+;changing axis to 2theta
+x2=findgen(127*1.25/c+b)*c+d & see,w2
+
+;straigtening
+y2=(y2-1)*30/127-15 & w2=max_straight_2d(w2) & see,w2
+
+;2d->1d
+w3=total(w2[*,43:84],2) & see,w3
+
+;saving data to xy file
+max_write_gsas_ech,'ECH000'+strtrim(string(f),2)+ g + '.gsa',w3
+
+;--------------------
+;saving data to xy file
+;max_write_xy,'ECH0000'+strtrim(string(f),2)+'.xy',w3
+;max_write_gsas_ech,'ECH0000'+strtrim(string(f),2)+'.gs',w3
+;d=par_txt_all[26] & d=string(d) & max_write_xy,strmid(d,28,10)+'.xy',w3
+
+;removing tilt
+;openr,u,'echidna.tilt',/get_lun & w40=fltarr(128) & readf,u,w40 & free_lun,u
+;for i=0,127 do begin for j=0,b-1 do begin w2[i*50+j]-=(j-b/2)*w40[i]; endfor endfor 
+
+;writing modified file
+;openw,u,'ech_eff',/get_lun & printf,u,w40 & free_lun,u
+
+;d=par_txt_all[26] & d=string(d) & max_write_xy,strmid(d,28,10)+'.xy',w3
+
+;1D interpolation of 128*b arrays: i - tube No, j - 2theta trace of jth y pixel
+;w2 = w1 & for i=0,127 do begin for j=0,127 do begin w1[i,j,*] = interpol(w1[i,j,*],w37[i,*],float(round(1000*w37[i,*]))/1000); endfor endfor 
+
+;w11=total(w1[*,43:84,*],2)
+;for i=0,127 do begin w22=w11[i,*]&x22=w37[i,*]& max_write_xy,'ECH0000'+STRTRIM(STRING(f),2)+'_'+STRTRIM(STRING(i),2)+'.xy',w22; endfor

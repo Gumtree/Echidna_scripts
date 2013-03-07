@@ -1,0 +1,34 @@
+drive msd 2500
+drive sc 0
+sampletitle ""
+#---------------
+config rights manager ansto
+#--------------
+#title "MI"
+#sampledescription "mtth140-noPC-noSC-rotator-Ge335"
+#user "Vladimir Luzin"
+#samplename g-Fe/Cu Ge335
+#runscan stth 4.0 5.2 25 time 120
+
+#--------------
+samplename Al He 400 bulk
+robby send ROTATE(30,298,)
+runscan stth 4 5.2 25 time 262
+robby send VacRtn(B,17,1)
+wait 60
+#--------------
+robby send SampToVac(B,18,1)
+wait 60
+samplename Zn bulk
+robby send ROTATE(30,298,)
+runscan stth 4 5.2 25 time 262
+robby send VacRtn(B,18,1)
+wait 60
+#--------------
+robby send SampToVac(B,19,1)
+wait 60
+samplename Ni bulk
+robby send ROTATE(30,148,)
+runscan stth 4 5.2 25 time 118
+robby send VacRtn(B,19,1)
+wait 60

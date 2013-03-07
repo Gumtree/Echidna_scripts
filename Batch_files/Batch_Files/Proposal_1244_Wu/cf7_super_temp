@@ -1,0 +1,29 @@
+drive msd 2500
+drive sc 0
+sampledescription mtth140-noPC-noSC-CF7-Ge335
+samplename 2 percent Mn doped FeSe
+user Maw-Kuen Wu
+#
+#samplename 2 percent Mn doped FeSe at base
+#runscan stth 4.0 5.2 25 time 220
+
+proc runtemps {} {
+set templist [list "4" "25" "50" "75" "85" "95" "100" "150" "300" ]
+
+hset /sample/tc1/heater/heaterRange_1 3
+hset /sample/tc1/heater/heaterRange_2 3
+#tc2 controlsensor sensorA
+tc2 range 5
+tc2 heateron 1
+
+foreach temperature $templist {
+samplename [ concat 2p_Mn_FeSe, $temperature K ]
+hset /sample/tc1/sensor/setpoint1 [expr $temperature]
+hset /sample/tc1/sensor/setpoint2 [expr $temperature]
+drive tc2 [expr $temperature]
+wait 300
+runscan stth 4.0 5.2 25 time 220
+}
+}
+
+runtemps
