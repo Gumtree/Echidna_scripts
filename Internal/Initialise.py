@@ -180,6 +180,9 @@ def __load_experiment_data__():
     Plot1.title = str(data_name.value) + ' vs ' + axis_name.value
     Plot1.pv.getPlot().setMarkerEnabled(True)
 
+def __dataset_added__(fns = None):
+    pass
+    
 # This function is called when pushing the Run button in the control UI.
 def __std_run_script__(fns):
     # Use the provided resources, please don't remove.

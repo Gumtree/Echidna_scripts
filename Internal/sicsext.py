@@ -72,22 +72,22 @@ def runscan(scan_variable, scan_start, scan_stop, numpoints, mode, preset, comm 
                     continue
                 if ((scanpoint == -1 and  currentPoint == 0) or (scanpoint != -1 and currentPoint != scanpoint)):
                     scanpoint = currentPoint
-                    if currentPoint > 0 and comm != None:
+                    if currentPoint > 0 :
                         try:
                             print '%4d \t %.4f' % (scanpoint, countsController.getValue().getFloatData())
                         except:
                             pass
-                        try:
+                        if not comm is None:
+                            try:
 #                            if (float(scanpoint) / 3) == (int(scanpoint) /3) :
                                 comm()
 #                                print '\tupdate plot'
-                        except:
-                            traceback.print_exc(file = sys.stdout)
+                            except:
+                                traceback.print_exc(file = sys.stdout)
                 time.sleep(0.1)
             if comm != None:
                 try:
                     comm()
-                    print '\tupdate plot'
                 except:
                     pass
             try:
@@ -162,22 +162,22 @@ def rawscan(type, scan_variable, scan_start, scan_increment, NP, mode, preset, c
                     continue
                 if ((scanpoint == -1 and  currentPoint == 0) or (scanpoint != -1 and currentPoint != scanpoint)):
                     scanpoint = currentPoint
-                    if currentPoint > 0 and comm != None:
+                    if currentPoint > 0 :
                         try:
                             print '%4d \t %d' % (scanpoint, countsController.getValue().getFloatData())
                         except:
                             pass
-                        try:
+                        if comm != None:
+                            try:
 #                            if (float(scanpoint) / 3) == (int(scanpoint) /3) :
-                                exec(comm)
+                                comm()
                                 print '\tupdate plot'
-                        except:
-                            traceback.print_exc(file = sys.stdout)
+                            except:
+                                traceback.print_exc(file = sys.stdout)
                 time.sleep(0.1)
             if comm != None:
                 try:
-                    exec(comm)
-                    print '\tupdate plot'
+                    comm()
                 except:
                     pass
             try:

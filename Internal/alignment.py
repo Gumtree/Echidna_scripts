@@ -9,7 +9,6 @@ from Internal import sicsext
 # script info
 __script__.title = 'Device Alignment'
 __script__.version = ''
-__cur_scan_filename__ = None
 #pact = Act('previous_step()', '<- Previous Step')
     
 G1 = Group('Scan on device')
@@ -33,7 +32,6 @@ def scan_device():
                     + ' ' + str(number_of_points.value) + ' ' + str(scan_mode.value) + ' ' + str(scan_preset.value))
     sicsext.runscan(device_name.value, scan_start.value, scan_stop.value, number_of_points.value, 
                     scan_mode.value, scan_preset.value, load_experiment_data, True)
-#    exec('sicsext.runscan(\'' + aname + '\', ' + scan.value + ', 0, \'call_back()\')')
     time.sleep(2)
     fit_curve()
 devices = sicsext.getDrivables()
@@ -47,6 +45,7 @@ G2 = Group('Fitting')
 data_name = Par('string', 'total_counts', \
                options = ['total_counts', 'bm1_counts', 'bm2_counts'])
 axis_name = Par('string', '')
+axis_name.enabled = False
 peak_pos = Par('float', 'NaN')
 fact = Act('fit_curve()', 'Fit Again')
 #offset_done = Par('bool', False)
@@ -60,7 +59,7 @@ def scan(dname, start, stop, np, mode, preset):
     number_of_points.value = np
     scan_mode.value = mode
     scan_preset.value = preset
-    axis_name = dname
+    axis_name.value = dname
     scan_device()
     
 def fit_curve():
@@ -72,11 +71,9 @@ def __run_script__(fns):
     __std_run_script__(fns)
 
 def load_experiment_data():
-    global __cur_scan_filename__
     basename = sicsext.getBaseFilename()
     fullname = str(System.getProperty('sics.data.path') + '/' + basename)
     df.datasets.clear()
-    __cur_scan_filename__ = fullname
     ds = df[fullname]
     dname = str(data_name.value)
     data = SimpleData(ds[dname])
@@ -93,36 +90,35 @@ def load_experiment_data():
     Plot1.title = str(data_name.value) + ' vs ' + axis_name.value
     Plot1.pv.getPlot().setMarkerEnabled(True)
 
+def __dataset_added__(fns = None):
+    pass
+    
 def __std_run_script__(fns):
     # Use the provided resources, please don't remove.
     global Plot1
     global Plot2
     global Plot3
-    global __cur_scan_filename__
     # check if a list of file names has been given
     if (fns is None or len(fns) == 0) :
         print 'no input datasets'
     else :
         for fn in fns:
             # load dataset with each file name
-            if fn == __cur_scan_filename__:
-                continue
-            else :
-                __cur_scan_filename__ = None
             ds = Plot1.ds
             if ds != None and len(ds) > 0:
                 if ds[0].location == fn:
                     return
             df.datasets.clear()
             ds = df[fn]
+            axis_name.value = ds.axes[0].name
             dname = str(data_name.value)
             if dname == 'total_counts':
 #                data = ds.sum(0)
                 data = ds[dname]
             else:
                 data = ds[dname]
-            qm = ds[str(axis_name.value)]
-            ds2 = Dataset(data, axes=[qm])
+            axis = ds[str(axis_name.value)]
+            ds2 = Dataset(data, axes=[axis])
             ds2.title = ds.id
             ds2.location = fn
             Plot1.set_dataset(ds2)
