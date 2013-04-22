@@ -14,7 +14,8 @@ def runbmonscan(scan_variable, scan_start, scan_increment, NP, mode, preset, cha
 def runhmscan(scan_variable, scan_start, scan_increment, NP, mode, preset, channel, comm = None):
     rawscan('hmscan', scan_variable, scan_start, scan_increment, NP, mode, preset, channel, comm)
 
-def runscan(scan_variable, scan_start, scan_stop, numpoints, mode, preset, comm = None, force = False):
+def runscan(scan_variable, scan_start, scan_stop, numpoints, mode, preset, comm = None, force = False, \
+            datatype = 'HISTOGRAM_XYT', savetype = 'save'):
     # Initialisation
     clearInterrupt()
     cpath = '/commands/scan/runscan'
@@ -27,8 +28,8 @@ def runscan(scan_variable, scan_start, scan_stop, numpoints, mode, preset, comm 
     execute('hset ' + cpath + '/numpoints ' + str(numpoints))
     execute('hset ' + cpath + '/mode ' + mode)
     execute('hset ' + cpath + '/preset ' + str(preset))
-    execute('hset ' + cpath + '/datatype ' + 'HISTOGRAM_XYT')
-    execute('hset ' + cpath + '/savetype ' + 'save')
+    execute('hset ' + cpath + '/datatype ' + datatype)
+    execute('hset ' + cpath + '/savetype ' + savetype)
     execute('hset ' + cpath + '/force ' + str(force))
 
     # Monitor status
