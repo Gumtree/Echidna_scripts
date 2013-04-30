@@ -31,22 +31,9 @@ try:
 except:
     pass
 
-def get_prof_value(name):
-    value = __UI__.getPreference(name)
-    if value == None:
-        value = ''
-    else:
-        value = str(value)
-    return value
-
-def set_prof_value(name, value):
-    if value == None:
-        value = ''
-    __UI__.setPreference(name, value)
-
 fi = File(__buffer_log_file__)
 if not fi.exists():
-    if not fi.mkdir():
+    if not fi.mkdirs():
         print 'Error: failed to make directory: ' + __buffer_log_file__
 __history_log_file__ = __buffer_log_file__ + '/History.txt'
 __buffer_log_file__ += '/LogFile.txt'
@@ -128,7 +115,7 @@ def update_buffer_log_folder():
     __buffer_log_file__ = __export_folder__
     fi = File(__buffer_log_file__)
     if not fi.exists():
-        if not fi.mkdir():
+        if not fi.mkdirs():
             print 'Error: failed to make directory: ' + __buffer_log_file__
     __history_log_file__ = __buffer_log_file__ + '/History.txt'
     __buffer_log_file__ += '/LogFile.txt'
