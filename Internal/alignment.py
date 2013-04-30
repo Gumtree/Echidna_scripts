@@ -16,7 +16,7 @@ device_name = Par('string', 'dummy_motor', options = ['dummy_motor'], command = 
 scan_start = Par('float', 0)
 scan_stop = Par('float', 0)
 number_of_points = Par('int', 0)
-scan_mode = Par('string', 'time')
+scan_mode = Par('string', 'time', options = ['time', 'count'])
 scan_mode.enabled = True
 scan_preset = Par('int', 0)
 act1 = Act('scan_device()', 'Scan on Device')
