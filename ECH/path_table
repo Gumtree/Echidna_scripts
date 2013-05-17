@@ -1,0 +1,49 @@
+######################################################
+# Please do not use key words listed here
+#	axes
+# 	err, error
+#	location
+#	name
+#	ndim
+#	size
+#	shape
+# 	title
+#	units
+#	var
+#	norm_value
+#	norm_attr
+######################################################
+
+experiment_title = $entry/experiment/title
+user = $entry/user/name
+email = $entry/user/email
+phone = $entry/user/phone
+
+total_counts = $entry/instrument/detector/total_counts
+detector_time = $entry/instrument/detector/time
+# detector_data = $entry/instrument/detector/hmm ??? do we still need that ???
+detector_radius = $entry/instrument/detector/radius
+active_height = $entry/instrument/detector/active_height
+
+# monitor_data = $entry/monitor/data ???? do we still need that ???
+bm1_counts = $entry/monitor/bm1_counts
+bm2_counts = $entry/monitor/bm2_counts
+bm3_counts = $entry/monitor/bm3_counts
+
+mchi = $entry/instrument/crystal/chi
+mphi = $entry/instrument/crystal/phi
+mx = $entry/instrument/crystal/translate_x
+my = $entry/instrument/crystal/translate_y
+# mom = $entry/instrument/crystal/rotate ?????????????????????????????????????
+mtth = $entry/instrument/crystal/takeoff_angle
+# oct = $entry/instrument/collimator/oct ?????????????????????????????????????
+
+sample_name = $entry/sample/name
+schi = $entry/sample/chi
+sphi = $entry/sample/phi
+stth = $entry/sample/azimuthal_angle
+sth = $entry/sample/half_azimuthal_angle
+sx = $entry/sample/translate_x
+sy = $entry/sample/translate_y
+som = $entry/sample/rotate
+# robby_drivable = $entry/sample/robby/setpoint ??????????????????????????????
