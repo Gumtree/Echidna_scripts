@@ -1,5 +1,5 @@
 # Script control setup area
-script_source = '/home/jrh/programs/echidna/Gumtree_scripts'
+script_source = '/home/jrh/programs/echidna/Echidna-Gumtree-Scripts'
 __script__.title     = 'ECH Reduction'
 __script__.version   = '1.0'
 __script__.dict_path = script_source + '/ECH/path_table'
@@ -34,7 +34,7 @@ Group('Background Correction').add(bkg_apply, bkg_map, bkg_show)
 # Efficiency Correction
 eff_apply = Par('bool', 'True')
 eff_map   = Par('file', '')
-eff_map.ext = '*.hdf'
+eff_map.ext = '*.*'
 eff_show  = Act('eff_show_proc()', 'Show') 
 Group('Efficiency Correction').add(eff_apply, eff_map, eff_show)
 
@@ -94,6 +94,8 @@ if normalisation_reference:  #saved as location, need label instead
 if efficiency_file_uri:
     eff_map.value = efficiency_file_uri
     
+# Storage for efficiency map
+eff_map_cache = {}
     
 ''' Button Actions '''
 
@@ -124,7 +126,21 @@ def bkg_show_proc():
 
 # show Efficiency Correction Map 
 def eff_show_proc():
-    show_helper(eff_map.value, Plot1, "Efficiency Map: ")
+    from Reduction import reduction
+    #print "Map cache is " + `eff_map_cache`
+    #print "Our current key is " + `eff_map.value`
+    #print "Our value is" + `eff_map_cache.get(eff_map.value)`
+    if not eff_map.value in eff_map_cache:
+        eff_map_cache[eff_map.value] = reduction.read_efficiency_cif(eff_map.value)
+    else:
+        print 'Found in cache ' + `eff_map_cache[eff_map.value]`
+    Plot1.clear()
+    # print 'Plotting ' + `eff_map_cache[eff_map.value]`
+    Plot1.set_dataset(eff_map_cache[eff_map.value])
+    Plot1.title = 'Efficiency map'  #add info to this title!
+
+# For HDF files
+# show_helper(eff_map.value, Plot1, "Efficiency Map: ")
 
 # show Vertical Tube Correction
 def vtc_show_proc():
@@ -343,7 +359,7 @@ def __run_script__(fns):
             eff = None
             print 'WARNING: no eff-map was specified'
         else:
-            eff = Dataset(str(eff_map.value))
+            eff = reduction.read_efficiency_cif(str(eff_map.value))
             if eff.ndim != 2:
                 raise AttributeError('eff.ndim != 2')
     else:
@@ -377,6 +393,8 @@ def __run_script__(fns):
         ds = df[fn]
         # extract basic metadata
         ds = reduction.AddCifMetadata.extract_metadata(ds)
+        # remove redundant dimensions
+        ds = ds.get_reduced()
         # check if normalized is required 
         if norm_ref:
             norm_tar = reduction.applyNormalization(ds, reference=norm_table[norm_ref], target=norm_tar)
@@ -404,12 +422,14 @@ def __run_script__(fns):
             else:
                 print 'specify assemble algorithm'
                 return
-            
+        # Display dataset
+        Plot1.set_dataset(ds)
         if vig_apply_rescale.value:
             ds = reduction.getVerticalIntegrated(ds, normalization=float(vig_rescale_target.value))
         else:
             ds = reduction.getVerticalIntegrated(ds)
-        
+        # Display reduced dataset
+        Plot2.set_dataset(ds)
         ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
         output.write_cif_data(ds,join(str(out_folder.value), 'reduced_' + basename(str(fn))[:-7]))
 

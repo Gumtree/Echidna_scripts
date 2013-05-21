@@ -75,6 +75,17 @@ def getCenters(boundaries):
 
         return rs
     
+def read_efficiency_cif(filename):
+    """Return a dataset,variance stored in a CIF file as efficiency values"""
+    import CifFile
+    eff_cif = CifFile.CifFile(str(filename))
+    eff_cif = eff_cif['efficiencies']
+    eff_data = map(float,eff_cif['_[local]_efficiency_data']) 
+    eff_var = map(float,eff_cif['_[local]_efficiency_variance']) 
+    final_data = Dataset(Data(eff_data).reshape([128,128])).transpose()
+    final_data.var = (Array(eff_var).reshape([128,128])).transpose()
+    return final_data
+    
 def applyNormalization(ds, reference, target=-1):
     """Normalise datasets ds by multiplying by target/reference.  Beam monitor counts, count time and total counts are
        all adjusted by this amount.  Reference is a string referring to a particular location in the dataset, and
@@ -110,7 +121,6 @@ def applyNormalization(ds, reference, target=-1):
         info_string = "Data multiplied by %f" % float(target)/reference
     elif not numericReference:
         reference = Data(reference)
-        print "Norm array is %s" % `reference`
         if target <= 0:
             target = reference.max()
         for i in xrange(ds.shape[0]):
@@ -132,20 +142,18 @@ def getSummed(ds, floatCopy=True, applyStth=True):
     print 'summation of', ds.title
 
     # check arguments
-    if ds.ndim != 4:
-        raise AttributeError('ds.ndim != 4')
+    if ds.ndim != 3:
+        raise AttributeError('ds.ndim != 3')
     if ds.axes[0].title != 'azimuthal_angle':
         raise AttributeError('ds.axes[0].title != azimuthal_angle')
-    if ds.axes[1].title != 'time_of_flight':
-        raise AttributeError('ds.axes[1].title != time_of_flight')
-    if applyStth and (ds.axes[3].title != 'x_pixel_angular_offset'):
-        raise AttributeError('ds.axes[3].title != x_pixel_angular_offset')
+    if applyStth and (ds.axes[2].title != 'x_pixel_angular_offset'):
+        raise AttributeError('ds.axes[2].title != x_pixel_angular_offset')
 
     # first dimension is summed (for Echidna second dimension is just legacy)
     if floatCopy:
-        rs = ds[0, 0].float_copy()
+        rs = ds[0].float_copy()
     else:
-        rs = ds[0, 0].__copy__()
+        rs = ds[0].__copy__()
 
     frame_count = ds.shape[0]
     for frame in xrange(1, frame_count):
@@ -178,23 +186,21 @@ def getStitched(ds):
     print 'stitching of', ds.title
 
     # check arguments
-    if ds.ndim != 4:
-        raise AttributeError('ds.ndim != 4')
+    if ds.ndim != 3:
+        raise AttributeError('ds.ndim != 3')
     if ds.axes[0].title != 'azimuthal_angle':
         raise AttributeError('ds.axes[0].title != azimuthal_angle')
-    if ds.axes[1].title != 'time_of_flight':
-        raise AttributeError('ds.axes[1].title != time_of_flight')
-    if ds.axes[3].title != 'x_pixel_angular_offset':
+    if ds.axes[2].title != 'x_pixel_angular_offset':
         raise AttributeError('ds.axes[3].title != x_pixel_angular_offset')
     if len(ds.stth) != ds.shape[0]:
         raise AttributeError('len(ds.stth) != ds.shape[0]')
 
     frame_count = ds.shape[0]
-    y_count     = ds.shape[2]
-    x_count     = ds.shape[3]
+    y_count     = ds.shape[1]
+    x_count     = ds.shape[2]
 
-    axisY = ds.axes[2]
-    axisX = ds.axes[3]
+    axisY = ds.axes[1]
+    axisX = ds.axes[2]
 
     # check if x-axis needs to be converted from boundaries to centers
     if len(axisX) == x_count + 1:
@@ -203,7 +209,12 @@ def getStitched(ds):
     # container to sort columns
     container = []
 
-    # add (angle, src_frame, src_column) for every frame and column
+    # add (angle, src_frame, src_column) for every frame and column.  
+    # JRH explanation: src_frame is just the step number (ie frame number).  src_column is the tube
+    # number.  Angle is the actual angle for this step and tube.
+    # this neato code creates a list of (angle, step number, tube number) tuples where angle is the
+    # actual angle that each column has come from.  The 'enumerate (axisX + stth)' phrase creates a list
+    # of angles for each tube at each step (step position given by stth).
     for src_frame, stth in enumerate(ds.stth):
         container.extend(map(lambda (src_column, angle): (angle, src_frame, src_column), enumerate(axisX + stth)))
 
@@ -214,9 +225,9 @@ def getStitched(ds):
     rs = zeros([y_count, x_count * frame_count])
 
     # copy meta data
-    copy_metadata_deep(rs, ds[0, 0]) # for Echidna second dimension is just legacy
+    copy_metadata_deep(rs, ds[0]) # for Echidna second dimension is just legacy
     for src_frame in xrange(1, frame_count):
-        ds_frame = ds[src_frame, 0]
+        ds_frame = ds[src_frame]
 
         # !!! what needs to be added?
         rs.total_counts  += ds_frame.total_counts
@@ -228,19 +239,20 @@ def getStitched(ds):
     ds_var = ds.var.__iArray__.getArrayUtils()
     rs_var = rs.var.__iArray__.getArrayUtils()
 
-    src_org = jintcopy([0, 0, 0      , 0])
-    src_shp = jintcopy([1, 1, y_count, 1])
+    src_org = jintcopy([0, 0      , 0])    #origins and shapes for section copies
+    src_shp = jintcopy([1, y_count, 1])
 
-    dst_org = jintcopy([0      , 0])
+    dst_org = jintcopy([0      , 0])       #destinations
     dst_shp = jintcopy([y_count, 1])
 
-    # copy columns
+    # copy columns.  As container is already sorted, we are simply copying in
+    # columns starting at the beginning and moving along the destination array
     for dst_column, (angle, src_frame, src_column) in enumerate(container):
 
         # update origins
         src_org[0] = src_frame
-        src_org[3] = src_column
-        dst_org[1] = dst_column
+        src_org[2] = src_column  #i.e. tube number
+        dst_org[1] = dst_column  #i.e. new tube position
 
         # copy storage
         src_array = ds_storage.section(src_org, src_shp).getArray()
@@ -259,8 +271,8 @@ def getStitched(ds):
     # finalize result
     rs.title = ds.title + ' (Stitched)'
     # axes
-    rs.axes[0].title = ds.axes[2].title
-    rs.axes[1].title = ds.axes[3].title
+    rs.axes[0].title = ds.axes[1].title
+    rs.axes[1].title = ds.axes[2].title
     # sth/stth is included in x-axis
     rs.sth  = 0
     rs.stth = 0
@@ -269,261 +281,10 @@ def getStitched(ds):
 
     return rs
 
-def getDeadPixelMap(ds):
-    print 'searching for dead pixels of', ds.title
-
-    # check arguments
-    if ds.ndim != 2:
-        raise AttributeError('ds.ndim != 2')
-
-    # result
-    rs = ds.__copy__()
-    rs.fill(0)
-    dp = 0 # dead pixels
-
-    ds_iter = ds.item_iter()
-    rs_iter = rs.item_iter()
-    try:
-        while True:
-            rs_iter.next()
-
-            if ds_iter.next() <= epsilon: # to compensate for floating-point error
-                dp += 1
-                rs_iter.set_curr(1)
-
-    except StopIteration:
-        pass
-
-    # finalize result
-    rs.title = ds.title + ' (Dead Pixels)'
-
-    print 'dead pixels:', dp
-
-    return rs
-
-def getOutlierMap(ds, stdRange=3):
-    print 'searching for outliers of', ds.title
-
-    # check arguments
-    if ds.ndim != 2:
-        raise AttributeError('ds.ndim != 2')
-
-    # determine average and standard deviation
-    px = 0.0 # number of pixels used
-    sm = 0.0 # sum of values required for mean value
-    sq = 0.0 # sum of squared values required for standard deviation
-
-    ds_iter = ds.item_iter()
-    try:
-        while True:
-            ds_val = ds_iter.next()
-
-            if ds_val > epsilon: # ignore dead pixels
-                px += 1
-                sm += ds_val
-                sq += ds_val * ds_val
-
-    except StopIteration:
-        pass
-
-    # average and standard deviation
-    avg = sm / px
-    std = sqrt(sq / px - avg * avg)
-
-    # valid range
-    vL = avg - stdRange * std
-    vH = avg + stdRange * std
-
-    # result
-    rs = ds.__copy__()
-    rs.fill(0)
-    ot = 0 # number of outliers
-
-    ds_iter = ds.item_iter()
-    rs_iter = rs.item_iter()
-    try:
-        while True:
-            rs_iter.next()
-            ds_val = ds_iter.next()
-
-            if (ds_val > epsilon) and ((ds_val < vL) or (ds_val > vH)) : # ignore dead pixels
-                # new outlier
-                ot += 1
-                rs_iter.set_curr(1)
-
-    except StopIteration:
-        pass
-
-    # finalize result
-    rs.title = ds.title + ' (Outliers)'
-
-    # dead pixels
-    dpx = ds.shape[0] * ds.shape[1] - px
-
-    print 'average counts per pixel:', avg
-    print 'standard deviation:', std
-    print 'outliers:', ot, '(sigma range:', str(stdRange) + ')'
-    print 'dead pixels:', dpx
-    print 'discarded pixels', dpx + ot
-
-    return rs
-
-def getOkMap(ds, stdRange=3, lowerBoundary=None, upperBoundary=None):
-    """The Ok Map is ? """
-    print 'generating OK-map of', ds.title
-
-    # check arguments
-    if ds.ndim != 2:
-        raise AttributeError('ds.ndim != 2')
-
-    # determine average and standard deviation
-    px = 0.0 # number of pixels used
-    sm = 0.0 # sum of values required for mean value
-    sq = 0.0 # sum of squared values required for standard deviation
-
-    # to check boundaries
-    y      =  0
-    x      = -1 # in order to start with (x=0,y=0) at first pixel
-    stride = ds.shape[1]
-
-    ds_iter = ds.item_iter()
-    try:
-        while True:
-            ds_val = ds_iter.next()
-
-            x += 1
-            if x >= stride:
-                y += 1
-                x  = 0
-
-            if (lowerBoundary is not None) and (y < lowerBoundary):
-                continue
-            if (upperBoundary is not None) and (y > upperBoundary) :
-                continue
-
-            if ds_val > epsilon: # ignore dead pixels
-                px += 1
-                sm += ds_val
-                sq += ds_val * ds_val
-
-    except StopIteration:
-        pass
-
-    # average / standard deviation
-    avg = sm / px
-    std = sqrt(sq / px - avg * avg)
-
-    # valid range
-    vL = avg - stdRange * std
-    vH = avg + stdRange * std
-
-    # result is OK-map
-    rs = ds.__copy__()
-    rs.fill(0)
-    ot = 0 # number of outliers
-
-    # to check boundaries
-    y      =  0
-    x      = -1 # in order to start with (x=0,y=0) at first pixel
-
-    ds_iter = ds.item_iter()
-    ok_iter = rs.item_iter()
-    try:
-        while True:
-            ok_iter.next()
-            ds_val = ds_iter.next()
-
-            x += 1
-            if x >= stride:
-                y += 1
-                x  = 0
-
-            if (lowerBoundary is not None) and (y < lowerBoundary):
-                continue
-            if (upperBoundary is not None) and (y > upperBoundary) :
-                continue
-
-            if ds_val > epsilon: # ignore dead pixels
-                if (vL <= ds_val) and (vH >= ds_val):
-                    ok_iter.set_curr(1)   # in range
-                else:
-                    ot += 1               # new outlier
-
-    except StopIteration:
-        pass
-
-    # finalize result
-    rs.title = ds.title + ' (OK-Map)'
-
-    # dead pixels
-    dpx = ds.shape[0] * ds.shape[1] - px
-
-    print 'average counts per pixel:', avg
-    print 'standard deviation:', std
-    print 'outliers:', ot, '(sigma range:', str(stdRange) + ')'
-    print 'dead pixels:', dpx
-    print 'discarded pixels', dpx + ot
-
-    return rs
-
-def getStdMap(ds):
-    print 'generating Std-map of', ds.title
-
-    # check arguments
-    if ds.ndim != 2:
-        raise AttributeError('ds.ndim != 2')
-
-    # determine average and standard deviation
-    px = 0.0 # number of pixels used
-    sm = 0.0 # sum of values required for mean value
-    sq = 0.0 # sum of squared values required for standard deviation
-
-    ds_iter = ds.item_iter()
-    try:
-        while True:
-            ds_val = ds_iter.next()
-
-            if ds_val > epsilon: # ignore dead pixels
-                px += 1
-                sm += ds_val
-                sq += ds_val * ds_val
-
-    except StopIteration:
-        pass
-
-    # average
-    avg = sm / px
-    std = sqrt(sq / px - avg * avg)
-
-    # result is standard deviation map
-    st = ds.float_copy()
-    st.fill(0)
-
-    ds_iter = ds.item_iter()
-    st_iter = st.item_iter()
-    try:
-        while True:
-            st_iter.next()
-            ds_val = ds_iter.next()
-
-            if ds_val > epsilon: # ignore dead pixels
-                st_iter.set_curr((ds_val - avg) / std)
-
-    except StopIteration:
-        pass
-
-    # finalize result
-    st.title = ds.title + ' (Std-Map)'
-
-    print 'average counts per pixel:', avg
-    print 'standard deviation:', std
-    print 'dead pixels:', ds.shape[0] * ds.shape[1] - px
-
-    return st
-
 def scrub_vanad_pos(vanad,takeoff,crystal,nosteps=25):
     """Return a (tube,minstep,maxstep) list describing where
        vanadium peaks occur for these settings"""
+    takeoff = int(round(takeoff))
     if crystal=='335' and takeoff==140 and nosteps==75:
        return [
               [32,50,70],   #110 at 44 degrees
@@ -562,7 +323,8 @@ def scrub_vanad_pos(vanad,takeoff,crystal,nosteps=25):
     else:
        raise ValueError,"No V peak data found for %s at %s" % (crystal,takeoff)
 
-def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",detail=None,splice=None):
+def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",bottom = 22, top = 106, 
+    detail=None,splice=None):
     """Calculate efficiencies given vanadium and background hdf files.  If detail is
     some integer, detailed calculations for that tube will be displayed. Edge is a
     list of tuples ((tube_no,step),) before which the tube is assumed to be blocked and therefore
@@ -577,11 +339,11 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",detai
     neighbouring values.  It also gives us a decent estimate of the error.
 
     norm_ref is the source of normalisation counts for putting each frame and each dataset onto a
-    common scale."""
+    common scale. Top and bottom are the upper and lower limits for a sensible signal."""
 
-    import stat
+    import stat,datetime
     omega = vanad["$entry/instrument/crystal/omega"][0]  # for reference
-    takeoff = vanad["$entry/instrument/crystal/takeoff"][0]
+    takeoff = vanad["$entry/instrument/crystal/takeoff_angle"][0]
     crystal = AddCifMetadata.pick_hkl(omega-takeoff/2.0,"335")  #post April 2009 used 335 only
     #
     # Get important information from the basic files
@@ -596,9 +358,9 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",detai
     btime = datetime.datetime.fromtimestamp(btime)
     btime = btime.strftime("%Y-%m-%dT%H:%M:%S%z")
     # Subtract the background
-    norm_target = applyNormalization(vanad,reference,-1)
-    applyNormalization(backgr,reference,norm_target)
-    no_backgr = vanad - backgr
+    norm_target = applyNormalization(vanad,norm_ref,-1)
+    applyNormalization(backgr,norm_ref,norm_target)
+    pure_vanad = (vanad - backgr).get_reduced()    #remove the annoying 2nd dimension
     nosteps = pure_vanad.shape[0]
     # now we have to get some efficiency numbers out.  We will have nosteps 
     # observations of each value, if nothing is blocked or scrubbed.   We obtain a
@@ -609,49 +371,63 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",detai
     # of the observed relative value
     #
     # remember the structure of our data: the leftmost index is the vertical
-    # pixel number, the right is the angle, as we have transposed 
-    #
-    eff_array = zeros((128,128)) 
-    # Now zero out blocked areas
+    # pixel number, the right is the angle,
+    eff_array = zeros_like(pure_vanad[0])
+    # keep a track of excluded tubes by step to work around lack of count_zero
+    # support
+    tube_count = ones(pure_vanad.shape[0]) * pure_vanad.shape[-1]
+    # Now zero out blocked areas. The first bs steps are blocked on tube bt.
+    # We are assuming no overlap with V peaks later
     for bt,bs in edge:
         pure_vanad[0:bs,:,bt] = 0
+        tube_count[0:bs] = tube_count[0:bs] - 1
     # Now zero out vanadium peaks
     sv_boundaries = scrub_vanad_pos(pure_vanad,takeoff,crystal,nosteps=nosteps)
     for bt,bstart,bfinish in sv_boundaries:
         pure_vanad[bstart:bfinish,:,bt] = 0
+        tube_count[bstart:bfinish] = tube_count[bstart:bfinish] - 1
     # Now zero out excluded regions
-    pure_vanad = pure_vanad[:,22:106:,:]
-    # For each detector position, calculate a factor relative to the mean observed intensity
+    pure_vanad = pure_vanad[:,bottom:top,:]
+    print "Tube count by step: " + `tube_count.tolist()`
+     # For each detector position, calculate a factor relative to the mean observed intensity
     # at that step.
-    step_sum = pure_vanad.sum(1).sum(1) #total counts at this step
-    non_zero = map(lambda a:numpy.nonzero(a),pure_vanad)
-    non_zero = map(lambda a:len(a[0]),non_zero)    #count non-zero elements
-    average = step_sum/non_zero  #average value for gain normalisation
-    print "Average intensity seen at each step: " + `average`
-    step_gain = pure_vanad.transpose()/average
-    step_gain = step_gain.transpose()  
+    step_sum = pure_vanad.sum(0) #total counts at each step - meaning is different to numpy
+    average = step_sum/(tube_count * (top - bottom))  #average value for gain normalisation
+    print "Average intensity seen at each step: " + `average.tolist()`
+    # No broadcasting, have to be clever
+    step_gain = map(lambda a,b:a/b,pure_vanad,average)
+    return step_gain
+
+def the_rest():
+   
+    def mean(a):
+        return a.sum()/len(a)
+
+    def cov(a):
+        m = mean(a)
+        total = ((a - m)**2).sum()
+        return total/(len(a)-1)
+
+    step_gain = step_gain.transpose()  # so now have [tubeno,vertical,step]
     # Now each point in step gain is the gain of this pixel at that step, using
     # the total counts at that step as normalisation
     # We add the individual observations to obtain the total gain...
     # Note that we have to reshape in order to make the arrays an array of vectors so that
-    # mean and covariance will work correctly
+    # mean and covariance will work correctly.  After the reshape + transpose below, we
+    # have shape[1]*shape[2] vectors that are shape[0] (ie number of steps) long.
     gain_as_vectors = step_gain.reshape(step_gain.shape[0],step_gain.shape[1]*step_gain.shape[2]) 
-    nonzero_gain = map(lambda a:numpy.compress(a>0,a),gain_as_vectors.transpose())
-    total_gain = map(lambda a:numpy.mean(numpy.array(a)),nonzero_gain)
+    nonzero_gain = map(lambda a:compress(a>0,a),gain_as_vectors.transpose())
+    total_gain = map(lambda a:mean(numpy.array(a)),nonzero_gain)
     total_gain = numpy.array(total_gain).reshape(step_gain.shape[1],step_gain.shape[2])
     # Calculate the covariance of the final sum as the covariance of the
     # series of observations, divided by the number of observations
-    covariances = map(numpy.cov,nonzero_gain)
-    covariances = numpy.array(covariances)
-    #count contributions
-    num_obs = numpy.array(map(len,nonzero_gain),dtype='float32')
-    #divide by contributions - 1
-    covariances = covariances/(num_obs-1)
+    covariances = map(cov,nonzero_gain)
+    covariances = Array(covariances)
     covariances = covariances.transpose().reshape(step_gain.shape[1],step_gain.shape[2]) 
     # now insert into the return array as inverse values
-    eff_array[:,22:106] = 1.0/(total_gain.transpose())
+    eff_array[:,bottom:top] = 1.0/(total_gain.transpose())
     #   eff_error[tube_no] = (variance*(inverse_val**4))
-    eff_error[:,22:106] = covariances.transpose()*(eff_array[:,22:106]**4)
+    eff_error[:,bottom:top] = covariances.transpose()*(eff_array[:,bottom:top]**4)
     # pixel OK map...anything with positive efficiency but variance is no 
     # greater than the efficiency (this latter is arbitrary)
     ok_pixels = numpy.where(eff_array>0)
@@ -949,7 +725,7 @@ def getBackgroundCorrected(ds, bkg, norm_ref=None, norm_target=-1):
 
     # normalise
     if norm_ref:
-            applyNormalisation(bkg,norm_ref,norm_target)
+            applyNormalization(bkg,norm_ref,norm_target)
 
     if ds.ndim == 2:
         # check shape
@@ -967,27 +743,23 @@ def getBackgroundCorrected(ds, bkg, norm_ref=None, norm_target=-1):
 
         print 'background corrected frames:', 1
 
-    elif ds.ndim == 4:
+    elif ds.ndim == 3:
         # check arguments
         if ds.axes[0].title != 'azimuthal_angle':
             raise AttributeError('ds.axes[0].title != azimuthal_angle')
-        if ds.axes[1].title != 'time_of_flight':
-            raise AttributeError('ds.axes[1].title != time_of_flight')
 
-        if bkg.ndim == 4:
+        if bkg.ndim == 3:
             if bkg.axes[0].title != 'azimuthal_angle':
                 raise AttributeError('bkg.axes[0].title != azimuthal_angle')
-            if bkg.axes[1].title != 'time_of_flight':
-                raise AttributeError('bkg.axes[1].title != time_of_flight')
             if ds.shape != bkg.shape:
                 raise AttributeError('ds.shape != bkg.shape')
         else:
-            if ds.shape[2:] != bkg.shape:
-                raise AttributeError('ds.shape[2:] != bkg.shape')
+            if ds.shape[1:] != bkg.shape:
+                raise AttributeError('ds.shape[1:] != bkg.shape')
 
         # result
         rs = ds.__copy__()
-        if bkg.ndim == 4:
+        if bkg.ndim == 3:
             # subtract each bkg-frame from each rs-frame
             # can't we do this straight out?
             # for frame in xrange(ds.shape[0]):
@@ -1006,7 +778,7 @@ def getBackgroundCorrected(ds, bkg, norm_ref=None, norm_target=-1):
         print 'background corrected frames:', ds.shape[0]
 
     else:
-        raise AttributeError('ds.ndim != 2 or 4')
+        raise AttributeError('ds.ndim != 2 or 3')
 
     return rs
 
@@ -1023,6 +795,7 @@ def getEfficiencyCorrected(ds, eff):
             raise AttributeError('ds.shape != eff.shape')
 
         # result
+       
         rs = ds * eff
 
         # finalize result
@@ -1030,19 +803,20 @@ def getEfficiencyCorrected(ds, eff):
 
         print 'efficiency corrected frames:', 1
 
-    elif ds.ndim == 4:
+    elif ds.ndim == 3:
         # check arguments
         if ds.axes[0].title != 'azimuthal_angle':
             raise AttributeError('ds.axes[0].title != azimuthal_angle')
-        if ds.axes[1].title != 'time_of_flight':
-            raise AttributeError('ds.axes[1].title != time_of_flight')
-        if ds.shape[2:] != eff.shape:
-            raise AttributeError('ds.shape[2:] != eff.shape')
+        if ds.shape[1:] != eff.shape:
+            raise AttributeError('ds.shape[1:] != eff.shape')
 
         # result
         rs = ds.__copy__()
         for frame in xrange(ds.shape[0]):
-            rs[frame, 0] *= eff
+            print 'Frame %d' % frame
+            print 'Frame shape: ' + `rs[frame].shape`
+            print 'Eff shape: ' + `eff.shape`
+            rs[frame] *= eff
 
         # finalize result
         rs.title = ds.title + ' (Efficiency Corrected)'
@@ -1050,7 +824,7 @@ def getEfficiencyCorrected(ds, eff):
         print 'efficiency corrected frames:', rs.shape[0]
 
     else:
-        raise AttributeError('ds.ndim != 2 or 4')
+        raise AttributeError('ds.ndim != 2 or 3')
 
     return rs
 
@@ -1061,15 +835,13 @@ def getVerticallyCorrected(ds, offsets_filename):
     if ds.ndim == 2:
         if ds.axes[0].title != 'y_pixel_offset':
             raise AttributeError('ds.axes[0].title != y_pixel_offset')
-    elif ds.ndim == 4:
+    elif ds.ndim == 3:
         if ds.axes[0].title != 'azimuthal_angle':
             raise AttributeError('ds.axes[0].title != azimuthal_angle')
-        if ds.axes[1].title != 'time_of_flight':
-            raise AttributeError('ds.axes[1].title != time_of_flight')
-        if ds.axes[2].title != 'y_pixel_offset':
+        if ds.axes[1].title != 'y_pixel_offset':
             raise AttributeError('ds.axes[2].title != y_pixel_offset')
     else:
-        raise AttributeError('ds.ndim != 2 or 4')
+        raise AttributeError('ds.ndim != 2 or 3')
 
     if not offsets_filename:
         raise AttributeError('offsets_filename is empty')
@@ -1081,14 +853,14 @@ def getVerticallyCorrected(ds, offsets_filename):
         # get functions for source data
         def getter2d(ds, src_sl, x_index):
             return ds[      src_sl, x_index] # 2d
-        def getter4d(ds, src_sl, x_index):
-            return ds[:, 0, src_sl, x_index] # 4d
+        def getter3d(ds, src_sl, x_index):
+            return ds[:, src_sl, x_index] # 3d
 
         # set functions for result data
         def setter2d(rs, dst_sl, x_index, value):
             rs[      dst_sl, x_index] = value # 2d
-        def setter4d(ds, dst_sl, x_index, value):
-            rs[:, 0, dst_sl, x_index] = value # 4d
+        def setter3d(ds, dst_sl, x_index, value):
+            rs[:, dst_sl, x_index] = value # 3d
 
         rs = ds.__copy__()
         if ds.ndim == 2:
@@ -1097,8 +869,8 @@ def getVerticallyCorrected(ds, offsets_filename):
             setter = setter2d
         else:
             y_len  = ds.shape[2]
-            getter = getter4d
-            setter = setter4d
+            getter = getter3d
+            setter = setter3d
 
         for line in f:
             if type(line) is str:
@@ -1149,15 +921,13 @@ def getHorizontallyCorrected(ds, offsets_filename):
     if ds.ndim == 2:
         if ds.axes[1].title != 'x_pixel_angular_offset':
             raise AttributeError('ds.axes[1].title != x_pixel_angular_offset')
-    elif ds.ndim == 4:
+    elif ds.ndim == 3:
         if ds.axes[0].title != 'azimuthal_angle':
             raise AttributeError('ds.axes[0].title != azimuthal_angle')
-        if ds.axes[1].title != 'time_of_flight':
-            raise AttributeError('ds.axes[1].title != time_of_flight')
-        if ds.axes[3].title != 'x_pixel_angular_offset':
+        if ds.axes[2].title != 'x_pixel_angular_offset':
             raise AttributeError('ds.axes[3].title != x_pixel_angular_offset')
     else:
-        raise AttributeError('ds.ndim != 2 or 4')
+        raise AttributeError('ds.ndim != 2 or 3')
 
     if not offsets_filename:
         raise AttributeError('offsets_filename is empty')
