@@ -372,7 +372,8 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     #
     # remember the structure of our data: the leftmost index is the vertical
     # pixel number, the right is the angle,
-    eff_array = zeros_like(pure_vanad[0])
+    eff_array = zeros(pure_vanad[0].shape)
+    eff_error = zeros(pure_vanad[0].shape)
     # keep a track of excluded tubes by step to work around lack of count_zero
     # support
     tube_count = ones(pure_vanad.shape[0]) * pure_vanad.shape[-1]
@@ -394,20 +395,12 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     step_sum = pure_vanad.sum(0) #total counts at each step - meaning is different to numpy
     average = step_sum/(tube_count * (top - bottom))  #average value for gain normalisation
     print "Average intensity seen at each step: " + `average.tolist()`
-    # No broadcasting, have to be clever
-    step_gain = map(lambda a,b:a/b,pure_vanad,average)
-    return step_gain
-
-def the_rest():
-   
-    def mean(a):
-        return a.sum()/len(a)
-
-    def cov(a):
-        m = mean(a)
-        total = ((a - m)**2).sum()
-        return total/(len(a)-1)
-
+    # No broadcasting, have to be clever.  We have to keep our storage in
+    # gumpy, not Jython, so we avoid creating large jython lists by not
+    # using map.
+    step_gain = ones(pure_vanad.shape)
+    for new,old,av in zip(range(len(step_gain)),pure_vanad,average):
+        step_gain[new] = old/av
     step_gain = step_gain.transpose()  # so now have [tubeno,vertical,step]
     # Now each point in step gain is the gain of this pixel at that step, using
     # the total counts at that step as normalisation
@@ -415,28 +408,47 @@ def the_rest():
     # Note that we have to reshape in order to make the arrays an array of vectors so that
     # mean and covariance will work correctly.  After the reshape + transpose below, we
     # have shape[1]*shape[2] vectors that are shape[0] (ie number of steps) long.
-    gain_as_vectors = step_gain.reshape(step_gain.shape[0],step_gain.shape[1]*step_gain.shape[2]) 
-    nonzero_gain = map(lambda a:compress(a>0,a),gain_as_vectors.transpose())
-    total_gain = map(lambda a:mean(numpy.array(a)),nonzero_gain)
-    total_gain = numpy.array(total_gain).reshape(step_gain.shape[1],step_gain.shape[2])
+    gain_as_vectors = step_gain.reshape([step_gain.shape[0],step_gain.shape[1]*step_gain.shape[2]]) 
+    gain_as_vectors = gain_as_vectors.transpose()
+    # count the non-zero contributions
+    nonzero_contribs = zeros(gain_as_vectors.shape,dtype=float)
+    nonzero_contribs[gain_as_vectors>0] = 1.0
+    nz_sum = nonzero_contribs.sum(axis=0)
+    gain_sum = gain_as_vectors.sum(axis=0)
+    total_gain = gain_sum/nz_sum
+    final_gain = total_gain.reshape([step_gain.shape[1],step_gain.shape[2]])
+    print 'We have total gain: ' + `final_gain`
+    print 'Shape ' + `final_gain.shape`
+    eff_array[:,bottom:top] = 1.0/final_gain
     # Calculate the covariance of the final sum as the covariance of the
     # series of observations, divided by the number of observations
-    covariances = map(cov,nonzero_gain)
-    covariances = Array(covariances)
-    covariances = covariances.transpose().reshape(step_gain.shape[1],step_gain.shape[2]) 
-    # now insert into the return array as inverse values
-    eff_array[:,bottom:top] = 1.0/(total_gain.transpose())
+    cov_array = zeros(gain_as_vectors.shape,dtype=float)
+    # Following is necessary to match dimensions
+    total_gain = total_gain.reshape([total_gain.shape[0],1])
+    print 'Shapes: ' + `cov_array[:,0].shape` + `gain_as_vectors[:,0].shape` + `total_gain.shape`
+    for step in xrange(gain_as_vectors.shape[1]):
+        print 'Covariance step %d' % step
+        cov_array[:,step] = (gain_as_vectors[:,step] - total_gain)**2
+    # Now ignore the points that are not observed before summing
+    cov_array[gain_as_vectors<=0] = 0
+    cov_sum = cov_array.sum(axis=0)
+    cov_result = cov_sum/(nz_sum - 1)
+    covariances = cov_result.reshape([step_gain.shape[1],step_gain.shape[2]])
+    print 'We have covariances too! ' + `covariances.shape`
+    print 'Writing to eff_error, shape ' + `eff_error[:,bottom:top].shape`
     #   eff_error[tube_no] = (variance*(inverse_val**4))
-    eff_error[:,bottom:top] = covariances.transpose()*(eff_array[:,bottom:top]**4)
+    eff_error[:,bottom:top] = covariances*(eff_array[:,bottom:top]**4)
     # pixel OK map...anything with positive efficiency but variance is no 
-    # greater than the efficiency (this latter is arbitrary)
-    ok_pixels = numpy.where(eff_array>0)
-    pix_ok_map = numpy.where(eff_error < eff_array,0,-1)
-    print "OK pixels %d" % len(ok_pixels[0])  
-    print "Variance not OK pixels %d" % sum(sum(pix_ok_map)) 
+    # greater than the efficiency (this latter is arbitrary)return eff_array
+    ok_pixels = zeros(eff_array.shape,dtype=int)
+    ok_pixels[eff_array>0]=1
+    pix_ok_map = zeros(eff_error.shape,dtype=int)
+    pix_ok_map[eff_error > eff_array]=1
+    print "OK pixels %d" % ok_pixels.sum() 
+    print "Variance not OK pixels %d" % pix_ok_map.sum()
     # Now fix our output arrays to avoid NaN
-    eff_array = numpy.where(numpy.isnan(eff_array),0,eff_array)
-    eff_error = numpy.where(numpy.isnan(eff_error),0,eff_error)
+    #eff_array = where(isnan(eff_array),0,eff_array)
+    #eff_error = where(isnan(eff_error),0,eff_error)
     if splice: 
         backgr_str = backgr[0]+" + " + backgr[1]
         add_str = "data from %s up to step %d replaced with data from %s" % (backgr[0],splice,backgr[1])
@@ -450,9 +462,9 @@ def the_rest():
     return {"_[local]_efficiency_data":eff_array,
             "_[local]_efficiency_variance":eff_error,
             "contributors":pix_ok_map,
-            "_[local]_efficiency_raw_data":os.path.basename(vanad),
+            "_[local]_efficiency_raw_data":os.path.basename(vanad.location),
             "_[local]_efficiency_raw_timestamp":vtime,
-            "_[local]_efficiency_background_data":os.path.basename(backgr),
+            "_[local]_efficiency_background_data":os.path.basename(backgr.location),
             "_[local]_efficiency_background_timestamp":btime,
             "_[local]_efficiency_determination_material":"Vanadium",
             "_[local]_efficiency_determination_method":"From flood field produced by 9mm V rod",
@@ -640,19 +652,68 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1):
 
     return rs
 
-def getVerticalCorrectionList(ds, algorithm='Vertically Centered Average', output_filename=None):
+def do_sum(ds):
+    """Trivial helper function to get around Gumtree missing stuff"""
+    starting = ds.get_reduced()
+    summed = zeros(starting.shape[1:])
+    for stepno in range(len(starting)):
+        summed = summed + starting[stepno]
+    return summed
+
+def getVerticalEdges(rawdata,ref_tube=0,simple=True,output_filename=None):
+    """Get the vertical edges of the Echidna tubes based on a simple edge
+    finding algorithm. We assume the edges are parallel"""
+    import os,math
+    results = []
+    for tube in range(len(rawdata)):
+        print "%d:" % tube,
+        results.append(get_edges(rawdata[tube]))
+    ref_tube_wid = results[ref_tube][1] - results[ref_tube][0]
+    ref_tube_val = results[ref_tube][0]+(ref_tube_wid/2.0)
+    of1 = open(output_filename,"w")
+    of1.write('#Vertical offsets calculated from %s' % os.path.basename(rawdata.location))
+    of1.write('#Calculated by Gumtree')
+    print "#Results:\n"
+    print "#Offsets of centres relative to %3.1f for tube %d\n" % (ref_tube_val,ref_tube)
+    print "#Tube Offset Error Scale Error Low High Diff   Val(L) Val(H)  Ideal(L) Ideal(H)\n"
+    for tube in range(len(results)):
+        thisres = results[tube]
+        thiswid = float(thisres[1] - thisres[0])
+        widvar = 1        #assume +/- 0.5 on each
+        thisoff = thisres[0]+(thiswid/2.0) - ref_tube_val
+        offvar = 1
+        scaleerr = sqrt(widvar)/ref_tube_wid
+        print "%3d: %4.1f %4.1f %5.3f %4.3f %3d %3d (%2d)\n" % (tube,thisoff,sqrt(offvar),
+        thiswid/ref_tube_wid,scaleerr,thisres[0],thisres[1],thiswid)
+        if simple:
+            of1.write("%3d  %3d\n" % (tube+1,-1*math.floor(thisoff)))
+    of1.close()
+    return {"result":results}
+
+def find_edge(edge_points):
+    """Find the half-way value between the values at the beginning and end
+       of the supplied array. The largest value must be at the end"""
+    target_val = edge_points[0]+(edge_points[-1] - edge_points[0])/2.0
+    for i in range(len(edge_points)):
+          if edge_points[i]>target_val and edge_points[i+1]>target_val: break
+    if i == len(edge_points) - 1:
+        print `edge_points`
+    return i
+
+def get_edges(whole_strip,edge_search=30):
+    """Return the bottom and top edges of the strip, assuming that the edge
+       occurs within edge_search pixels"""
+    # Gumtree - we can't reverse an array, so we have to be tricky and 
+    # multiply the end one by -1
+    return (find_edge(whole_strip[0:edge_search]),
+            len(whole_strip) - (edge_search - find_edge(-1.0*whole_strip[-edge_search:])))
+
+def getVerticalCenteredAverage(ds, output_filename=None):
     print 'make vertical correction list...'
 
     # check arguments
     if ds.ndim != 2:
         raise AttributeError('ds.ndim != 2')
-    if ds.axes[0].title != 'y_pixel_offset':
-        raise AttributeError('ds.axes[0].title != y_pixel_offset')
-    if ds.axes[1].title != 'x_pixel_angular_offset':
-        raise AttributeError('ds.axes[1].title != x_pixel_angular_offset')
-    if (algorithm is str) and (algorithm.lower() != 'vertically centered average'):
-        raise AttributeError('currently only "Vertically Centered Average" is supported')
-
     # vertical weighted mean values for each column
     vwm     = zeros(ds.shape[1])
     vwm_sum = 0.0
@@ -706,7 +767,7 @@ def getVerticalCorrectionList(ds, algorithm='Vertically Centered Average', outpu
                 f.write("%-7i %i\n" % (x_index, offset))
 
         # finalize result
-        rs.title = 'Vertical Corrections [based on %s via "%s"]' % (ds.title, algorithm)
+        rs.title = 'Vertical Corrections [based on %s]' % ds.location
 
         print 'maximal absolute offset:', max_offset
 
@@ -885,13 +946,13 @@ def getVerticallyCorrected(ds, offsets_filename):
                         if offset != 0:
 
                             # transfer pixel along current column
-                            dst_sl = slice(                             \
-                                Reduction._max(-offset        , 0    ), \
-                                Reduction._min(-offset + y_len, y_len))
+                            dst_sl = slice(
+                                _max(-offset        , 0    ), 
+                                _min(-offset + y_len, y_len))
 
-                            src_sl = slice(                             \
-                                Reduction._max(+offset        , 0    ), \
-                                Reduction._min(+offset + y_len, y_len))
+                            src_sl = slice(                             
+                                _max(+offset        , 0    ), 
+                                _min(+offset + y_len, y_len))
 
                             setter(rs, dst_sl, x_index, getter(ds, src_sl, x_index))
 

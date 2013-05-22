@@ -31,6 +31,13 @@ bkg_map.ext = '*.hdf'
 bkg_show  = Act('bkg_show_proc()', 'Show') 
 Group('Background Correction').add(bkg_apply, bkg_map, bkg_show)
 
+# Vertical Tube Correction
+vtc_apply = Par('bool', 'True')
+vtc_file  = Par('file', '')
+vtc_file.ext = '*.txt,*.*'
+vtc_show  = Act('vtc_show_proc()', 'Show') 
+Group('Vertical Tube Correction').add(vtc_apply, vtc_file, vtc_show)
+
 # Efficiency Correction
 eff_apply = Par('bool', 'True')
 eff_map   = Par('file', '')
@@ -38,12 +45,6 @@ eff_map.ext = '*.*'
 eff_show  = Act('eff_show_proc()', 'Show') 
 Group('Efficiency Correction').add(eff_apply, eff_map, eff_show)
 
-# Vertical Tube Correction
-vtc_apply = Par('bool', 'True')
-vtc_file  = Par('file', '')
-vtc_file.ext = '*.txt,*.*'
-vtc_show  = Act('vtc_show_proc()', 'Show') 
-Group('Vertical Tube Correction').add(vtc_apply, vtc_file, vtc_show)
 
 # Horizontal Tube Correction
 htc_apply = Par('bool', 'True')
@@ -400,14 +401,16 @@ def __run_script__(fns):
             norm_tar = reduction.applyNormalization(ds, reference=norm_table[norm_ref], target=norm_tar)
         if bkg:
             ds = reduction.getBackgroundCorrected(ds, bkg, norm_table[norm_ref], norm_tar)
-        # check if efficiency correction is required
-        if eff:
-            ds = reduction.getEfficiencyCorrected(ds, eff)
         
         # check if vertical tube correction is required
         if vtc:
             ds = reduction.getVerticallyCorrected(ds, vtc)
             
+        # check if efficiency correction is required
+        if eff:
+            ds = reduction.getEfficiencyCorrected(ds, eff)
+        
+        
         # check if horizontal tube correction is required
         if htc:
             ds = reduction.getHorizontallyCorrected(ds, htc)
