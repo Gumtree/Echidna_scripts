@@ -25,7 +25,7 @@ norm_target    = Par('string', 'auto')
 Group('Normalization').add(norm_apply, norm_reference, norm_target)
 
 # Background Correction
-bkg_apply = Par('bool', 'True')
+bkg_apply = Par('bool', 'False')
 bkg_map   = Par('file', '')
 bkg_map.ext = '*.hdf'
 bkg_show  = Act('bkg_show_proc()', 'Show') 

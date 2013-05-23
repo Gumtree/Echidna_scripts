@@ -28,28 +28,26 @@ out_folder.dtype = 'folder'
 Group('Output Folder').add(out_folder)
 
 # Normalization
-norm_apply     = Par('bool'  , 'True'      )
-norm_reference = Par('string', 'bm1 counts', options = ['bm1 counts', 'bm2 counts', 'bm3 counts', 'detector time'])
-Group('Normalization').add(norm_apply, norm_reference)
+# We link the normalisation sources to actual dataset locations right here, right now
+norm_table = {'Monitor 1':'bm1_counts','Monitor 2':'bm2_counts',
+              'Monitor 3':'bm3_counts','Detector time':'detector_time'}
 
-## Background Correction Map
-bkg_make = Par('bool'  , 'True')
-bkg_name = Par('string', today.strftime("bkg_%Y_%m_%d.hdf"))
-Group('Background Correction Map').add(bkg_make, bkg_name)
+norm_apply     = Par('bool'  , 'True'      )
+norm_reference = Par('string', 'bm1 counts', options = norm_table.keys())
+Group('Normalization').add(norm_apply, norm_reference)
 
 # Vertical Tube Correction List
 vtc_make      = Par('bool'  , 'True')
 vtc_name      = Par('string', today.strftime("vertical_offsets_%Y_%m_%d.txt"))
-vtc_algorithm = Par('string', 'Vertically Centered Average', options = ['Vertically Centered Average'])
+vtc_algorithm = Par('string', 'Edges', 
+                    options = ['Edges','Vertically Centered Average'])
 Group('Vertical Tube Correction List').add(vtc_make, vtc_algorithm, vtc_name)
 
 # Efficiency Correction Map
 eff_make = Par('bool'  , 'True')
 eff_name = Par('string', today.strftime("eff_%Y_%m_%d.hdf"))
 eff_std_range      = Par('float' , '1.8' )
-eff_lower_boundary = Par('int'   , '0'   )
-eff_upper_boundary = Par('int'   , '127' )
-Group('Efficiency Correction Map').add(eff_make, eff_name, eff_std_range, eff_lower_boundary, eff_upper_boundary)
+Group('Efficiency Correction Map').add(eff_make, eff_name, eff_std_range)
 
 
 ''' Load Preferences '''
@@ -130,13 +128,15 @@ def __run_script__(fns):
         return
     
     van = Dataset(str(in_van_run.value)).get_reduced()
+    van.location = str(in_van_run.value)
     bkg = Dataset(str(in_bkg_run.value)).get_reduced()
+    bkg.location = str(in_bkg_run.value)
     
     # check if input is correct
     if van.ndim != 3:
-        raise AttributeError('van.ndim != 4')
+        raise AttributeError('van.ndim != 3')
     if bkg.ndim != 3:
-        raise AttributeError('van.ndim != 4')
+        raise AttributeError('bkg.ndim != 3')
     if van.axes[0].title != 'azimuthal_angle':
         raise AttributeError('van.axes[0].title != azimuthal_angle')
     if bkg.axes[0].title != 'azimuthal_angle':
@@ -149,6 +149,7 @@ def __run_script__(fns):
         norm_ref = str(norm_reference.value)
     
     # check if vertical tube correction list needs to be created
+    vtc_filename = join(str(out_folder.value), str(vtc_name.value))
     if vtc_make.value:
         if van.ndim > 2:
             summed = zeros(van.shape[1:])
@@ -157,26 +158,26 @@ def __run_script__(fns):
                 input_ds = summed
         else:
             input_ds = van
-        reduction.getVerticalCorrectionList(                                    
-            input_ds,                                                            
-            algorithm=str(vtc_algorithm.value),                                 
-            output_filename=join(str(out_folder.value), str(vtc_name.value)))
+        input_ds.location = van.location
+        if str(vtc_algorithm.value) == 'Vertically Centered Average':
+            reduction.getVerticalCorrectionList(input_ds,
+                                                output_filename=vtc_filename)
+        elif str(vtc_algorithm.value) == 'Edges':
+            reduction.getVerticalEdges(                                    
+                input_ds,output_filename=vtc_filename)
+        else:
+            print 'Vertical offset algorithm not recognised'
 
-    # Check source of vertical offsets
-    voff_name = vtc_name.value
     if eff_make.value:
-        eff = reduction.calc_eff_mark2(van, bkg,voff=vtc_name.value , norm_ref=norm_ref)
-        eff.save_copy(join(str(out_folder.value), str(eff_name.value)))
-
-        reduction.getVerticalIntegrated(eff)
-        
-    # check if vertical tube correction list needs to be created
-    if vtc_make.value:
-        reduction.getVerticalCorrectionList(                                    
-            van,                                                            
-            algorithm=str(vtc_algorithm.value),                                 
-            output_filename=join(str(out_folder.value), str(vtc_name.value)))
-
+        eff = reduction.calc_eff_mark2(van, bkg,vtc_filename , norm_ref=norm_table[norm_ref])
+    
+    output_filename = join(str(out_folder.value), str(eff_name.value))
+    # write out new efficiency file
+    import time
+    print 'Writing efficiency file at %s' % time.asctime()
+    reduction.output_2d_efficiencies(eff, output_filename, comment='Created by Gumtree')
+    print 'Finished writing at %s' % time.asctime()
+    
 # dispose
 def __dispose__():
     global Plot1

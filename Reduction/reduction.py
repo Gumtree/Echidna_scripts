@@ -75,17 +75,7 @@ def getCenters(boundaries):
 
         return rs
     
-def read_efficiency_cif(filename):
-    """Return a dataset,variance stored in a CIF file as efficiency values"""
-    import CifFile
-    eff_cif = CifFile.CifFile(str(filename))
-    eff_cif = eff_cif['efficiencies']
-    eff_data = map(float,eff_cif['_[local]_efficiency_data']) 
-    eff_var = map(float,eff_cif['_[local]_efficiency_variance']) 
-    final_data = Dataset(Data(eff_data).reshape([128,128])).transpose()
-    final_data.var = (Array(eff_var).reshape([128,128])).transpose()
-    return final_data
-    
+
 def applyNormalization(ds, reference, target=-1):
     """Normalise datasets ds by multiplying by target/reference.  Beam monitor counts, count time and total counts are
        all adjusted by this amount.  Reference is a string referring to a particular location in the dataset, and
@@ -342,8 +332,8 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     common scale. Top and bottom are the upper and lower limits for a sensible signal."""
 
     import stat,datetime
-    omega = vanad["$entry/instrument/crystal/omega"][0]  # for reference
-    takeoff = vanad["$entry/instrument/crystal/takeoff_angle"][0]
+    omega = vanad["mom"][0]  # for reference
+    takeoff = vanad["mtth"][0]
     crystal = AddCifMetadata.pick_hkl(omega-takeoff/2.0,"335")  #post April 2009 used 335 only
     #
     # Get important information from the basic files
@@ -361,6 +351,10 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     norm_target = applyNormalization(vanad,norm_ref,-1)
     applyNormalization(backgr,norm_ref,norm_target)
     pure_vanad = (vanad - backgr).get_reduced()    #remove the annoying 2nd dimension
+    #
+    # move the vertical pixels to correct positions
+    #
+    pure_vanad = getVerticallyCorrected(pure_vanad,v_off)
     nosteps = pure_vanad.shape[0]
     # now we have to get some efficiency numbers out.  We will have nosteps 
     # observations of each value, if nothing is blocked or scrubbed.   We obtain a
@@ -459,8 +453,8 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     ttable = ""
     for btube,bstep in edge:
        ttable = ttable + "  %5d%5d\n" % (btube,bstep) 
-    return {"_[local]_efficiency_data":eff_array,
-            "_[local]_efficiency_variance":eff_error,
+    return {"_[local]_efficiency_data":eff_array.transpose(),
+            "_[local]_efficiency_variance":eff_error.transpose(),
             "contributors":pix_ok_map,
             "_[local]_efficiency_raw_data":os.path.basename(vanad.location),
             "_[local]_efficiency_raw_timestamp":vtime,
@@ -476,6 +470,47 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
              "Flood field data lower than values in following table assumed obscured:\n  Tube   Step\n " + ttable + add_str
             }
 
+def output_2d_efficiencies(result_dict,filename,comment=''):
+    outfile = open(filename,"w")
+    outfile.write("#"+comment+"\n")
+    #first two values are dimensions in C/Java order
+    outfile.write("data_efficiencies\n")
+    efficiencies = result_dict["_[local]_efficiency_data"]
+    variances = result_dict["_[local]_efficiency_variance"]
+    del result_dict["_[local]_efficiency_data"]
+    del result_dict["_[local]_efficiency_variance"]
+    outfile.write("_[local]_efficiency_number_of_tubes %d\n" % len(efficiencies[0]))
+    outfile.write("_[local]_efficiency_number_vertical %d\n" % len(efficiencies))
+    for key,val in result_dict.items():
+        if key[0]=='_':           # CIF items only
+            if not '\n' in str(val):
+                outfile.write("%s '%s'\n" % (key,val))
+            else:
+                outfile.write("%s \n;\n%s\n;\n" % (key,val))
+    outfile.write("loop_\n _[local]_efficiency_data\n _[local]_efficiency_variance\n")
+    for col_no in range(len(efficiencies)):
+            for vert_pix in range(len(efficiencies[col_no])):
+                if not vert_pix%5:               #multiple of 5
+                    outfile.write("\n")
+                #Use lots of significant figures for variances as will take sqrt later
+                outfile.write("%8.5f %10.7f " % (efficiencies[col_no][vert_pix], variances[col_no][vert_pix]))
+            outfile.write("##End row %d\n" % (col_no))  #a line at the end of each tube
+            print 'Finished row %d' % col_no
+    outfile.close()
+
+def read_efficiency_cif(filename):
+    """Return a dataset,variance stored in a CIF file as efficiency values"""
+    import CifFile,time
+    print 'Reading in %s as CIF at %s' % (filename,time.asctime())
+    eff_cif = CifFile.CifFile(str(filename))
+    eff_cif = eff_cif['efficiencies']
+    eff_data = map(float,eff_cif['_[local]_efficiency_data']) 
+    eff_var = map(float,eff_cif['_[local]_efficiency_variance']) 
+    final_data = Dataset(Data(eff_data).reshape([128,128]))
+    final_data.var = (Array(eff_var).reshape([128,128]))
+    print 'Finished reading at %s' % time.asctime()
+    return final_data
+    
 def getEfficiencyCorrectionMap(van, bkg, okMap=None):
     print 'create efficiency correction map...'
 
@@ -660,34 +695,39 @@ def do_sum(ds):
         summed = summed + starting[stepno]
     return summed
 
-def getVerticalEdges(rawdata,ref_tube=0,simple=True,output_filename=None):
+def getVerticalEdges(rawdata,simple=True,output_filename=None):
     """Get the vertical edges of the Echidna tubes based on a simple edge
-    finding algorithm. We assume the edges are parallel"""
+    finding algorithm. We assume the edges are parallel. The shifts are
+    adjusted so that 63.5 is the centre."""
     import os,math
+    ref_tube = 0   #all widths relative to the first tube
+    rw = rawdata.transpose()
     results = []
-    for tube in range(len(rawdata)):
+    for tube in range(len(rw)):
         print "%d:" % tube,
-        results.append(get_edges(rawdata[tube]))
+        results.append(get_edges(rw[tube]))
     ref_tube_wid = results[ref_tube][1] - results[ref_tube][0]
-    ref_tube_val = results[ref_tube][0]+(ref_tube_wid/2.0)
-    of1 = open(output_filename,"w")
-    of1.write('#Vertical offsets calculated from %s' % os.path.basename(rawdata.location))
-    of1.write('#Calculated by Gumtree')
+    # ref_tube_val = results[ref_tube][0]+(ref_tube_wid/2.0)
+    if output_filename != None:
+        of1 = open(output_filename,"w")
+        of1.write('#Vertical offsets calculated from %s\n' % os.path.basename(rawdata.location))
+        of1.write('#Calculated by Gumtree Edge algorithm\n')
     print "#Results:\n"
-    print "#Offsets of centres relative to %3.1f for tube %d\n" % (ref_tube_val,ref_tube)
+    print "#Offsets of centres relative to ideal 63.5\n"
     print "#Tube Offset Error Scale Error Low High Diff   Val(L) Val(H)  Ideal(L) Ideal(H)\n"
     for tube in range(len(results)):
         thisres = results[tube]
         thiswid = float(thisres[1] - thisres[0])
         widvar = 1        #assume +/- 0.5 on each
-        thisoff = thisres[0]+(thiswid/2.0) - ref_tube_val
+        thisoff = thisres[0]+(thiswid/2.0) - 63.5
         offvar = 1
         scaleerr = sqrt(widvar)/ref_tube_wid
-        print "%3d: %4.1f %4.1f %5.3f %4.3f %3d %3d (%2d)\n" % (tube,thisoff,sqrt(offvar),
+        print "%3d: %4.1f %4.1f %5.3f %4.3f %3d %3d (%2d)" % (tube,thisoff,sqrt(offvar),
         thiswid/ref_tube_wid,scaleerr,thisres[0],thisres[1],thiswid)
-        if simple:
+        if simple and output_filename != None:
             of1.write("%3d  %3d\n" % (tube+1,-1*math.floor(thisoff)))
-    of1.close()
+    if output_filename != None:
+        of1.close()
     return {"result":results}
 
 def find_edge(edge_points):
@@ -696,8 +736,6 @@ def find_edge(edge_points):
     target_val = edge_points[0]+(edge_points[-1] - edge_points[0])/2.0
     for i in range(len(edge_points)):
           if edge_points[i]>target_val and edge_points[i+1]>target_val: break
-    if i == len(edge_points) - 1:
-        print `edge_points`
     return i
 
 def get_edges(whole_strip,edge_search=30):
@@ -874,9 +912,6 @@ def getEfficiencyCorrected(ds, eff):
         # result
         rs = ds.__copy__()
         for frame in xrange(ds.shape[0]):
-            print 'Frame %d' % frame
-            print 'Frame shape: ' + `rs[frame].shape`
-            print 'Eff shape: ' + `eff.shape`
             rs[frame] *= eff
 
         # finalize result
