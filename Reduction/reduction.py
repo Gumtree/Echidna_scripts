@@ -318,7 +318,7 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     """Calculate efficiencies given vanadium and background hdf files.  If detail is
     some integer, detailed calculations for that tube will be displayed. Edge is a
     list of tuples ((tube_no,step),) before which the tube is assumed to be blocked and therefore
-    data are unreliable. All efficiencies in this area are set to zero.  A value for step larger
+    data are unreliable. All efficiencies in this area are set to 1.  A value for step larger
     than the total steps will result in zero efficiency for this tube overall. A splicing operation
     merges files in backgr by substituting the first splice steps of the first file with
     the first splice steps of the second file.
@@ -470,13 +470,20 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
              "Flood field data lower than values in following table assumed obscured:\n  Tube   Step\n " + ttable + add_str
             }
 
-def output_2d_efficiencies(result_dict,filename,comment=''):
+def output_2d_efficiencies(result_dict,filename,comment='',transpose=False):
+    #We have to make sure that we have our array orientation correct. The
+    # transpose flag signals that the data and error arrays should be transposed before
+    # output
     outfile = open(filename,"w")
     outfile.write("#"+comment+"\n")
     #first two values are dimensions in C/Java order
     outfile.write("data_efficiencies\n")
     efficiencies = result_dict["_[local]_efficiency_data"]
     variances = result_dict["_[local]_efficiency_variance"]
+    if transpose==True:
+        print 'Transposing efficiencies'
+        efficiencies = efficiencies.transpose()
+        variances = variances.transpose()
     del result_dict["_[local]_efficiency_data"]
     del result_dict["_[local]_efficiency_variance"]
     outfile.write("_[local]_efficiency_number_of_tubes %d\n" % len(efficiencies[0]))
@@ -488,16 +495,37 @@ def output_2d_efficiencies(result_dict,filename,comment=''):
             else:
                 outfile.write("%s \n;\n%s\n;\n" % (key,val))
     outfile.write("loop_\n _[local]_efficiency_data\n _[local]_efficiency_variance\n")
-    for col_no in range(len(efficiencies)):
-            for vert_pix in range(len(efficiencies[col_no])):
-                if not vert_pix%5:               #multiple of 5
+    # In Gumpy iteration is much faster as __getitem__ involves a lot of code each and
+    # every time - hence we have rewritten this as an iterator
+    col_count = 0
+    col_iter = array.ArraySliceIter(efficiencies)
+    var_col_iter = array.ArraySliceIter(variances)
+    try:
+      while True:
+        col = col_iter.next()
+        col_var = var_col_iter.next()
+        pix_iter = col.item_iter()
+        pix_var_iter = col_var.item_iter()
+        point_count = 0
+        try:
+            while True:
+                point_count = point_count + 1
+                if not point_count%5:               #multiple of 5
                     outfile.write("\n")
                 #Use lots of significant figures for variances as will take sqrt later
-                outfile.write("%8.5f %10.7f " % (efficiencies[col_no][vert_pix], variances[col_no][vert_pix]))
-            outfile.write("##End row %d\n" % (col_no))  #a line at the end of each tube
-            print 'Finished row %d' % col_no
+                outfile.write("%8.5f %10.7f " % (pix_iter.next(), pix_var_iter.next()))
+        except StopIteration:
+            pass
+        outfile.write("##End row %d\n" % (col_count))  #a line at the end of each tube
+        print 'Finished row %d' % col_count
+        col_count = col_count + 1
+    except StopIteration:
+       pass
     outfile.close()
-
+    # Return keys to dictionary
+    result_dict["_[local]_efficiency_data"] = efficiencies
+    result_dict["_[local]_efficiency_variance"] = variances
+    
 def read_efficiency_cif(filename):
     """Return a dataset,variance stored in a CIF file as efficiency values"""
     import CifFile,time
@@ -511,74 +539,63 @@ def read_efficiency_cif(filename):
     print 'Finished reading at %s' % time.asctime()
     return final_data
     
-def getEfficiencyCorrectionMap(van, bkg, okMap=None):
-    print 'create efficiency correction map...'
-
-    # [davidm] I do not recommend to automatically sum the input, because the result may not be normalized correctly
-    # check if summation is required
-    # (it does not matter if we subtract each bkg-frame from each van-frame and then sum the result or
-    #  if we subtract the summed bkg-frames from the summed van-frames)
-    #if van.ndim == 4:
-    #    van = Reduction.getSummed(van, applyStth=False, show=False)
-    #if bkg.ndim == 4:
-    #    bkg = Reduction.getSummed(bkg, applyStth=False, show=False)
+def getVerticalIntegrated(ds, okMap=None, normalization=-1):
+    print 'vertical integration of', ds.title
 
     # check dimensions
-    if van.ndim != 2:
-        raise AttributeError('van.ndim != 2')
-    if bkg.ndim != 2:
-        raise AttributeError('bkg.ndim != 2')
+    if ds.ndim != 2:
+        raise AttributeError('ds.ndim != 2')
     if (okMap is not None) and (okMap.ndim != 2):
         raise AttributeError('okMap.ndim != 2')
 
     # check shape
-    if van.shape != bkg.shape:
-        raise AttributeError('van.shape != bkg.shape')
-    if (okMap is not None) and (van.shape != okMap.shape):
-        raise AttributeError('van.shape != okMap.shape')
+    if (okMap is not None) and (ds.shape != okMap.shape):
+        raise AttributeError('ds.shape != okMap.shape')    
 
-    # result     
-    rs  = van.float_copy()
-    rs -= bkg
-
-    # iterators
-    rs_val_iter = rs.item_iter()
-    rs_var_iter = rs.var.item_iter()
-    # special check for okMap
-    if okMap is not None:
-        ok_iter = okMap.item_iter()
-    else:
-        ok_iter = DefaultOkIter()
-
-    px = 0.0 # number of pixels used
-    sm = 0.0 # sum of inverted values required for mean value
-
-    try:
-        while True:
-            rs_val = rs_val_iter.next()
-            rs_var_iter.next()
-
-            if (ok_iter.next() > epsilon) and (rs_val > epsilon): # to compensate for floating-point error
-                px += 1
-                sm += rs_val
-            else:
-                # for bad-pixel set result to zero
-                rs_val_iter.set_curr(0.0)
-                rs_var_iter.set_curr(0.0)
-
-    except StopIteration:
-        pass
+    # JRH strategy: we need to sum vertically, accumulating individual pixel
+    # errors as we go, and counting the contributions.
+    #
+    # The okmap should give us contributions by summing vertically
+    # Note that we are assuming at least 0.1 count in every valid pixel
+    
+    import time
+    print `time.clock()`
+    totals = ds.sum(axis=1)
+    print `time.clock()`
+    contrib_map = zeros(ds.shape,dtype=int)
+    print `time.clock()`
+    contrib_map[ds>0.1] = 1
+    print `time.clock()`
+    contribs = contrib_map.sum(axis=1)
+    print `time.clock()`
+    #
+    # We have now reduced the scale of the problem by 100
+    #
+    # Normalise to the maximum number of contributors
+    max_contribs = float(contribs.max())
+    #
+    print 'Maximum no of contributors %f' % max_contribs
+    contribs = contribs/max_contribs
+    totals = totals / contribs
+    
+    # Note that we haven't treated variance yet
 
     # finalize result
-    av = sm / px # average
-    rs = av / rs # = 1 / (rs / av) # to obtain inverted result
+    totals.title = ds.title + ' (Vertically Integrated)'
 
-    rs.title = 'Efficiency Map [based on %s]' % van.title
+    # normalize result if required
+    if normalization > 0:
+        totals *= (float(normalization) / totals.max())
+        totals.title = totals.title + ' (x %5.0f)' % (float(normalization)/totals.max())
 
-    return rs
- # incomplete
+    # check if x-axis needs to be converted from boundaries to centers
+    if len(ds.axes[1]) == (ds.shape[1] + 1):
+        totals.set_axes([getCenters(ds.axes[1])])
+        totals.axes[0].title = ds.axes[1].title
 
-def getVerticalIntegrated(ds, okMap=None, normalization=-1):
+    return totals
+
+def oldgetVerticalIntegrated(ds, okMap=None, normalization=-1):
     print 'vertical integration of', ds.title
 
     # check dimensions

@@ -306,8 +306,11 @@ def __run_script__(fns):
     from Reduction import reduction
     from os.path import basename
     from os.path import join
+    import time           #how fast are we going?
     import AddCifMetadata,output
     
+    elapsed = time.clock()
+    print 'Started working at %f' % (time.clock()-elapsed)
     df.datasets.clear()
     
     # check input
@@ -402,19 +405,21 @@ def __run_script__(fns):
         if bkg:
             ds = reduction.getBackgroundCorrected(ds, bkg, norm_table[norm_ref], norm_tar)
         
+        print 'Finished normalisation, background subtraction at %f' % (time.clock()-elapsed)
         # check if vertical tube correction is required
         if vtc:
             ds = reduction.getVerticallyCorrected(ds, vtc)
-            
+        print 'Finished vertical offset correction at %f' % (time.clock()-elapsed)
         # check if efficiency correction is required
         if eff:
             ds = reduction.getEfficiencyCorrected(ds, eff)
         
-        
+        print 'Finished efficiency correction at %f' % (time.clock()-elapsed)
         # check if horizontal tube correction is required
         if htc:
             ds = reduction.getHorizontallyCorrected(ds, htc)
 
+        print 'Finished horizontal correction at %f' % (time.clock()-elapsed)
         # assemble dataset
         if ds.ndim > 2:
             asm_algo = str(asm_algorithm.value)
@@ -426,16 +431,19 @@ def __run_script__(fns):
                 print 'specify assemble algorithm'
                 return
         # Display dataset
+        print 'Finished stitching at %f' % (time.clock()-elapsed)
         Plot1.set_dataset(ds)
         if vig_apply_rescale.value:
             ds = reduction.getVerticalIntegrated(ds, normalization=float(vig_rescale_target.value))
         else:
             ds = reduction.getVerticalIntegrated(ds)
+        print 'Finished vertical integration at %f' % (time.clock()-elapsed)
         # Display reduced dataset
         Plot2.set_dataset(ds)
         ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
         output.write_cif_data(ds,join(str(out_folder.value), 'reduced_' + basename(str(fn))[:-7]))
-
+        print 'Finished writing data at %f' % (time.clock()-elapsed)
+        
 # dispose
 def __dispose__():
     global Plot1,Plot2,Plot3

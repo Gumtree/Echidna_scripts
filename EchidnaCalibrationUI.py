@@ -1,5 +1,5 @@
 # Script control setup area
-script_source = '/home/jrh/programs/echidna/Gumtree_scripts'
+script_source = '/home/jrh/programs/echidna/Echidna-Gumtree-Scripts'
 __script__.title     = 'ECH Calibration'
 __script__.version   = '1.0'
 __script__.dict_path = script_source + '/ECH/path_table'
@@ -46,8 +46,9 @@ Group('Vertical Tube Correction List').add(vtc_make, vtc_algorithm, vtc_name)
 # Efficiency Correction Map
 eff_make = Par('bool'  , 'True')
 eff_name = Par('string', today.strftime("eff_%Y_%m_%d.hdf"))
+eff_transpose = Par('bool', 'False')
 eff_std_range      = Par('float' , '1.8' )
-Group('Efficiency Correction Map').add(eff_make, eff_name, eff_std_range)
+Group('Efficiency Correction Map').add(eff_make, eff_name, eff_std_range,eff_transpose)
 
 
 ''' Load Preferences '''
@@ -177,6 +178,11 @@ def __run_script__(fns):
     print 'Writing efficiency file at %s' % time.asctime()
     reduction.output_2d_efficiencies(eff, output_filename, comment='Created by Gumtree')
     print 'Finished writing at %s' % time.asctime()
+    if eff_transpose.value==True:
+        output_filename = output_filename + '-transposed'
+        reduction.output_2d_efficiencies(eff,output_filename,comment='Created by Gumtree',
+                                         transpose=True)
+        print 'Finished writing transposed file at %s' % time.asctime()
     
 # dispose
 def __dispose__():
