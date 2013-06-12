@@ -85,3 +85,21 @@ def format_esd(number,var):
     else:
         flt_format = "%%.%df(%%2d)" % outsigfigs
     return flt_format % (number, int(round(err)))
+
+###################################################
+def dump_tubes(ds,filename):
+    """Dump information from each tube"""
+    import math
+    # We have 2D data, with the first axis being tube number and the second
+    # axis the angular step of that tube
+    outfile = open(filename,"w")
+    for tubeno in range(ds.shape[1]):
+        outfile.write("#Detector %d\n" % tubeno)
+        angle_array = ds.axes[0]+ds.axes[1][tubeno]
+        data_array = ds[:,tubeno].get_reduced()
+        error = data_array.var
+        for stepno in range(ds.shape[0]):
+            outfile.write("%8.4f   %8.4f    %8.4f" % (angle_array[stepno],data_array[stepno],
+                                                      math.sqrt(error[stepno])))
+            outfile.write("\n")
+    outfile.close()

@@ -539,12 +539,13 @@ def read_efficiency_cif(filename):
     print 'Finished reading at %s' % time.asctime()
     return final_data
     
-def getVerticalIntegrated(ds, okMap=None, normalization=-1):
+# The following routine can be called with unstitched data, in
+# which case we will return the data with the 'axis' dimension
+# summed. The default is for axis=1
+def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1):
     print 'vertical integration of', ds.title
+    start_dim = ds.ndim
 
-    # check dimensions
-    if ds.ndim != 2:
-        raise AttributeError('ds.ndim != 2')
     if (okMap is not None) and (okMap.ndim != 2):
         raise AttributeError('okMap.ndim != 2')
 
@@ -560,13 +561,13 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1):
     
     import time
     print `time.clock()`
-    totals = ds.sum(axis=1)
+    totals = ds.intg(axis=axis)
     print `time.clock()`
     contrib_map = zeros(ds.shape,dtype=int)
     print `time.clock()`
     contrib_map[ds>0.1] = 1
     print `time.clock()`
-    contribs = contrib_map.sum(axis=1)
+    contribs = contrib_map.intg(axis=axis)
     print `time.clock()`
     #
     # We have now reduced the scale of the problem by 100
@@ -588,10 +589,15 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1):
         totals *= (float(normalization) / totals.max())
         totals.title = totals.title + ' (x %5.0f)' % (float(normalization)/totals.max())
 
-    # check if x-axis needs to be converted from boundaries to centers
-    if len(ds.axes[1]) == (ds.shape[1] + 1):
-        totals.set_axes([getCenters(ds.axes[1])])
-        totals.axes[0].title = ds.axes[1].title
+    # check if any axis needs to be converted from boundaries to centers
+    new_axes = []
+    for i in range(totals.ndim):
+        if len(totals.axes[i]) == totals.shape[i] + 1:
+            new_axes.append(getCenters(totals.axes[i]))
+        else:
+            new_axes.append(totals.axes[i])
+    totals.set_axes(new_axes)
+    # totals.axes[0].title = ds.axes[1].title
 
     return totals
 
