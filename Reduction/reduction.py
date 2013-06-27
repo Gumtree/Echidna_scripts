@@ -542,7 +542,7 @@ def read_efficiency_cif(filename):
 # The following routine can be called with unstitched data, in
 # which case we will return the data with the 'axis' dimension
 # summed. The default is for axis=1
-def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1):
+def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0):
     print 'vertical integration of', ds.title
     start_dim = ds.ndim
 
@@ -597,9 +597,64 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1):
         else:
             new_axes.append(totals.axes[i])
     totals.set_axes(new_axes)
-    # totals.axes[0].title = ds.axes[1].title
 
+    # Finally, cluster points together if they are close enough
+
+    if cluster > 0:
+        totals = debunch(totals,cluster)
     return totals
+
+def debunch(totals,cluster_size):
+    new_totals = zeros_like(totals)
+    new_totals = Dataset(new_totals)
+    nt_iter = new_totals.item_iter()
+    ntv_iter = new_totals.var.item_iter()
+    tot_iter = totals.item_iter()
+    totv_iter = totals.var.item_iter()
+    axis_iter = totals.axes[0].item_iter()
+    cluster_begin = axis_iter.next()
+    new_angle = cluster_begin
+    total_intensity = total_variance = 0.0
+    mean_angle = 0.0
+    bunch_points = 0
+    in_points = 0
+    new_axis = []
+    while True:
+        distance = new_angle - cluster_begin
+        if distance < cluster_size:
+            total_intensity += tot_iter.next()
+            total_variance += totv_iter.next()
+            mean_angle +=axis_iter.next()
+            bunch_points += 1
+            try:
+                new_angle = axis_iter.next()
+            except:
+                break
+        else:                #this point to far beyond beginning
+            nt_iter.next()
+            ntv_iter.next()
+            nt_iter.set_curr(total_intensity/bunch_points)
+            ntv_iter.set_curr(total_variance/(bunch_points*bunch_points))
+            new_axis.append(mean_angle/bunch_points)
+            in_points += bunch_points
+            # re-initialise counters
+            total_intensity = 0.0
+            total_variance = 0.0
+            mean_angle = 0.0
+            bunch_points = 0
+            #The while loop has not stepped the input iterators forward, so we now treat the same
+            #point as we have just tested, but as last_point will now be the same, we will accumulate
+            #it.
+            cluster_begin = new_angle
+    # Now we have finished, we just need to handle the last point
+    nt_iter.next()
+    nt_iter.set_curr(total_intensity)
+    new_axis.append(mean_angle/bunch_points)
+    # Trim output arrays
+    newlen = len(new_axis)
+    new_totals = new_totals[:newlen]
+    new_totals.axes[0] = new_axis
+    return new_totals
 
 def oldgetVerticalIntegrated(ds, okMap=None, normalization=-1):
     print 'vertical integration of', ds.title

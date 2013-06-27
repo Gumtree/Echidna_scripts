@@ -62,7 +62,8 @@ vig_lower_boundary = Par('int', '0')
 vig_upper_boundary = Par('int', '127')
 vig_apply_rescale  = Par('bool', 'True')
 vig_rescale_target = Par('float', '10000.0')
-Group('Vertical Integration').add(vig_lower_boundary, vig_upper_boundary, vig_apply_rescale, vig_rescale_target)
+vig_cluster = Par('float','0.03')
+Group('Vertical Integration').add(vig_lower_boundary, vig_upper_boundary, vig_cluster, vig_apply_rescale, vig_rescale_target)
 
 # Plot Helper
 plh_from = Par('string', 'Plot 2', options = ['Plot 1', 'Plot 2', 'Plot 3'])
@@ -434,9 +435,10 @@ def __run_script__(fns):
         print 'Finished stitching at %f' % (time.clock()-elapsed)
         Plot1.set_dataset(ds)
         if vig_apply_rescale.value:
-            ds = reduction.getVerticalIntegrated(ds, normalization=float(vig_rescale_target.value))
+            ds = reduction.getVerticalIntegrated(ds, axis=0, normalization=float(vig_rescale_target.value),
+                                                 cluster=float(vig_cluster.value))
         else:
-            ds = reduction.getVerticalIntegrated(ds)
+            ds = reduction.getVerticalIntegrated(ds, axis=0, cluster=float(vig_cluster.value))
         print 'Finished vertical integration at %f' % (time.clock()-elapsed)
         # Display reduced dataset
         Plot2.set_dataset(ds)
