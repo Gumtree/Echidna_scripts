@@ -573,6 +573,7 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0)
     # We have now reduced the scale of the problem by 100
     #
     # Normalise to the maximum number of contributors
+    print 'Axes labels:' + `ds.axes[0].title` + ' ' + `ds.axes[1].title`
     max_contribs = float(contribs.max())
     #
     print 'Maximum no of contributors %f' % max_contribs
@@ -596,8 +597,9 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0)
             new_axes.append(getCenters(totals.axes[i]))
         else:
             new_axes.append(totals.axes[i])
+        print 'Axis %d: %s' % (i,totals.axes[i].title)
     totals.set_axes(new_axes)
-
+    
     # Finally, cluster points together if they are close enough
 
     if cluster > 0:
@@ -654,6 +656,8 @@ def debunch(totals,cluster_size):
     newlen = len(new_axis)
     new_totals = new_totals[:newlen]
     new_totals.axes[0] = new_axis
+    new_totals.axes[0].title = totals.axes[0].title
+    new_totals.title = totals.title
     return new_totals
 
 def oldgetVerticalIntegrated(ds, okMap=None, normalization=-1):
