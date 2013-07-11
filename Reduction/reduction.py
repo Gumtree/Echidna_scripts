@@ -623,18 +623,6 @@ def getEfficiencyCorrected(ds, eff):
 def getVerticallyCorrected(ds, offsets_filename):
     print 'vertical correction of', ds.title
 
-    # check arguments
-    if ds.ndim == 2:
-        if ds.axes[0].title != 'y_pixel_offset':
-            raise AttributeError('ds.axes[0].title != y_pixel_offset')
-    elif ds.ndim == 3:
-        if ds.axes[0].title != 'azimuthal_angle':
-            raise AttributeError('ds.axes[0].title != azimuthal_angle')
-        if ds.axes[1].title != 'y_pixel_offset':
-            raise AttributeError('ds.axes[2].title != y_pixel_offset')
-    else:
-        raise AttributeError('ds.ndim != 2 or 3')
-
     if not offsets_filename:
         raise AttributeError('offsets_filename is empty')
 
@@ -660,10 +648,11 @@ def getVerticallyCorrected(ds, offsets_filename):
             getter = getter2d
             setter = setter2d
         else:
-            y_len  = ds.shape[2]
+            y_len  = ds.shape[1]
             getter = getter3d
             setter = setter3d
 
+        # print 'ds.shape: ' + `ds.shape`
         for line in f:
             if type(line) is str:
                 line = line.strip()
@@ -677,6 +666,7 @@ def getVerticallyCorrected(ds, offsets_filename):
                         if offset != 0:
 
                             # transfer pixel along current column
+                            # print 'x_index, offset:' + `x_index` + ' ' + `offset`
                             dst_sl = slice(
                                 _max(-offset        , 0    ), 
                                 _min(-offset + y_len, y_len))
@@ -696,10 +686,11 @@ def getVerticallyCorrected(ds, offsets_filename):
                             setter(rs, dst_sl, x_index, 0)
 
         # finalize result
-        rs.title = ds.title + ' (Vertically Corrected)'
+        rs.title = ds.title + ' (V)'
 
         print 'vertically corrected:', ds.title
-
+        info_string = "Pixels vertically translated according to contents of file %s" % offsets_filename
+        rs.add_metadata("_pd_proc_info_data_reduction",info_string,"CIF",append=True)
         return rs
 
     finally:

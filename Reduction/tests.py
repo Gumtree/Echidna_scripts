@@ -76,7 +76,6 @@ class BackgroundTestCase(unittest.TestCase):
     def testBack(self):
         """Test that background subtraction yields correct values when no normalisation
         is necessary."""
-        print 'Before: ' + `self.test_array`
         rs = reduction.getBackgroundCorrected(self.test_array,self.back_array)
         self.failUnless(rs.storage[0][0][0] == 15)
         self.failUnless(rs.storage[1][1][1] == 10)
@@ -95,9 +94,39 @@ class BackgroundTestCase(unittest.TestCase):
         """Test that the metadata is inserted and returned correctly"""
         rs = reduction.getBackgroundCorrected(self.test_array,self.back_array,norm_ref='bm1_counts',norm_target=5.0)
         pf = rs.harvest_metadata("CIF")
-        print `pf`
         self.failUnless("subtracted using" in str(pf["_pd_proc_info_data_reduction"]))
         self.failUnless("normalising to %f using monitor bm1_counts" % 5.0 in str(pf["_pd_proc_info_data_reduction"]))
+
+class VerticalTubeTestCase(unittest.TestCase):
+    def setUp(self):
+        start_array = [[1,1,1,1,1,1,1,1],
+                       [2,2,2,2,2,2,2,2],
+                       [3,3,3,3,3,3,3,3],
+                       [4,4,4,4,4,4,4,4],
+                       [5,5,5,5,5,5,5,5]]
+        import copy
+        # repeat this array 4 frames
+        test_array = []
+        for i in range(4):
+            test_array = test_array + [copy.deepcopy(start_array)]
+        self.test_array = Dataset(test_array)
+        # now the specification file: by examination of the getVerticalEdges routine, it
+        # can be deduced that a -1 in the specification means that the signal should be
+        # moved down by 1 pixel
+        testfile = open("vtc_test.txt","w")
+        testfile.write("# Test file for Echidna data reduction, may be deleted\n")
+        testfile.write("1 -1\n2 2\n3 -3\n4 4\n5 -3\n6 2\n7 0\n8 1\n")
+        testfile.close()
+
+    def testVCor(self):
+        rs = reduction.getVerticallyCorrected(self.test_array,"vtc_test.txt")
+        self.failUnless(rs[0][0][0] == 2)
+        self.failUnless(rs[1][3][5] == 2)
+
+    def testVCorMeta(self):
+        rs = reduction.getVerticallyCorrected(self.test_array,"vtc_test.txt")
+        pf = rs.harvest_metadata("CIF")
+        self.failUnless("vertically translated" in str(pf["_pd_proc_info_data_reduction"]))
 
 if __name__=="__main__":
     unittest.main()
