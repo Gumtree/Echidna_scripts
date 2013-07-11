@@ -52,8 +52,52 @@ class NormalisationTestCase(unittest.TestCase):
         """Test that metadata is correctly produced"""
         ds,target = reduction.applyNormalization(self.test_array,reference='bm1_counts',target=-1)
         pf = ds.harvest_metadata("CIF")
-        print `pf`
         self.failUnless("Data normalised to %f" % float(target) in str(pf["_pd_proc_info_data_reduction"]))
+
+class BackgroundTestCase(unittest.TestCase):
+    def setUp(self):
+        import copy
+        self.core_array2 = [[25,25,25],[25.0,25.0,25.0]]
+        back_vals = [[10.0,10.0,10.0],[15.0,15.0,15.0]]
+        # repeat this core array 4 times
+        test_array = []
+        back_array = []
+        for i in range(4):
+            test_array = test_array + [copy.deepcopy(self.core_array2)]
+            back_array = back_array + [copy.deepcopy(back_vals)]
+        self.test_array = Dataset(test_array)
+        self.back_array = Dataset(back_array)
+        # now add variances
+        self.test_array.var = Array(self.test_array)
+        self.test_array.bm1_counts = Array([5.0,5.0,5.0,5.0])
+        self.back_array.var = Array(self.back_array)
+        self.back_array.bm1_counts = Array([10.0,4.0,10.0,10.0])
+
+    def testBack(self):
+        """Test that background subtraction yields correct values when no normalisation
+        is necessary."""
+        print 'Before: ' + `self.test_array`
+        rs = reduction.getBackgroundCorrected(self.test_array,self.back_array)
+        self.failUnless(rs.storage[0][0][0] == 15)
+        self.failUnless(rs.storage[1][1][1] == 10)
+        # testing variances
+        self.failUnless(rs.var[0][0][0] == 35)
+        self.failUnless(rs.var[1][1][1] == 40)
+        
+    def testNormBack(self):
+        """Test that normalisation is correctly performed"""
+        rs = reduction.getBackgroundCorrected(self.test_array,self.back_array,norm_ref='bm1_counts',norm_target=5.0)
+        self.failUnless(rs.storage[0][0][0] == self.test_array[0][0][0]-self.back_array[0][0][0]/2)
+        self.failUnless(rs.storage[1][1][1] == self.test_array[1][1][1]-self.back_array[1][1][1]*1.25)
+        self.failUnless(rs.storage[2][1][1] == self.test_array[2][1][1]-self.back_array[2][1][1]/2)
+        
+    def testBackMeta(self):
+        """Test that the metadata is inserted and returned correctly"""
+        rs = reduction.getBackgroundCorrected(self.test_array,self.back_array,norm_ref='bm1_counts',norm_target=5.0)
+        pf = rs.harvest_metadata("CIF")
+        print `pf`
+        self.failUnless("subtracted using" in str(pf["_pd_proc_info_data_reduction"]))
+        self.failUnless("normalising to %f using monitor bm1_counts" % 5.0 in str(pf["_pd_proc_info_data_reduction"]))
 
 if __name__=="__main__":
     unittest.main()
