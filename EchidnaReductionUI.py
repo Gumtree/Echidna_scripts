@@ -45,13 +45,17 @@ eff_map.ext = '*.*'
 eff_show  = Act('eff_show_proc()', 'Show') 
 Group('Efficiency Correction').add(eff_apply, eff_map, eff_show)
 
-
 # Horizontal Tube Correction
 htc_apply = Par('bool', 'True')
 htc_file  = Par('file', '')
 htc_file.ext = '*.ang,*.*'
 htc_show  = Act('htc_show_proc()', 'Show') 
 Group('Horizontal Tube Correction').add(htc_apply, htc_file, htc_show)
+
+# Recalculate gain
+regain_apply = Par('bool','True')
+regain_iterno = Par('int','5')
+Group('Recalculate Gain').add(regain_apply,regain_iterno)
 
 # Assemble
 asm_algorithm = Par('string', 'stitch frames', options = ['stitch frames', 'sum frames'])
@@ -402,7 +406,7 @@ def __run_script__(fns):
         ds = ds.get_reduced()
         # check if normalized is required 
         if norm_ref:
-            norm_tar = reduction.applyNormalization(ds, reference=norm_table[norm_ref], target=norm_tar)
+            ds,norm_tar = reduction.applyNormalization(ds, reference=norm_table[norm_ref], target=norm_tar)
         if bkg:
             ds = reduction.getBackgroundCorrected(ds, bkg, norm_table[norm_ref], norm_tar)
         
@@ -421,6 +425,15 @@ def __run_script__(fns):
             ds = reduction.getHorizontallyCorrected(ds, htc)
 
         print 'Finished horizontal correction at %f' % (time.clock()-elapsed)
+
+        # check if we are recalculating gain
+        if regain_apply.value:
+           ds,stats = reduction.do_overlap(ds,regain_iterno.value)
+           print 'Have new gains at %f' % (time.clock() - elapsed)
+           Plot4 = Plot(title='Chi squared history')
+           Plot5 = Plot(title='Final Gain')
+           Plot4.set_dataset(Dataset(stats[4]))   #chisquared history
+           Plot5.set_dataset(Dataset(stats[0]))   #final gain plot
         # assemble dataset
         if ds.ndim > 2:
             asm_algo = str(asm_algorithm.value)
@@ -433,7 +446,9 @@ def __run_script__(fns):
                 return
         # Display dataset
         print 'Finished stitching at %f' % (time.clock()-elapsed)
+        Plot1.clear()
         Plot1.set_dataset(ds)
+        Plot1.title = ds.title
         if vig_apply_rescale.value:
             ds = reduction.getVerticalIntegrated(ds, axis=0, normalization=float(vig_rescale_target.value),
                                                  cluster=float(vig_cluster.value))
@@ -441,7 +456,9 @@ def __run_script__(fns):
             ds = reduction.getVerticalIntegrated(ds, axis=0, cluster=float(vig_cluster.value))
         print 'Finished vertical integration at %f' % (time.clock()-elapsed)
         # Display reduced dataset
+        Plot2.clear()
         Plot2.set_dataset(ds)
+        Plot2.title = ds.title
         ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
         output.write_cif_data(ds,join(str(out_folder.value), 'reduced_' + basename(str(fn))[:-7]))
         print 'Finished writing data at %f' % (time.clock()-elapsed)
@@ -465,3 +482,4 @@ def run_action(act):
         act.set_error_status()
         traceback.print_exc(file = sys.stdout)
         raise Exception, 'Error in running <' + act.text + '>'
+

@@ -80,7 +80,8 @@ def applyNormalization(ds, reference, target=-1):
     """Normalise datasets ds by multiplying by target/reference.  Beam monitor counts, count time and total counts are
        all adjusted by this amount.  Reference is a string referring to a particular location in the dataset, and
        target is the target value to which they will be adjusted.  If target is not specified, the maximum value of
-       the reference array is used and reported for further use.  Note that the dataset is modified in place."""
+       the reference array is used and reported for further use. The variance of the values in the reference array
+       is assumed to follow counting statistics."""
     print 'normalization of', ds.title
     # Normalization
     reference = getattr(ds,reference)
@@ -95,38 +96,66 @@ def applyNormalization(ds, reference, target=-1):
         if reference.ndim != 1:
             raise AttributeError('reference.ndim != 1')
         if reference.shape[0] != ds.shape[0]:
-            raise AttributeError('reference.shape[0] != ds.shape[0]')
+            raise AttributeError('reference.shape[0] != ds.shape[0] (%d != %d)' % (reference.shape[0],ds.shape[0]))
 
-    def do_norm(ds, f):
-        ds               *= f
-        ds.bm1_counts    *= f
-        ds.bm2_counts    *= f
-        ds.bm3_counts    *= f
-        ds.detector_time *= f
-        ds.total_counts  *= f
-
+    def do_norm(rs, f, varf):
+        # We propagate errors in the data, but not in
+        # the ancillary values
+        print 'In do_norm, given %f(%f)' % (f,varf)
+        print 'In do_norm, before: ' + `rs.storage`
+        # Funny syntax below to make sure we write into the original area,
+        # not assign a new value
+        rs.var *= f * f
+        rs.var += varf * rs * rs
+        rs.storage       *= f
+        try:             #These may be absent in some cases
+            rs.bm1_counts    *= f
+            rs.bm2_counts    *= f
+            rs.bm3_counts    *= f
+            rs.detector_time *= f
+            rs.total_counts  *= f
+        except AttributeError:
+            pass
+       
     # normalization
+    copy_metadata_deep(rs,ds)
     if numericReference and target > 0:
-        do_norm(ds, float(target) / reference)
-        info_string = "Data multiplied by %f" % float(target)/reference
+        # We have a single number to refer to for normalisation, so
+        # we are effectively scaling everything by a single number
+        scale_factor = float(target)/reference
+        variance = scale_factor * target/(reference*reference)
+        do_norm(rs, scale_factor, variance)
+        info_string = "Data multiplied by %f with variance %f" % (scale_factor,variance)
     elif not numericReference:
+        # Each step has a different value, and we manually perform the
+        # error propagation 
         reference = Data(reference)
         if target <= 0:
             target = reference.max()
-        for i in xrange(ds.shape[0]):
-            do_norm(ds[i], float(target) / reference[i])
-        info_string = "Data normalised to %f, no error propagation" % float(target)
+        for i in xrange(rs.shape[0]):
+            f = float(target)/reference[i]
+            v = f*target/(reference[i]*reference[i])
+            # Funny syntax below to make sure we write into the original area,
+            # not assign a new value
+            tar_shape = [1,rs.shape[1],rs.shape[2]]
+            tar_origin = [i,0,0]
+            rss = rs.storage.get_section(tar_origin,tar_shape).get_reduced()
+            rsv = rs.var.get_section(tar_origin,tar_shape).get_reduced()
+            rs.var[i] = rsv*f * f
+            rs.var[i] += v * rss * rss
+            rs.storage[i] = rs.storage[i]*f
+        info_string = "Data normalised to %f with error propagation assuming counting statistics" % float(target)
     else:
         # interesting note - if we get here, we are passed a single reference number
         # and a negative target, meaning that we use the reference as the target and
         # end up multiplying by 1.0, so no need to do anything at all.
         target = reference
         info_string = "No normalisation applied to data."
-    ds.add_metadata('_pd_proc_info_data_reduction',info_string, tag="CIF", append=True)
+    rs.add_metadata('_pd_proc_info_data_reduction',info_string, tag="CIF", append=True)
     print 'normalized:', ds.title
     # finalize result
-    ds.title += '-(N)'
-    return target
+    rs.title += '-(N)'
+    return rs,target
 
 def getSummed(ds, floatCopy=True, applyStth=True):
     print 'summation of', ds.title
@@ -769,14 +798,6 @@ def oldgetVerticalIntegrated(ds, okMap=None, normalization=-1):
 
     return rs
 
-def do_sum(ds):
-    """Trivial helper function to get around Gumtree missing stuff"""
-    starting = ds.get_reduced()
-    summed = zeros(starting.shape[1:])
-    for stepno in range(len(starting)):
-        summed = summed + starting[stepno]
-    return summed
-
 def getVerticalEdges(rawdata,simple=True,output_filename=None):
     """Get the vertical edges of the Echidna tubes based on a simple edge
     finding algorithm. We assume the edges are parallel. The shifts are
@@ -1149,5 +1170,69 @@ def getHorizontallyCorrected(ds, offsets_filename):
         if f != None:
             f.close()
 
+def do_overlap(ds,iterno):
+    import time
+    b = ds.intg(axis=1).get_reduced()  
+    # Determine pixels per tube interval
+    tube_pos = ds.axes[-1]
+    tubesep = abs(tube_pos[0]-tube_pos[-1])/(len(tube_pos)-1)
+    tube_steps = ds.axes[0]
+    bin_size = abs(tube_steps[0]-tube_steps[-1])/(len(tube_steps)-1)
+    pixel_step = int(round(tubesep/bin_size))
+    print '%d steps before overlap' % pixel_step
+    # Reshape with individual sections summed
+    c = b.reshape([b.shape[0]/pixel_step,pixel_step,b.shape[-1]])
+    print `b.shape` + "->" + `c.shape`
+    # sum the individual unoverlapped sections
+    d = c.intg(axis=1)
+    e = d.transpose()
+    # we skip the first two tubes' data as it is all zero
+    q= iterate_data(e[3:],pixel_step=1,iter_no=iterno)
+    # q[0] contains the final gain values, which we now apply
+    print 'Have gains at %f' % time.clock()
+    """ The following lines are intended to improve efficiency
+    by a factor of about 10, by using Arrays instead of datasets
+    and avoiding the [] operator, which currently involves too
+    many lines of Python code per invocation. Note that 
+    ArraySectionIter.next() is also code heavy, so calculate the
+    sections ourselves."""
+    final_gains = array.ones(ds.shape[-1])
+    final_gains[2:] = q[0]
+    final_errors = array.zeros(ds.shape[-1])
+    final_errors[2:] = q[5]
+    ds_as_array = ds.storage
+    rs = array.zeros_like(ds)
+    rs_var = array.zeros_like(ds)
+    gain_iter = final_gains.__iter__()
+    gain_var_iter = final_errors.__iter__()
+    print 'RS shape: ' + `rs.shape`
+    print 'Gain shape: ' + `final_gains.shape`
+    target_shape = [rs.shape[0],rs.shape[1],1]
+    for atubeno in range(len(final_gains)):
+        rta = rs.get_section([0,0,atubeno],target_shape)
+        dta = ds_as_array.get_section([0,0,atubeno],target_shape)
+        fgn = gain_iter.next()
+        fgvn = gain_var_iter.next()
+        rta += dta * fgn
+        rtav = rs_var.get_section([0,0,atubeno],target_shape)
+        # sigma^2(a*b) = a^2 sigma^2(b) + b^2 sigma^2(a)
+        rtav += ds.var.storage.get_section([0,0,atubeno],target_shape)*fgn*fgn + \
+                fgvn * dta**2
+    # Now build up the important information
+    cs = copy(ds)
+    cs.data = rs
+    cs.var = rs_var
+    return cs,q
 
-
+def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True):
+    import overlap
+    start_gain = array.ones(len(dataset))
+    gain,first_ave,chisquared,residual_map,esds = overlap.find_gain(dataset,dataset,pixel_step,start_gain,pixel_mask=pixel_mask)
+    old_result = first_ave    #store for later
+    chisq_history = [chisquared]
+    for cycle_no in range(iter_no+1):
+        esdflag = (cycle_no == iter_no)  # need esds as well
+        gain,interim_result,chisquared,residual_map,esds = overlap.find_gain(dataset,dataset,pixel_step,gain,pixel_mask=pixel_mask,errors=esdflag)
+        chisq_history.append(chisquared)
+    print 'Chisquared: ' + `chisq_history`
+    return gain,dataset,interim_result,residual_map,chisquared,esds,first_ave

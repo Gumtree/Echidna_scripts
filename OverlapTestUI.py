@@ -369,7 +369,8 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True
     old_result = first_ave    #store for later
     chisq_history = [chisquared]
     for cycle_no in range(iter_no+1):
-        gain,interim_result,chisquared,residual_map,esds = overlap.find_gain(dataset,dataset,pixel_step,gain,pixel_mask=pixel_mask)
+        esdflag = cycle_no == iter_no
+        gain,interim_result,chisquared,residual_map,esds = overlap.find_gain(dataset,dataset,pixel_step,gain,pixel_mask=pixel_mask,errors=esdflag)
         chisq_history.append(chisquared)
         if not cycle_no % ((iter_no/2)+1):             # +1 to avoid division by zero for single step iterations
             print "Plotting cycle %d" % cycle_no
