@@ -11,8 +11,33 @@ fixed_table = {
 "_pd_instr_soller_eq_spec/detc": "0.0833"
 }
 
+def add_metadata_methods(rawfile):
+    # This is so crazy - we are going to hack into the class to create two new functions to
+    # handle our metadata, completely bypassing the built-in methods. We do this because
+    # we think leaving the metadata at the Python level is simpler, but subclassing the Dataset
+    # class and allowing initialisation with a Dataset makes stuff too hard.
+    # Tag is included for legacy reasons
+    def p(self,key,value,tag="CIF",append=False):
+        metadata_store = self.__dict__['ms']  #get around gumpy intercepting getattr
+        if metadata_store.has_key(key) and append is True:
+            metadata_store[key] = metadata_store[key] + '\n' + value
+        else:
+            metadata_store[key] = value
+
+    def h(self,tag):
+        return self.__dict__['ms']
+
+    def c(self,old):
+        self.__dict__['ms'] = old.__dict__['ms']
+
+    rawfile.__dict__['ms'] = {}
+    rawfile.__class__.__dict__['add_metadata'] = p
+    rawfile.__class__.__dict__['harvest_metadata'] = h
+    rawfile.__class__.__dict__['copy_cif_metadata'] = c
+
 def extract_metadata(rawfile):
     import datetime
+    add_metadata_methods(rawfile)
     for key,val in fixed_table.items():
         rawfile.add_metadata(key,val,tag="CIF")
     # get monochromator-related information

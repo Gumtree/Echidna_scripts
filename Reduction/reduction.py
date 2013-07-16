@@ -75,7 +75,6 @@ def getCenters(boundaries):
 
         return rs
     
-
 def applyNormalization(ds, reference, target=-1):
     """Normalise datasets ds by multiplying by target/reference.  Beam monitor counts, count time and total counts are
        all adjusted by this amount.  Reference is a string referring to a particular location in the dataset, and
@@ -83,6 +82,8 @@ def applyNormalization(ds, reference, target=-1):
        the reference array is used and reported for further use. The variance of the values in the reference array
        is assumed to follow counting statistics."""
     print 'normalization of', ds.title
+    # Store reference name for later
+    refname = str(reference)
     # Normalization
     reference = getattr(ds,reference)
 
@@ -118,7 +119,8 @@ def applyNormalization(ds, reference, target=-1):
        
     # normalization
     rs = ds.__copy__()
-    copy_metadata_deep(rs,ds)
+    copy_metadata_deep(rs,ds)  #NeXuS metadata
+    rs.copy_cif_metadata(ds)   #CIF metadata
     if numericReference and target > 0:
         # We have a single number to refer to for normalisation, so
         # we are effectively scaling everything by a single number
@@ -144,14 +146,14 @@ def applyNormalization(ds, reference, target=-1):
             rs.var[i] = rsv*f * f
             rs.var[i] += v * rss * rss
             rs.storage[i] = rs.storage[i]*f
-        info_string = "Data normalised to %f on %s with error propagation assuming counting statistics" % (float(target),reference)
+        info_string = "Data normalised to %f on %s with error propagation assuming counting statistics" % (float(target),refname)
     else:
         # interesting note - if we get here, we are passed a single reference number
         # and a negative target, meaning that we use the reference as the target and
         # end up multiplying by 1.0, so no need to do anything at all.
         target = reference
         info_string = "No normalisation applied to data."
-    rs.add_metadata('_pd_proc_info_data_reduction',info_string, tag="CIF", append=True)
+    rs.add_metadata('_pd_proc_info_data_reduction',info_string, append=True)
     print 'normalized:', ds.title
     # finalize result
     rs.title += '-(N)'
@@ -245,6 +247,7 @@ def getStitched(ds):
 
     # copy meta data
     copy_metadata_deep(rs, ds[0]) # for Echidna second dimension is just legacy
+    rs.copy_cif_metadata(ds)
     for src_frame in xrange(1, frame_count):
         ds_frame = ds[src_frame]
 
@@ -306,13 +309,14 @@ def read_efficiency_cif(filename):
     import CifFile,time
     print 'Reading in %s as CIF at %s' % (filename,time.asctime())
     eff_cif = CifFile.CifFile(str(filename))
+    print 'Finished reading in %s as CIF at %s' % (filename,time.asctime())
     eff_cif = eff_cif['efficiencies']
     eff_data = map(float,eff_cif['_[local]_efficiency_data']) 
     eff_var = map(float,eff_cif['_[local]_efficiency_variance']) 
     final_data = Dataset(Data(eff_data).reshape([128,128]))
     final_data.var = (Array(eff_var).reshape([128,128]))
     print 'Finished reading at %s' % time.asctime()
-    return final_data
+    return final_data,eff_cif
     
 # The following routine can be called with unstitched data, in
 # which case we will return the data with the 'axis' dimension
@@ -359,6 +363,7 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0)
 
     # finalize result
     totals.title = ds.title + ' (Vertically Integrated)'
+    totals.copy_cif_metadata(ds)
 
     # normalize result if required
     if normalization > 0:
@@ -430,6 +435,7 @@ def debunch(totals,cluster_size):
     # Trim output arrays
     newlen = len(new_axis)
     new_totals = new_totals[:newlen]
+    new_totals.copy_cif_metadata(totals)
     new_totals.axes[0] = new_axis
     new_totals.axes[0].title = totals.axes[0].title
     new_totals.title = totals.title
@@ -544,9 +550,6 @@ def oldgetVerticalIntegrated(ds, okMap=None, normalization=-1):
 
     return rs
 
-
-''' corrections '''
-
 def getBackgroundCorrected(ds, bkg, norm_ref=None, norm_target=-1):
     """Subtract the background from the supplied dataset, after normalising the
     background to the specified counts on monitor given in reference. Note that
@@ -561,6 +564,7 @@ def getBackgroundCorrected(ds, bkg, norm_ref=None, norm_target=-1):
     rs = ds.__copy__()  # for metadata
     # result
     rs = ds - bkg
+    rs.copy_cif_metadata(ds)
     
         # ensure that result doesn't contain negative pixels
     
@@ -577,7 +581,7 @@ def getBackgroundCorrected(ds, bkg, norm_ref=None, norm_target=-1):
 
     return rs
 
-def getEfficiencyCorrected(ds, eff):
+def getEfficiencyCorrected(ds, (eff,eff_metadata)):
     print 'efficiency correction of', ds.title
 
     # check dimensions
@@ -595,7 +599,6 @@ def getEfficiencyCorrected(ds, eff):
 
         # finalize result
         rs.title = ds.title + ' (Efficiency Corrected)'
-
         print 'efficiency corrected frames:', 1
 
     elif ds.ndim == 3:
@@ -612,6 +615,11 @@ def getEfficiencyCorrected(ds, eff):
 
         # finalize result
         rs.title = ds.title + ' (Efficiency Corrected)'
+        rs.copy_cif_metadata(ds)
+        # now include all the efficiency file metadata
+        for key in eff_metadata.keys():
+            if key not in ("_[local]_efficiency_data","_[local]_efficiency_variance"):
+                rs.add_metadata(key,eff_metadata[key])
 
         print 'efficiency corrected frames:', rs.shape[0]
 
@@ -643,6 +651,7 @@ def getVerticallyCorrected(ds, offsets_filename):
             rs[:, dst_sl, x_index] = value # 3d
 
         rs = ds.__copy__()
+        rs.copy_cif_metadata(ds)
         if ds.ndim == 2:
             y_len  = ds.shape[0]
             getter = getter2d
@@ -720,6 +729,7 @@ def getHorizontallyCorrected(ds, offsets_filename):
         f = open(offsets_filename, 'r')
 
         rs = ds.__copy__()
+        rs.copy_cif_metadata(ds)
 
         # get x-axis (last axis)
         axisX = rs.axes[-1]
@@ -744,8 +754,9 @@ def getHorizontallyCorrected(ds, offsets_filename):
                     index        += 1
 
         # finalize result
-        rs.title = ds.title + ' (Horizontally Corrected)'
-
+        rs.title = ds.title + ' (H)'
+        info_string = "Ideal detector tube positions were adjusted based on standard file."
+        rs.add_metadata("_pd_proc_info_data_reduction",info_string,"CIF",append=True)
         print 'horizontally corrected:', ds.title
 
         return rs
@@ -806,6 +817,7 @@ def do_overlap(ds,iterno):
     cs = copy(ds)
     cs.data = rs
     cs.var = rs_var
+    cs.copy_cif_metadata(ds)
     return cs,q
 
 def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True):

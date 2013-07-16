@@ -101,7 +101,8 @@ if efficiency_file_uri:
     eff_map.value = efficiency_file_uri
     
 # Storage for efficiency map
-eff_map_cache = {}
+if not 'eff_map_cache' in globals():
+    eff_map_cache = {}
     
 ''' Button Actions '''
 
@@ -368,9 +369,11 @@ def __run_script__(fns):
             eff = None
             print 'WARNING: no eff-map was specified'
         else:
-            eff = reduction.read_efficiency_cif(str(eff_map.value))
-            if eff.ndim != 2:
-                raise AttributeError('eff.ndim != 2')
+            if not eff_map.value in eff_map_cache:
+                eff_map_cache[eff_map.value] = reduction.read_efficiency_cif(str(eff_map.value))
+            else:
+                print 'Found cached efficiency map ' + str(eff_map.value)
+            eff = eff_map_cache[eff_map.value]
     else:
         eff = None
     
@@ -403,10 +406,11 @@ def __run_script__(fns):
         # extract basic metadata
         ds = reduction.AddCifMetadata.extract_metadata(ds)
         # remove redundant dimensions
-        ds = ds.get_reduced()
+        rs = ds.get_reduced()
+        rs.copy_cif_metadata(ds)
         # check if normalized is required 
         if norm_ref:
-            ds,norm_tar = reduction.applyNormalization(ds, reference=norm_table[norm_ref], target=norm_tar)
+            ds,norm_tar = reduction.applyNormalization(rs, reference=norm_table[norm_ref], target=norm_tar)
         if bkg:
             ds = reduction.getBackgroundCorrected(ds, bkg, norm_table[norm_ref], norm_tar)
         

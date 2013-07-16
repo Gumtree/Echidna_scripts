@@ -128,5 +128,7 @@ class VerticalTubeTestCase(unittest.TestCase):
         pf = rs.harvest_metadata("CIF")
         self.failUnless("vertically translated" in str(pf["_pd_proc_info_data_reduction"]))
 
+# Horizontal correction is not worth testing, the code is self-explanatory
+
 if __name__=="__main__":
     unittest.main()

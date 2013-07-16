@@ -56,7 +56,7 @@ def prepare_string(bad_string):
     """Format a string for a CIF file"""
     if "\r" in bad_string or "\n" in bad_string:
         #Wrap the text nicely
-        good_string = "\n;\n"+good_string+"\n;\n";
+        good_string = "\n;\n"+bad_string+"\n;\n";
     else: 
        	# Note that this is not perfect; we may have a string containing whitespace
        	# immediately following a single or double quote, in which case we must use
