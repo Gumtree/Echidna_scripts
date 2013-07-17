@@ -3,6 +3,8 @@
 # is analogous to the AddMetadata routine in the old Java code.  We store the
 # metadata in the file itself, but in a place that we know is preserved on copy.
 
+from CifFile import CifBlock
+
 fixed_table = {
 "_pd_instr_geometry": 	"Cylindrical array of vertical detector tubes centred on " +
 	    		"sample illuminated by monochromatic neutrons",
@@ -12,11 +14,11 @@ fixed_table = {
 }
 
 def add_metadata_methods(rawfile):
-    # This is so crazy - we are going to hack into the class to create two new functions to
+    # This is so crazy - we are going to hack into the class to create three new functions to
     # handle our metadata, completely bypassing the built-in methods. We do this because
     # we think leaving the metadata at the Python level is simpler, but subclassing the Dataset
-    # class and allowing initialisation with a Dataset makes stuff too hard.
-    # Tag is included for legacy reasons
+    # class and initialising from a Dataset looks clunky and awkward.
+    # Tag keyword is included for legacy reasons
     def p(self,key,value,tag="CIF",append=False):
         metadata_store = self.__dict__['ms']  #get around gumpy intercepting getattr
         if metadata_store.has_key(key) and append is True:
@@ -30,7 +32,7 @@ def add_metadata_methods(rawfile):
     def c(self,old):
         self.__dict__['ms'] = old.__dict__['ms']
 
-    rawfile.__dict__['ms'] = {}
+    rawfile.__dict__['ms'] = CifBlock()
     rawfile.__class__.__dict__['add_metadata'] = p
     rawfile.__class__.__dict__['harvest_metadata'] = h
     rawfile.__class__.__dict__['copy_cif_metadata'] = c

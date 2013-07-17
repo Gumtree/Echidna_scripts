@@ -314,9 +314,8 @@ def calc_error_new(obs,model,gain_vector,offset,pixel_mask):
     scanlen = obs.shape[1]
     numslices = len(obs)
     for atubeno in range(numslices):
-        rta = ri.next()
         mod_sec = model.get_section([offset*atubeno],[scanlen])
-        rta += math.sqrt(sum((gi.next()-(oi.next()*pixel_mask/mod_sec))**2)/scanlen)
+        ri.set_next(math.sqrt(sum((gi.next()-(oi.next()*pixel_mask/mod_sec))**2)/scanlen))
     return result
 
 # Thus function performs linear interpolation on the input array to calculate intermediate values.

@@ -1,47 +1,43 @@
-import math
+import math,copy
 
 def write_cif_data(ds,filename):
     """Write the dataset in CIF format"""
-    from StarFile import LoopBlock
+    from CifFile import CifFile, CifLoopBlock
     from datetime import datetime
     block_name = sanitise(ds.title[0:17])
-    if not filename[-3:]=='cif':
-        filename = filename+'.cif'
-    fh = open(filename,"w")
-    header = \
-"""#CIF\1.1
-#####################################################
-#                                                   #
-#   CIF file using powder CIF dictionary)           #
-#   For details, see http://it.iucr.org/g           #
-#                                                   #
-#####################################################
-"""
-    fh.write(header)
-    # Create a block name from dataset name and current time
-    current_time = datetime.now().isoformat()
-    fh.write("data_%s%s\n" % (block_name,current_time))
+# Create a block name from dataset name and current time
+    current_time =  datetime.now().isoformat()
+    block_name = str(block_name) + str(current_time)
+    metadata_store = ds.harvest_metadata("CIF")
+    alldata = CifFile()
+    alldata.NewBlock(block_name,blockcontents=metadata_store)
     # Create a unique block id
     username = '?'
     try:
         username = sanitise(str(ds['user']))
     except:
         pass
-    fh.write("_pd_block_id \t%s|%s|%s\n" % (block_name,current_time,username) )
-    fh.write("_audit_creation_date \t%s\n"% current_time)
-    fh.write("_audit_creation_method \t%s\n"% "'Automatically generated from raw NeXuS data file by Gumtree routines'")
-    fh.write("loop_\n _audit_conform_dict_name\n  _audit_conform_dict_version\n _audit_conform_dict_location\n")
-    fh.write(" cif_core.dic  2.3.1 ftp://ftp.iucr.org/pub/cifdics/cif_core_2.3.1.dic\n")
-    fh.write(" cif_pd.dic    1.0.1 ftp://ftp.iucr.org/pub/cifdics/cif_pd_1.0.1.dic\n\n")
-    more_metadata = ds.harvest_metadata("CIF")
-    for key,value in more_metadata.items():
-        print "DEBUG: writing %s -> %s" % (key,str(value))
-        fh.write("%s \t" % key)
-        fh.write("%s\n" % prepare_string(str(value)))
-    # now put in the actual data
-    fh.write("\nloop_\n _pd_proc_2theta_corrected\n _pd_proc_intensity_net\n _pd_proc_intensity_net_esd\n")
-    for point in range(len(ds)):
-        fh.write("%10.5f %15s %15.5f\n" % (ds.axes[0][point],format_esd(ds[point],ds.var[point]),math.sqrt(ds.var[point])))
+    metadata_store["_pd_block_id"] = "%s|%s|%s" % (block_name,current_time,username) 
+    metadata_store["_audit_creation_date"] = current_time
+    metadata_store["_audit_creation_method"] = "Automatically generated from raw NeXuS data file by Gumtree routines"
+    metadata_store.AddCifItem((
+        (("_audit_conform_dict_name", "_audit_conform_dict_version", "_audit_conform_dict_location"),),
+        ((("cif_core.dic","cif_pd.dic"),("2.3.1","1.0.1"),
+         ("ftp://ftp.iucr.org/pub/cifdics/cif_core_2.3.1.dic","ftp://ftp.iucr.org/pub/cifdics/cif_pd_1.0.1.dic")),))
+)   
+    import time
+    angles = map(lambda a:("%.5f" % a),ds.axes[0])
+    ints = map(lambda a,b:format_esd(a,b),ds,ds.var)
+    esds = map(lambda a:"%.5f" % math.sqrt(a),ds.var)
+    metadata_store.AddCifItem((
+            (("_pd_proc_2theta_corrected", "_pd_proc_intensity_net", "_pd_proc_intensity_net_esd"),),
+  #          ((("%10.5f" % ds.axes[0][0],),(format_esd(ds[0],ds.var[0]),),("%15.5f" % math.sqrt(ds.var[0]),)),))
+            ((angles,ints,esds),))
+                              )
+    if not filename[-3:]=='cif':
+        filename = filename+'.cif'
+    fh = open(filename,"w")
+    fh.write(str(alldata))
     fh.close()
 
 def sanitise(badstring):

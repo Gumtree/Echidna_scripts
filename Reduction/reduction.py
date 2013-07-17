@@ -339,15 +339,10 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0)
     # Note that we are assuming at least 0.1 count in every valid pixel
     
     import time
-    print `time.clock()`
     totals = ds.intg(axis=axis)
-    print `time.clock()`
     contrib_map = zeros(ds.shape,dtype=int)
-    print `time.clock()`
     contrib_map[ds>0.1] = 1
-    print `time.clock()`
     contribs = contrib_map.intg(axis=axis)
-    print `time.clock()`
     #
     # We have now reduced the scale of the problem by 100
     #
@@ -765,6 +760,8 @@ def getHorizontallyCorrected(ds, offsets_filename):
         if f != None:
             f.close()
 
+# Calculate adjusted gain based on matching intensities between overlapping
+# sections of data from different detectors
 def do_overlap(ds,iterno):
     import time
     b = ds.intg(axis=1).get_reduced()  
@@ -815,9 +812,18 @@ def do_overlap(ds,iterno):
                 fgvn * dta**2
     # Now build up the important information
     cs = copy(ds)
-    cs.data = rs
+    cs.storage = rs
     cs.var = rs_var
     cs.copy_cif_metadata(ds)
+    # prepare info for CIF file
+    import math
+    detno = map(lambda a:"%d" % a,range(len(final_gains)))
+    gain_as_strings = map(lambda a:"%.4f" % a,final_gains)
+    gain_esd = map(lambda a:"%.4f" % math.sqrt(a),final_errors)
+    cs.harvest_metadata("CIF").AddCifItem((
+        (("_[local]_detector_number","_[local]_refined_gain","_[local]_refined_gain_esd"),),
+        ((detno,gain_as_strings,gain_esd),))
+        )
     return cs,q
 
 def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True):
@@ -828,6 +834,7 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True
     chisq_history = [chisquared]
     for cycle_no in range(iter_no+1):
         esdflag = (cycle_no == iter_no)  # need esds as well
+        print 'Esdflag: ' + `esdflag`
         gain,interim_result,chisquared,residual_map,esds = overlap.find_gain(dataset,dataset,pixel_step,gain,pixel_mask=pixel_mask,errors=esdflag)
         chisq_history.append(chisquared)
     print 'Chisquared: ' + `chisq_history`

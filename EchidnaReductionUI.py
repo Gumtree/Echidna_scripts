@@ -134,17 +134,13 @@ def bkg_show_proc():
 # show Efficiency Correction Map 
 def eff_show_proc():
     from Reduction import reduction
-    #print "Map cache is " + `eff_map_cache`
-    #print "Our current key is " + `eff_map.value`
-    #print "Our value is" + `eff_map_cache.get(eff_map.value)`
     if not eff_map.value in eff_map_cache:
         eff_map_cache[eff_map.value] = reduction.read_efficiency_cif(eff_map.value)
     else:
         print 'Found in cache ' + `eff_map_cache[eff_map.value]`
     Plot1.clear()
-    # print 'Plotting ' + `eff_map_cache[eff_map.value]`
     Plot1.set_dataset(eff_map_cache[eff_map.value])
-    Plot1.title = 'Efficiency map'  #add info to this title!
+    Plot1.title = 'Efficiency map'
 
 # For HDF files
 # show_helper(eff_map.value, Plot1, "Efficiency Map: ")
@@ -432,12 +428,15 @@ def __run_script__(fns):
 
         # check if we are recalculating gain
         if regain_apply.value:
+           print 'ds.has_key(ms): ' + `ds.__dict__.has_key('ms')`
            ds,stats = reduction.do_overlap(ds,regain_iterno.value)
            print 'Have new gains at %f' % (time.clock() - elapsed)
            Plot4 = Plot(title='Chi squared history')
            Plot5 = Plot(title='Final Gain')
+           fg = Dataset(stats[0])
+           fg.var = stats[5]
            Plot4.set_dataset(Dataset(stats[4]))   #chisquared history
-           Plot5.set_dataset(Dataset(stats[0]))   #final gain plot
+           Plot5.set_dataset(fg)   #final gain plot
         # assemble dataset
         if ds.ndim > 2:
             asm_algo = str(asm_algorithm.value)
@@ -463,8 +462,8 @@ def __run_script__(fns):
         Plot2.clear()
         Plot2.set_dataset(ds)
         Plot2.title = ds.title
-        ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
         output.write_cif_data(ds,join(str(out_folder.value), 'reduced_' + basename(str(fn))[:-7]))
+        # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
         print 'Finished writing data at %f' % (time.clock()-elapsed)
         
 # dispose
