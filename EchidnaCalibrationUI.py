@@ -115,7 +115,7 @@ def get_norm_ref(ds, ref_name):
 # This function is called when pushing the Run button in the control UI.
 def __run_script__(fns):
     
-    from Reduction import reduction
+    from Reduction import reduction,calibrations
     from os.path import join
     
     df.datasets.clear()
@@ -161,26 +161,26 @@ def __run_script__(fns):
             input_ds = van
         input_ds.location = van.location
         if str(vtc_algorithm.value) == 'Vertically Centered Average':
-            reduction.getVerticalCorrectionList(input_ds,
+            calibrations.getVerticalCorrectionList(input_ds,
                                                 output_filename=vtc_filename)
         elif str(vtc_algorithm.value) == 'Edges':
-            reduction.getVerticalEdges(                                    
+            calibrations.getVerticalEdges(                                    
                 input_ds,output_filename=vtc_filename)
         else:
             print 'Vertical offset algorithm not recognised'
 
     if eff_make.value:
-        eff = reduction.calc_eff_mark2(van, bkg,vtc_filename , norm_ref=norm_table[norm_ref])
+        eff = calibrations.calc_eff_mark2(van, bkg,vtc_filename , norm_ref=norm_table[norm_ref])
     
     output_filename = join(str(out_folder.value), str(eff_name.value))
     # write out new efficiency file
     import time
     print 'Writing efficiency file at %s' % time.asctime()
-    reduction.output_2d_efficiencies(eff, output_filename, comment='Created by Gumtree')
+    calibrations.output_2d_efficiencies(eff, output_filename, comment='Created by Gumtree')
     print 'Finished writing at %s' % time.asctime()
     if eff_transpose.value==True:
         output_filename = output_filename + '-transposed'
-        reduction.output_2d_efficiencies(eff,output_filename,comment='Created by Gumtree',
+        calibrations.output_2d_efficiencies(eff,output_filename,comment='Created by Gumtree',
                                          transpose=True)
         print 'Finished writing transposed file at %s' % time.asctime()
     

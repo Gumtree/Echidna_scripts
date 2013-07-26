@@ -1,3 +1,9 @@
+# A collection of routines used for calculating Echidna calibrations
+import math
+import AddCifMetadata,reduction
+import os
+from gumpy.nexus import *
+
 def scrub_vanad_pos(vanad,takeoff,crystal,nosteps=25):
     """Return a (tube,minstep,maxstep) list describing where
        vanadium peaks occur for these settings"""
@@ -27,8 +33,8 @@ def scrub_vanad_pos(vanad,takeoff,crystal,nosteps=25):
               [63, 0,25],
               [75,35,50],   #220
               [76,10,25],
-              [106,10,36],  #222 
-              [107,0,11] 
+#              [106,10,36],  #222 
+#              [107,0,11] 
               ]
     elif crystal=="335" and takeoff==140 and nosteps==25:
         return [
@@ -74,14 +80,20 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     btime = os.stat(backgr.location)[stat.ST_CTIME]
     btime = datetime.datetime.fromtimestamp(btime)
     btime = btime.strftime("%Y-%m-%dT%H:%M:%S%z")
+    # This step required to insert our metadata hooks into the dataset object
+    AddCifMetadata.add_metadata_methods(vanad)
+    AddCifMetadata.add_metadata_methods(backgr)
+    # Fail early
+    print 'Using %s and %s' % (str(vanad.location),str(backgr.location))
     # Subtract the background
-    norm_target = applyNormalization(vanad,norm_ref,-1)
-    applyNormalization(backgr,norm_ref,norm_target)
+    vanad,norm_target = reduction.applyNormalization(vanad,norm_ref,-1)
+    backgr,nn = reduction.applyNormalization(backgr,norm_ref,norm_target)
     pure_vanad = (vanad - backgr).get_reduced()    #remove the annoying 2nd dimension
+    pure_vanad.copy_cif_metadata(vanad)
     #
     # move the vertical pixels to correct positions
     #
-    pure_vanad = getVerticallyCorrected(pure_vanad,v_off)
+    pure_vanad = reduction.getVerticallyCorrected(pure_vanad,v_off)
     nosteps = pure_vanad.shape[0]
     # now we have to get some efficiency numbers out.  We will have nosteps 
     # observations of each value, if nothing is blocked or scrubbed.   We obtain a
@@ -93,11 +105,11 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     #
     # remember the structure of our data: the leftmost index is the vertical
     # pixel number, the right is the angle,
-    eff_array = zeros(pure_vanad[0].shape)
-    eff_error = zeros(pure_vanad[0].shape)
+    eff_array = array.zeros(pure_vanad[0].shape)
+    eff_error = array.zeros(pure_vanad[0].shape)
     # keep a track of excluded tubes by step to work around lack of count_zero
     # support
-    tube_count = ones(pure_vanad.shape[0]) * pure_vanad.shape[-1]
+    tube_count = array.ones(pure_vanad.shape[0]) * pure_vanad.shape[-1]
     # Now zero out blocked areas. The first bs steps are blocked on tube bt.
     # We are assuming no overlap with V peaks later
     for bt,bs in edge:
@@ -140,7 +152,18 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     final_gain = total_gain.reshape([step_gain.shape[1],step_gain.shape[2]])
     print 'We have total gain: ' + `final_gain`
     print 'Shape ' + `final_gain.shape`
-    eff_array[:,bottom:top] = 1.0/final_gain
+    import time
+    elapsed = time.clock()
+    # efficiency speedup; we would like to write
+    # eff_array[:,bottom:top] = 1.0/final_gain
+    # but anything in gumpy with square brackets goes crazy slow.
+    eff_array_sect = eff_array.get_section([0,bottom],[eff_array.shape[0],top-bottom])
+    eas_iter = eff_array_sect.item_iter()
+    fgi = final_gain.item_iter()
+    while eas_iter.has_next():
+        eas_iter.set_next(1.0/fgi.next())
+    print 'Efficiency array setting took %f' % (time.clock() - elapsed)
+    print 'Check: element (64,64) is %f' % (eff_array[64,64])
     # Calculate the covariance of the final sum as the covariance of the
     # series of observations, divided by the number of observations
     cov_array = zeros(gain_as_vectors.shape,dtype=float)
@@ -158,7 +181,15 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     print 'We have covariances too! ' + `covariances.shape`
     print 'Writing to eff_error, shape ' + `eff_error[:,bottom:top].shape`
     #   eff_error[tube_no] = (variance*(inverse_val**4))
-    eff_error[:,bottom:top] = covariances*(eff_array[:,bottom:top]**4)
+    # We want to write...
+    # eff_error[:,bottom:top] = covariances*(eff_array[:,bottom:top]**4)
+    # but for a speed-up we write...
+    eff_error_sect = eff_error.get_section([0,bottom],[eff_error.shape[0],top-bottom])
+    easi = eff_error_sect.item_iter()
+    covi = covariances.item_iter()
+    effi = eff_array_sect.item_iter()
+    while easi.has_next():
+        easi.set_next(covi.next()*(effi.next()**4))
     # pixel OK map...anything with positive efficiency but variance is no 
     # greater than the efficiency (this latter is arbitrary)return eff_array
     ok_pixels = zeros(eff_array.shape,dtype=int)
@@ -167,9 +198,8 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     pix_ok_map[eff_error > eff_array]=1
     print "OK pixels %d" % ok_pixels.sum() 
     print "Variance not OK pixels %d" % pix_ok_map.sum()
-    # Now fix our output arrays to avoid NaN
-    #eff_array = where(isnan(eff_array),0,eff_array)
-    #eff_error = where(isnan(eff_error),0,eff_error)
+    # Now fix our output arrays to put dodgy pixels to one
+    eff_array[eff_error>eff_array] = 1.0
     if splice: 
         backgr_str = backgr[0]+" + " + backgr[1]
         add_str = "data from %s up to step %d replaced with data from %s" % (backgr[0],splice,backgr[1])
@@ -183,9 +213,9 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     return {"_[local]_efficiency_data":eff_array.transpose(),
             "_[local]_efficiency_variance":eff_error.transpose(),
             "contributors":pix_ok_map,
-            "_[local]_efficiency_raw_data":os.path.basename(vanad.location),
+            "_[local]_efficiency_raw_data":os.path.basename(str(vanad.location)),
             "_[local]_efficiency_raw_timestamp":vtime,
-            "_[local]_efficiency_background_data":os.path.basename(backgr.location),
+            "_[local]_efficiency_background_data":os.path.basename(str(backgr.location)),
             "_[local]_efficiency_background_timestamp":btime,
             "_[local]_efficiency_determination_material":"Vanadium",
             "_[local]_efficiency_determination_method":"From flood field produced by 9mm V rod",
@@ -279,8 +309,8 @@ def getVerticalEdges(rawdata,simple=True,output_filename=None):
         widvar = 1        #assume +/- 0.5 on each
         thisoff = thisres[0]+(thiswid/2.0) - 63.5
         offvar = 1
-        scaleerr = sqrt(widvar)/ref_tube_wid
-        print "%3d: %4.1f %4.1f %5.3f %4.3f %3d %3d (%2d)" % (tube,thisoff,sqrt(offvar),
+        scaleerr = math.sqrt(widvar)/ref_tube_wid
+        print "%3d: %4.1f %4.1f %5.3f %4.3f %3d %3d (%2d)" % (tube,thisoff,math.sqrt(offvar),
         thiswid/ref_tube_wid,scaleerr,thisres[0],thisres[1],thiswid)
         if simple and output_filename != None:
             of1.write("%3d  %3d\n" % (tube+1,-1*math.floor(thisoff)))

@@ -383,7 +383,6 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0)
 
 def debunch(totals,cluster_size):
     new_totals = zeros_like(totals)
-    new_totals = Dataset(new_totals)
     nt_iter = new_totals.item_iter()
     ntv_iter = new_totals.var.item_iter()
     tot_iter = totals.item_iter()
@@ -401,19 +400,27 @@ def debunch(totals,cluster_size):
         if distance < cluster_size:
             total_intensity += tot_iter.next()
             total_variance += totv_iter.next()
-            mean_angle +=axis_iter.next()
+            mean_angle +=new_angle
             bunch_points += 1
             try:
                 new_angle = axis_iter.next()
             except:
                 break
         else:                #this point to far beyond beginning
+            # for debugging
+            
             nt_iter.next()
             ntv_iter.next()
             nt_iter.set_curr(total_intensity/bunch_points)
             ntv_iter.set_curr(total_variance/(bunch_points*bunch_points))
             new_axis.append(mean_angle/bunch_points)
             in_points += bunch_points
+            # debugging
+            #if in_points < 30:
+            #    print '%d: new_totals[0:50] = ' % in_points + `new_totals.storage[0:50]`
+            #    print '%d: total_intensity/bunch_points = %f/%f = %f' % (in_points,total_intensity,
+            #                                                         bunch_points,total_intensity/bunch_points) 
+            #    print '%d: mean angle %f' % (in_points,mean_angle/bunch_points)
             # re-initialise counters
             total_intensity = 0.0
             total_variance = 0.0
@@ -424,11 +431,17 @@ def debunch(totals,cluster_size):
             #it.
             cluster_begin = new_angle
     # Now we have finished, we just need to handle the last point
+    print 'Finished debunching, nt[1000] = %f' % new_totals[1000]
     nt_iter.next()
-    nt_iter.set_curr(total_intensity)
+    ntv_iter.next()
+    nt_iter.set_curr(total_intensity/bunch_points)
+    ntv_iter.set_curr(total_variance/(bunch_points*bunch_points))
     new_axis.append(mean_angle/bunch_points)
     # Trim output arrays
     newlen = len(new_axis)
+    print 'Clustered axis has length %d, running from %f to %f' % (newlen,new_axis[0],new_axis[-1])
+    print 'Cluster factor %d/%d =  %f' % (len(totals),newlen,1.0*len(totals)/newlen)
+    print 'Totals[1000] = %f, new totals[1000] = %f' % (totals[1000],new_totals[1000])
     new_totals = new_totals[:newlen]
     new_totals.copy_cif_metadata(totals)
     new_totals.axes[0] = new_axis
@@ -826,16 +839,22 @@ def do_overlap(ds,iterno):
         )
     return cs,q
 
-def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True):
+def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True,algo="FordRollett"):
     import overlap
     start_gain = array.ones(len(dataset))
-    gain,first_ave,chisquared,residual_map,esds = overlap.find_gain(dataset,dataset,pixel_step,start_gain,pixel_mask=pixel_mask)
+    if algo == "FordRollett":
+        gain,first_ave,chisquared,residual_map,ar,esds = overlap.find_gain_fr(dataset,dataset,pixel_step,start_gain,pixel_mask=pixel_mask)
+    else:
+        gain,first_ave,chisquared,residual_map,esds = overlap.find_gain(dataset,dataset,pixel_step,start_gain,pixel_mask=pixel_mask)
     old_result = first_ave    #store for later
-    chisq_history = [chisquared]
+    # chisq_history = [chisquared]
     for cycle_no in range(iter_no+1):
         esdflag = (cycle_no == iter_no)  # need esds as well
         print 'Esdflag: ' + `esdflag`
-        gain,interim_result,chisquared,residual_map,esds = overlap.find_gain(dataset,dataset,pixel_step,gain,pixel_mask=pixel_mask,errors=esdflag)
+        if algo == "FordRollett":
+            gain,interim_result,ar,esds = overlap.find_gain_fr(dataset,dataset,pixel_step,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
+        else:
+            gain,interim_result,ar,esds = overlap.find_gain(dataset,dataset,pixel_step,gain,pixel_mask=pixel_mask,errors=esdflag)
         chisq_history.append(chisquared)
     print 'Chisquared: ' + `chisq_history`
     return gain,dataset,interim_result,residual_map,chisquared,esds,first_ave

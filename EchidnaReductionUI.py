@@ -13,7 +13,11 @@ if script_source not in sys.path:
 # Output Folder
 out_folder = Par('file', script_source + '/Data/')
 out_folder.dtype = 'folder'
-Group('Output Folder').add(out_folder)
+output_xyd = Par('bool','False')
+output_cif = Par('bool','True')
+output_fxye = Par('bool','True')
+output_stem = Par('string','reduced_')
+Group('Output Folder').add(output_xyd,output_cif,output_fxye,output_stem,out_folder)
 
 # Normalization
 # We link the normalisation sources to actual dataset locations right here, right now
@@ -110,7 +114,6 @@ def show_helper(filename, plot, pre_title = ''):
     if filename:
         
         ds = Dataset(str(filename))
-        plot.clear()
         
         if ds.ndim == 4:
             plot.set_dataset(ds[0, 0])
@@ -138,8 +141,7 @@ def eff_show_proc():
         eff_map_cache[eff_map.value] = reduction.read_efficiency_cif(eff_map.value)
     else:
         print 'Found in cache ' + `eff_map_cache[eff_map.value]`
-    Plot1.clear()
-    Plot1.set_dataset(eff_map_cache[eff_map.value])
+    Plot1.set_dataset(eff_map_cache[eff_map.value][0])
     Plot1.title = 'Efficiency map'
 
 # For HDF files
@@ -171,7 +173,6 @@ def vtc_show_proc():
             ds.title = 'Vertical Tube Correction'
             
             # show plot
-            Plot3.clear()
             Plot3.set_dataset(ds)
 
         finally:
@@ -202,7 +203,6 @@ def htc_show_proc():
             ds.title = 'Horizontal Tube Correction'
             
             # show plot
-            Plot1.clear()
             Plot1.set_dataset(ds)
 
         finally:
@@ -237,7 +237,6 @@ def plh_copy_proc():
     
     dst_ds = dst_plot.ds
     if type(dst_ds) is not list:
-        dst_plot.clear()
         dst_ds = []
     
     dst_ds_ids = [id(ds) for ds in dst_ds]
@@ -449,7 +448,6 @@ def __run_script__(fns):
                 return
         # Display dataset
         print 'Finished stitching at %f' % (time.clock()-elapsed)
-        Plot1.clear()
         Plot1.set_dataset(ds)
         Plot1.title = ds.title
         if vig_apply_rescale.value:
@@ -459,10 +457,16 @@ def __run_script__(fns):
             ds = reduction.getVerticalIntegrated(ds, axis=0, cluster=float(vig_cluster.value))
         print 'Finished vertical integration at %f' % (time.clock()-elapsed)
         # Display reduced dataset
-        Plot2.clear()
         Plot2.set_dataset(ds)
         Plot2.title = ds.title
-        output.write_cif_data(ds,join(str(out_folder.value), 'reduced_' + basename(str(fn))[:-7]))
+        # Output datasets
+        filename_base = join(str(out_folder.value),str(output_stem.value) + basename(str(fn))[:-7])
+        if output_cif.value:
+            output.write_cif_data(ds,filename_base)
+        if output_xyd.value:
+            output.write_xyd_data(ds,filename_base)
+        if output_fxye.value:
+            output.write_fxye_data(ds,filename_base)
         # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
         print 'Finished writing data at %f' % (time.clock()-elapsed)
         

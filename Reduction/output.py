@@ -1,5 +1,7 @@
+# A series of routines for outputting data
 import math,copy
 
+# Output CIF data, including metadata
 def write_cif_data(ds,filename):
     """Write the dataset in CIF format"""
     from CifFile import CifFile, CifLoopBlock
@@ -69,18 +71,42 @@ def prepare_string(bad_string):
 #
 def format_esd(number,var):
     """Format the esd as intensity(nn), where nn follows the ISO rules"""
+    # The idea is to multiply the error until we have a number between
+    # 2 and 20, and the number of significant figures after the
+    # decimal point is adjusted according to the size of the error and
+    # and the number of multiplications
     err = math.sqrt(var)
     if err<0.000000001: return "%.5f(0)" % number
     err_as_int = err
-    outsigfigs = -2
-    while err_as_int < 9.5: 
+    outsigfigs = 0
+    while err_as_int < 1.95: 
         outsigfigs+=1
         err_as_int *=10
-    if outsigfigs < 0:
-        flt_format = "%.0f(%2d)"
+    if outsigfigs <= 0:  #Error somewhere to left of decimal point
+        # should format in scientific notation but too lazy
+        flt_format = "%.0f(%d)"
     else:
-        flt_format = "%%.%df(%%2d)" % outsigfigs
-    return flt_format % (number, int(round(err)))
+        flt_format = "%%.%df(%%d)" % outsigfigs
+    # print 'Format: %s, number %f, err %f, err_as_int %d' % (flt_format,number,err,int(round(err_as_int)))
+    return flt_format % (number, int(round(err_as_int)))
+
+###################################################
+# Output xyd data (three column ASCII)
+###################################################
+def write_xyd_data(ds,filename):
+    from datetime import datetime
+    current_time =  datetime.now().isoformat()
+    angles = map(lambda a:("%.5f" % a),ds.axes[0])
+    ints = map(lambda a:"%.2f" % a,ds)
+    esds = map(lambda a:"%.5f" % math.sqrt(a),ds.var)
+    if not filename[-3:]=='xyd':
+        filename = filename+'.xyd'
+    fh = open(filename,"w")
+    fh.write("# Data from file %s, written %s\n" % (ds.title[0:17],str(current_time)))
+    fh.write("# %10s %10s %10s\n" % ("Angle","Intensity","Error"))
+    for point in zip(angles,ints,esds):
+        fh.write("  %10s %10s %10s\n" % (point[0],point[1],point[2]))
+    fh.close()
 
 ###################################################
 def dump_tubes(ds,filename):
