@@ -10,7 +10,16 @@ if script_source not in sys.path:
 
 # Imports
 from Reduction import overlap
-
+'''Extra plots'''
+if 'Plot4' not in globals():
+    Plot4 = Plot(title='Chi-squared history')
+    Plot4.close = noclose
+if 'Plot5' not in globals():
+    Plot5 = Plot(title='Gain')
+    Plot5.close = noclose
+if 'Plot6' not in globals():
+    Plot6 = Plot(title='Residual Map')
+    Plot6.close = noclose
 ''' User Interface '''
 
 # Output Folder
@@ -88,9 +97,10 @@ if normalisation_reference:  #saved as location, need label instead
         if vals: norm_reference.value = vals[0]
 if efficiency_file_uri:
     eff_map.value = efficiency_file_uri
-    
+
 # Storage for efficiency map
-eff_map_cache = {}
+if not 'eff_map_cache' in globals():
+    eff_map_cache = {}
     
 ''' Button Actions '''
 
@@ -106,7 +116,7 @@ def eff_show_proc():
         print 'Found in cache ' + `eff_map_cache[eff_map.value]`
     Plot1.clear()
     # print 'Plotting ' + `eff_map_cache[eff_map.value]`
-    Plot1.set_dataset(eff_map_cache[eff_map.value])
+    Plot1.set_dataset(eff_map_cache[eff_map.value][0])
     Plot1.title = 'Efficiency map'  #add info to this title!
 
 def plh_copy_proc():
@@ -203,7 +213,7 @@ def plh_delete_proc():
 
 # This function is called when pushing the Run button in the control UI.
 def __run_script__(fns):
-    
+    global Plot4,Plot5,Plot6
     from Reduction import reduction
  
     from os.path import basename
@@ -255,9 +265,11 @@ def __run_script__(fns):
             eff = None
             print 'WARNING: no eff-map was specified'
         else:
-            eff = reduction.read_efficiency_cif(str(eff_map.value))
-            if eff.ndim != 2:
-                raise AttributeError('eff.ndim != 2')
+            if not eff_map.value in eff_map_cache:
+                eff_map_cache[eff_map.value] = reduction.read_efficiency_cif(str(eff_map.value))
+            else:
+                print 'Found cached efficiency map ' + str(eff_map.value)
+            eff = eff_map_cache[eff_map.value]
     else:
         eff = None
     
@@ -290,10 +302,11 @@ def __run_script__(fns):
         # extract basic metadata
         ds = reduction.AddCifMetadata.extract_metadata(ds)
         # remove redundant dimensions
-        ds = ds.get_reduced()
+        rs = ds.get_reduced()
+        rs.copy_cif_metadata(ds)
         # check if normalized is required 
         if norm_ref:
-            norm_tar = reduction.applyNormalization(ds, reference=norm_table[norm_ref], target=norm_tar)
+            ds,norm_tar = reduction.applyNormalization(rs, reference=norm_table[norm_ref], target=norm_tar)
         
         print 'Finished normalisation at %f' % (time.clock()-elapsed)
         # check if vertical tube correction is required
@@ -326,12 +339,28 @@ def __run_script__(fns):
             d = c.intg(axis=1)
             e = d.transpose()
             # we skip the first two tube's data as it is all zero
-            q= iterate_data(e[3:],pixel_step=1,iter_no=regain_iterno.value)
+            # Get an initial average to start with
+            first_gain = array.ones(len(b.transpose())-3)
+            first_ave,x,y = overlap.apply_gain(b.transpose()[3:,:],b.transpose()[3:,:],pixel_step,first_gain)
+            q= iterate_data(e[3:],pixel_step=1,iter_no=int(regain_iterno.value))
             f,x,y = overlap.apply_gain(b.transpose()[3:,:],b.transpose()[3:,:],pixel_step,q[0])
             f = Dataset(f)
+            f.title = "After scaling"
             print `f.shape` + ' ' + `y.shape` + ' ' + `x.shape`
             Plot1.set_dataset(f)
-
+            first_ave = Dataset(first_ave)
+            first_ave.title = "Before scaling"
+            Plot1.add_dataset(Dataset(first_ave))
+            Plot4.set_dataset(Dataset(q[4]))
+            fg = Dataset(q[0])
+            fg.var = q[5]
+            Plot5.set_dataset(fg)
+            residual_map = Dataset(q[3])
+            print `residual_map`
+            try:
+                Plot6.set_dataset(residual_map)
+            except:
+                pass
         print 'Finished regain calculation at %f' % (time.clock() - elapsed)
 """
         # assemble dataset
@@ -359,18 +388,16 @@ def __run_script__(fns):
         output.write_cif_data(ds,join(str(out_folder.value), 'reduced_' + basename(str(fn))[:-7]))
         print 'Finished writing data at %f' % (time.clock()-elapsed)
         """
-def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True):
+def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None):
     start_gain = array.ones(len(dataset))
-    gain,first_ave,chisquared,residual_map,esds = overlap.find_gain(dataset,dataset,pixel_step,start_gain,pixel_mask=pixel_mask)
-    if plot_clear:
-        Plot1.clear()
-        Plot2.clear()
+    gain,first_ave,chisquared,residual_map,ar,esds = overlap.find_gain_fr(dataset,dataset,pixel_step,start_gain,pixel_mask=pixel_mask)
     Plot1.set_dataset(Dataset(first_ave))
+    Plot2.set_dataset(zeros_like(first_ave))
     old_result = first_ave    #store for later
     chisq_history = [chisquared]
     for cycle_no in range(iter_no+1):
         esdflag = cycle_no == iter_no
-        gain,interim_result,chisquared,residual_map,esds = overlap.find_gain(dataset,dataset,pixel_step,gain,pixel_mask=pixel_mask,errors=esdflag)
+        gain,interim_result,chisquared,residual_map,ar,esds = overlap.find_gain_fr(dataset,dataset,pixel_step,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
         chisq_history.append(chisquared)
         if not cycle_no % ((iter_no/2)+1):             # +1 to avoid division by zero for single step iterations
             print "Plotting cycle %d" % cycle_no
