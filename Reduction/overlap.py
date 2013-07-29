@@ -44,7 +44,7 @@ def find_gain(data, variance, steps_per_tube, gain_array,pixel_mask=None,errors=
    print 'Gain at %f' % (time.clock() - elapsed)
    # calculate the error in each gain  from the rms differences
    if errors:
-       esds = calc_error_new(data,outdata,gain,steps_per_tube,pixel_mask)
+       esds = calc_error_new(data,outdata,gain,steps_per_tube)
        print 'Final errors at %f' % (time.clock() - elapsed)
    else: esds = array.zeros_like(gain)
    return gain,outdata,chisquared,residual_map,esds
@@ -357,7 +357,7 @@ def calc_error(obs,model,gain_vector,offset,pixel_mask):
     return result
 
 # This function calculates the error in the gain numbers by getting the RMS deviation of obs_point/model_point
-def calc_error_new(obs,model,gain_vector,offset,pixel_mask):
+def calc_error_new(obs,model,gain_vector,offset):
     # We should calculate  as for shift_sub_tube_mult, but dividing instead
     import math
     result = array.zeros_like(gain_vector)
@@ -368,7 +368,7 @@ def calc_error_new(obs,model,gain_vector,offset,pixel_mask):
     numslices = len(obs)
     for atubeno in range(numslices):
         mod_sec = model.get_section([offset*atubeno],[scanlen])
-        ri.set_next(math.sqrt(sum((gi.next()-(oi.next()*pixel_mask/mod_sec))**2)/scanlen))
+        ri.set_next(math.sqrt(sum((gi.next()-(oi.next()/mod_sec))**2)/scanlen))
     return result
 
 # The treatment of Ford and Rollett  Acta Cryst. (1968) B24,293
@@ -432,7 +432,7 @@ def find_gain_fr(data, variance, steps_per_tube, gain_array,arminus1=None,pixel_
    print 'Chi %s at %f' % (`chisquared`,(time.clock() - elapsed))
    # calculate the error in each gain  from the rms differences
    if errors:
-       esds = calc_error_new(data,outdata,gain,steps_per_tube,pixel_mask)
+       esds = calc_error_new(data,outdata,gain,steps_per_tube)
        print 'Final errors at %f' % (time.clock() - elapsed)
    else: esds = array.zeros_like(gain)
    return gain,outdata,chisquared,residual_map,ar,esds

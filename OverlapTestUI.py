@@ -344,6 +344,8 @@ def __run_script__(fns):
             first_ave,x,y = overlap.apply_gain(b.transpose()[3:,:],b.transpose()[3:,:],pixel_step,first_gain)
             q= iterate_data(e[3:],pixel_step=1,iter_no=int(regain_iterno.value))
             f,x,y = overlap.apply_gain(b.transpose()[3:,:],b.transpose()[3:,:],pixel_step,q[0])
+            # Get error for full dataset
+            esds = overlap.calc_error_new(b.transpose()[3:,:],f,q[0],pixel_step)
             f = Dataset(f)
             f.title = "After scaling"
             print `f.shape` + ' ' + `y.shape` + ' ' + `x.shape`
@@ -353,8 +355,12 @@ def __run_script__(fns):
             Plot1.add_dataset(Dataset(first_ave))
             Plot4.set_dataset(Dataset(q[4]))
             fg = Dataset(q[0])
-            fg.var = q[5]
+            fg.var = esds
             Plot5.set_dataset(fg)
+            # show old esds
+            fgold = Dataset(q[0])
+            fgold.var = q[5]
+            Plot5.add_dataset(fgold)
             residual_map = Dataset(q[3])
             print `residual_map`
             try:

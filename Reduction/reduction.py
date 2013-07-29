@@ -775,8 +775,9 @@ def getHorizontallyCorrected(ds, offsets_filename):
 
 # Calculate adjusted gain based on matching intensities between overlapping
 # sections of data from different detectors
-def do_overlap(ds,iterno):
+def do_overlap(ds,iterno,algo="FordRollett"):
     import time
+    from Reduction import overlap
     b = ds.intg(axis=1).get_reduced()  
     # Determine pixels per tube interval
     tube_pos = ds.axes[-1]
@@ -792,9 +793,14 @@ def do_overlap(ds,iterno):
     d = c.intg(axis=1)
     e = d.transpose()
     # we skip the first two tubes' data as it is all zero
-    q= iterate_data(e[3:],pixel_step=1,iter_no=iterno)
-    # q[0] contains the final gain values, which we now apply
+    gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave = \
+        iterate_data(e[3:],pixel_step=1,iter_no=iterno)
     print 'Have gains at %f' % time.clock()
+    # calculate errors based on full dataset
+    # First get a full model
+    model,wd,mv = overlap.apply_gain(b.transpose()[3:],b.var.transpose()[3:],pixel_step,gain)
+    esds = overlap.calc_error_new(b.transpose()[3:],model,gain,pixel_step)
+    print 'Have full model and errors at %f' % time.clock()
     """ The following lines are intended to improve efficiency
     by a factor of about 10, by using Arrays instead of datasets
     and avoiding the [] operator, which currently involves too
@@ -802,9 +808,9 @@ def do_overlap(ds,iterno):
     ArraySectionIter.next() is also code heavy, so calculate the
     sections ourselves."""
     final_gains = array.ones(ds.shape[-1])
-    final_gains[2:] = q[0]
+    final_gains[2:] = gain
     final_errors = array.zeros(ds.shape[-1])
-    final_errors[2:] = q[5]
+    final_errors[2:] = esds
     ds_as_array = ds.storage
     rs = array.zeros_like(ds)
     rs_var = array.zeros_like(ds)
@@ -837,9 +843,14 @@ def do_overlap(ds,iterno):
         (("_[local]_detector_number","_[local]_refined_gain","_[local]_refined_gain_esd"),),
         ((detno,gain_as_strings,gain_esd),))
         )
-    return cs,q
+    return cs,gain,esds,chisquared
 
+# Do an iterative refinement of the gain values
 def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True,algo="FordRollett"):
+    """Iteratively refine the gain. The pixel_step is the number of steps a tube takes before it
+    overlaps with the next tube. iter_no is the number of iterations. Pixel_mask has a zero for any
+    tube that should be excluded. Algo 'ford rollett' applies the algorithm of Ford and Rollet, 
+    Acta Cryst. (1968) B24, p293"""
     import overlap
     start_gain = array.ones(len(dataset))
     if algo == "FordRollett":
@@ -847,14 +858,14 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True
     else:
         gain,first_ave,chisquared,residual_map,esds = overlap.find_gain(dataset,dataset,pixel_step,start_gain,pixel_mask=pixel_mask)
     old_result = first_ave    #store for later
-    # chisq_history = [chisquared]
+    chisq_history = [chisquared]
     for cycle_no in range(iter_no+1):
         esdflag = (cycle_no == iter_no)  # need esds as well
-        print 'Esdflag: ' + `esdflag`
         if algo == "FordRollett":
-            gain,interim_result,ar,esds = overlap.find_gain_fr(dataset,dataset,pixel_step,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
+            gain,interim_result,chisquared,residual_map,ar,esds = overlap.find_gain_fr(dataset,dataset,pixel_step,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
         else:
-            gain,interim_result,ar,esds = overlap.find_gain(dataset,dataset,pixel_step,gain,pixel_mask=pixel_mask,errors=esdflag)
+            gain,interim_result,chisquared,residual_map,ar,esds = overlap.find_gain(dataset,dataset,pixel_step,gain,pixel_mask=pixel_mask,errors=esdflag)
         chisq_history.append(chisquared)
+        # Calculate the errors using the full, not truncated, dataset
     print 'Chisquared: ' + `chisq_history`
     return gain,dataset,interim_result,residual_map,chisquared,esds,first_ave

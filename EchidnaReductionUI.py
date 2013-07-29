@@ -428,13 +428,13 @@ def __run_script__(fns):
         # check if we are recalculating gain
         if regain_apply.value:
            print 'ds.has_key(ms): ' + `ds.__dict__.has_key('ms')`
-           ds,stats = reduction.do_overlap(ds,regain_iterno.value)
+           ds,gain,esds,chisquared = reduction.do_overlap(ds,regain_iterno.value)
            print 'Have new gains at %f' % (time.clock() - elapsed)
            Plot4 = Plot(title='Chi squared history')
            Plot5 = Plot(title='Final Gain')
-           fg = Dataset(stats[0])
-           fg.var = stats[5]
-           Plot4.set_dataset(Dataset(stats[4]))   #chisquared history
+           fg = Dataset(gain)
+           fg.var = esds
+           Plot4.set_dataset(Dataset(chisquared))   #chisquared history
            Plot5.set_dataset(fg)   #final gain plot
         # assemble dataset
         if ds.ndim > 2:
