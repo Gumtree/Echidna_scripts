@@ -109,6 +109,55 @@ def write_xyd_data(ds,filename):
     fh.close()
 
 ###################################################
+#  FXYE format (New GSAS)                         #
+###################################################
+def output_fxye_data(ds,filename):
+    """
+ *  This class implements a GSAS FXYE format exporter for powder data.  The specifications were
+ *  obtained from Brian Toby.
+ *  
+ *  For full specification of the format, see GSAS Technical Manual, 26/09/2004 Edition p 217.
+ *  Salient points for our output here: 
+ *  (1) comments begin with '#' as the first character and each line should be padded
+ *  to 80 characters.
+ *  (2) Comments must not appear after the 'BANK' line
+ *  (3) The file consists of one or more comments lines followed by data block lines
+ *  (4) A data block starts with a 'BANK' line
+ *  (5) BANK line format is 'BANK' IBANK NCHAN NREC BINTYP TYPE TYPE TYPE TYPE
+ *  (6) IBANK is a unique ID, NCHAN is number of points, NREC is number of lines, TYPE is
+ *  'FXYE' in this case
+ *  (7) Data are then presented as one point per line: two theta in centidegrees, 
+ *  intensities, errors: 3(F8.0,F7.4,F5.4) in Fortran notation
+ *  (8) BINTYPE needs to be CONS even though it is not relevant for FXYE
+ *  @author jrh"""
+
+    from datetime import datetime
+    current_time =  datetime.now().isoformat()
+    """(Java code)
+outputfile.format("BANK %2d %5d %5d CONS %10.3f %7.2f 0 0 FXYE%n", 
+                                                   frame_ct+1,thlen,thlen,100.0*row_iter.getDoubleNext(),grid_spac
+ing*100.0);  //Frame cannot be zero
+                            row_iter = tth_row.getIterator();  //reset iterator
+                                while(row_iter.hasNext()) {
+                                        outputfile.format("%8.2f %8.2f %8.2f%n",100.0*row_iter.getDoubleNext(),dat
+a_iter.getDoubleNext(),
+                                                        Math.sqrt(error_iter.getDoubleNext()));
+                                }
+                                frame_ct++;
+    """
+    angles = map(lambda a:("%.5f" % a),ds.axes[0])
+    ints = map(lambda a:"%.2f" % a,ds)
+    esds = map(lambda a:"%.5f" % math.sqrt(a),ds.var)
+    if not filename[-3:]=='xye':
+        filename = filename+'.xye'
+    fh = open(filename,"w")
+    fh.write("# Data from file %s, written %s. GSAS FXYE format\n" % (ds.title[0:17],str(current_time)))
+    fh.write("# %10s %10s %10s\n" % ("Angle","Intensity","Error"))
+    for point in zip(angles,ints,esds):
+        fh.write("  %10s %10s %10s\n" % (point[0],point[1],point[2]))
+    fh.close()
+
+###################################################
 def dump_tubes(ds,filename):
     """Dump information from each tube"""
     import math

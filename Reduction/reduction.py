@@ -291,7 +291,7 @@ def getStitched(ds):
     rs.axes[1] = map(lambda (angle, src_frame, src_column): angle, container)
 
     # finalize result
-    rs.title = ds.title + ' (Stitched)'
+    rs.title = ds.title + ' (St)'
     # axes
     rs.axes[0].title = ds.axes[1].title
     rs.axes[1].title = ds.axes[2].title
@@ -363,7 +363,7 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0)
     # normalize result if required
     if normalization > 0:
         totals *= (float(normalization) / totals.max())
-        totals.title = totals.title + ' (x %5.0f)' % (float(normalization)/totals.max())
+        totals.title = totals.title + ' (x %5.2f)' % (float(normalization)/totals.max())
 
     # check if any axis needs to be converted from boundaries to centers
     new_axes = []
@@ -622,7 +622,7 @@ def getEfficiencyCorrected(ds, (eff,eff_metadata)):
             rs[frame] *= eff
 
         # finalize result
-        rs.title = ds.title + ' (Efficiency Corrected)'
+        rs.title = ds.title + ' (Eff)'
         rs.copy_cif_metadata(ds)
         # now include all the efficiency file metadata
         for key in eff_metadata.keys():
@@ -808,9 +808,9 @@ def do_overlap(ds,iterno,algo="FordRollett"):
     ArraySectionIter.next() is also code heavy, so calculate the
     sections ourselves."""
     final_gains = array.ones(ds.shape[-1])
-    final_gains[2:] = gain
+    final_gains[3:] = gain
     final_errors = array.zeros(ds.shape[-1])
-    final_errors[2:] = esds
+    final_errors[3:] = esds
     ds_as_array = ds.storage
     rs = array.zeros_like(ds)
     rs_var = array.zeros_like(ds)
@@ -819,16 +819,21 @@ def do_overlap(ds,iterno,algo="FordRollett"):
     print 'RS shape: ' + `rs.shape`
     print 'Gain shape: ' + `final_gains.shape`
     target_shape = [rs.shape[0],rs.shape[1],1]
+    print 'Before correction: tube 47, step 10, pixel 64: %f' % (ds_as_array[10,64,47])
+    print 'Shape: %s, target %s' % (`ds_as_array[:,:,0].shape`,`target_shape`)
     for atubeno in range(len(final_gains)):
-        rta = rs.get_section([0,0,atubeno],target_shape)
-        dta = ds_as_array.get_section([0,0,atubeno],target_shape)
         fgn = gain_iter.next()
         fgvn = gain_var_iter.next()
-        rta += dta * fgn
+        if atubeno == 47:
+            print 'Gain for tube 47 is %f(+/- %f)' % (fgn,fgvn)
+            print 'Re-refine tube 47 before: %s' % `ds_as_array[10,64,47]`
+        rs[:,:,atubeno] = ds_as_array[:,:,atubeno]*fgn
+        if atubeno == 47:
+            print 'Re-refine tube 47 after: %s' % `rs[10,64,47]`
         rtav = rs_var.get_section([0,0,atubeno],target_shape)
         # sigma^2(a*b) = a^2 sigma^2(b) + b^2 sigma^2(a)
         rtav += ds.var.storage.get_section([0,0,atubeno],target_shape)*fgn*fgn + \
-                fgvn * dta**2
+                fgvn * ds_as_array[:,:,atubeno]**2
     # Now build up the important information
     cs = copy(ds)
     cs.storage = rs
@@ -843,29 +848,45 @@ def do_overlap(ds,iterno,algo="FordRollett"):
         (("_[local]_detector_number","_[local]_refined_gain","_[local]_refined_gain_esd"),),
         ((detno,gain_as_strings,gain_esd),))
         )
+    cs.title = cs.title + '(Regainx%d)' % iterno
+    print 'Final regain check: tube 47,step 10, pixel 64: %f' % cs[10,64,47]
     return cs,gain,esds,chisquared
 
-# Do an iterative refinement of the gain values
+# Do an iterative refinement of the gain values. We calculate errors only when chisquared shift is
+# small, and aim for a shift/esd of <0.1
 def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True,algo="FordRollett"):
     """Iteratively refine the gain. The pixel_step is the number of steps a tube takes before it
-    overlaps with the next tube. iter_no is the number of iterations. Pixel_mask has a zero for any
-    tube that should be excluded. Algo 'ford rollett' applies the algorithm of Ford and Rollet, 
+    overlaps with the next tube. iter_no is the number of iterations, if negative the routine will iterate
+    until chisquared does not change by more than 0.01 or abs(iter_no) steps, whichever comes first. Pixel_mask 
+    has a zero for any tube that should be excluded. Algo 'ford rollett' applies the algorithm of Ford and Rollet, 
     Acta Cryst. (1968) B24, p293"""
     import overlap
     start_gain = array.ones(len(dataset))
     if algo == "FordRollett":
-        gain,first_ave,chisquared,residual_map,ar,esds = overlap.find_gain_fr(dataset,dataset,pixel_step,start_gain,pixel_mask=pixel_mask)
+        gain,first_ave,chisquared,residual_map,ar,esds,k = overlap.find_gain_fr(dataset,dataset,pixel_step,start_gain,pixel_mask=pixel_mask)
     else:
         gain,first_ave,chisquared,residual_map,esds = overlap.find_gain(dataset,dataset,pixel_step,start_gain,pixel_mask=pixel_mask)
     old_result = first_ave    #store for later
     chisq_history = [chisquared]
-    for cycle_no in range(iter_no+1):
-        esdflag = (cycle_no == iter_no)  # need esds as well
+    k_history = [k]
+    if iter_no > 0: 
+        no_iters = iter_no
+    else:
+        no_iters = abs(iter_no)
+    for cycle_no in range(no_iters+1):
+        esdflag = (cycle_no == no_iters)  # need esds as well, and flags the last cycle
+        if cycle_no > 3 and iter_no < 0:
+            esdflag = (esdflag or (abs(chisq_history[-2]-chisq_history[-1]))<0.005)
         if algo == "FordRollett":
-            gain,interim_result,chisquared,residual_map,ar,esds = overlap.find_gain_fr(dataset,dataset,pixel_step,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
+            gain,interim_result,chisquared,residual_map,ar,esds,k = overlap.find_gain_fr(dataset,dataset,pixel_step,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
         else:
             gain,interim_result,chisquared,residual_map,ar,esds = overlap.find_gain(dataset,dataset,pixel_step,gain,pixel_mask=pixel_mask,errors=esdflag)
         chisq_history.append(chisquared)
-        # Calculate the errors using the full, not truncated, dataset
+        k_history.append(k)
+        if esdflag is True:
+            break
     print 'Chisquared: ' + `chisq_history`
-    return gain,dataset,interim_result,residual_map,chisquared,esds,first_ave
+    print 'K: ' + `k_history`
+    print 'Total cycles: %d' % cycle_no
+    print 'Maximum shift/error: %f' % max(ar/esds)
+    return gain,dataset,interim_result,residual_map,chisq_history,esds,first_ave

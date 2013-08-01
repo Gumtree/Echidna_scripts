@@ -396,14 +396,20 @@ def __run_script__(fns):
         """
 def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None):
     start_gain = array.ones(len(dataset))
-    gain,first_ave,chisquared,residual_map,ar,esds = overlap.find_gain_fr(dataset,dataset,pixel_step,start_gain,pixel_mask=pixel_mask)
+    gain,first_ave,chisquared,residual_map,ar,esds,K = overlap.find_gain_fr(dataset,dataset,pixel_step,start_gain,pixel_mask=pixel_mask)
     Plot1.set_dataset(Dataset(first_ave))
     Plot2.set_dataset(zeros_like(first_ave))
     old_result = first_ave    #store for later
     chisq_history = [chisquared]
-    for cycle_no in range(iter_no+1):
+    if iter_no > 0:
+        no_iters = iter_no
+    else:
+        no_iters = abs(iter_no)
+    for cycle_no in range(no_iters+1):
         esdflag = cycle_no == iter_no
-        gain,interim_result,chisquared,residual_map,ar,esds = overlap.find_gain_fr(dataset,dataset,pixel_step,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
+        if cycle_no > 3 and iter_no < 0:
+            esdflag = (esdflag or (abs(chisq_history[-2]-chisq_history[-1]))<0.005)
+        gain,interim_result,chisquared,residual_map,ar,esds,K = overlap.find_gain_fr(dataset,dataset,pixel_step,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
         chisq_history.append(chisquared)
         if not cycle_no % ((iter_no/2)+1):             # +1 to avoid division by zero for single step iterations
             print "Plotting cycle %d" % cycle_no
@@ -411,6 +417,7 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None):
             Plot2.add_dataset(Dataset(interim_result-old_result))#,label="%d" % cycle_no)
             old_result = interim_result
             Plot3.set_dataset(Dataset(chisq_history))#,label="%d" % cycle_no)
+    print 'Maximum shift/error: %f' % max(ar/esds)
     return gain,dataset,interim_result,residual_map,chisquared,esds,first_ave
 
 # dispose

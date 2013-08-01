@@ -373,7 +373,7 @@ def calc_error_new(obs,model,gain_vector,offset):
 
 # The treatment of Ford and Rollett  Acta Cryst. (1968) B24,293
 # In find_gain, we do not want to use datapoints that are zero.  We have to mask these out
-def find_gain_fr(data, variance, steps_per_tube, gain_array,arminus1=None,pixel_mask=None,errors=False):
+def find_gain_fr(data, variance, steps_per_tube, gain_array,arminus1=None,pixel_mask=None,errors=False,accel_flag=True):
    import math,time
    """usage: data is a 2D gumpy Array consisting of vertically-integrated scans from multiple tubes on Echidna, 
       where successive scans start overlapping neighbouring tubes after steps_per_tube steps. 
@@ -382,7 +382,8 @@ def find_gain_fr(data, variance, steps_per_tube, gain_array,arminus1=None,pixel_
       the input gain is returned as well as the new gain.  
       Pixel mask is a data-shaped array containing 0s in those positions
       where the pixel information should not be used.  If None, all pixels are used.
-      If errors is True, errors are calculated"""
+      If errors is True, errors are calculated.
+      If accel_flag is True, the accelerated version of Ford and Rollett is used."""
    if pixel_mask is None:
        pixel_mask = array.ones_like(data[0])
    elapsed = time.clock()
@@ -400,7 +401,6 @@ def find_gain_fr(data, variance, steps_per_tube, gain_array,arminus1=None,pixel_
    # index 'j' in equation (3) is a sum over tubes
    #
    aparray = shift_mult_fr_add(gain_array,outdata,data,data_weights,steps_per_tube,pixel_mask)
-   print 'Got ap at %f' % (time.clock() - elapsed)
    cpr = fr_get_cpr(gain_array,outdata,data,data_weights,aparray,steps_per_tube,pixel_mask)
    print 'Cpr at %f' % (time.clock() - elapsed)
    #
@@ -408,15 +408,21 @@ def find_gain_fr(data, variance, steps_per_tube, gain_array,arminus1=None,pixel_
    dpr[cpr>0.5*gain_array] = cpr
    dpr[cpr<=0.5*gain_array] = 0.5*gain_array
    epr = dpr/dpr[0]
-   ir = epr-gain_array
-   if arminus1 is None:
-      K = 0
+   # no acceleration
+   if accel_flag is False:
+      gain = epr
+      K = 0.0
+      ar = zeros_like(gain_array)
    else:
-      K = sum(arminus1*ir)/sum(arminus1 *arminus1)
-      if K>0.3: 
-         K=0.3
-   ar = ir/(1.0-K)
-   gain = gain_array + ar
+      ir = epr-gain_array
+      if arminus1 is None:
+         K = 0
+      else:
+         K = sum(arminus1*ir)/sum(arminus1 *arminus1)
+         if K>0.3: 
+            K=0.3
+      ar = ir/(1.0-K)
+      gain = gain_array + ar
    print 'Gain at %f' % (time.clock() - elapsed)
    # Some statistics
    #
@@ -435,7 +441,7 @@ def find_gain_fr(data, variance, steps_per_tube, gain_array,arminus1=None,pixel_
        esds = calc_error_new(data,outdata,gain,steps_per_tube)
        print 'Final errors at %f' % (time.clock() - elapsed)
    else: esds = array.zeros_like(gain)
-   return gain,outdata,chisquared,residual_map,ar,esds
+   return gain,outdata,chisquared,residual_map,ar,esds,K
 
 
 # Thus function performs linear interpolation on the input array to calculate intermediate values.
