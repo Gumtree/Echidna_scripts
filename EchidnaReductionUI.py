@@ -1,17 +1,13 @@
 # Script control setup area
-script_source = '/home/jrh/programs/echidna/Echidna-Gumtree-Scripts'
 __script__.title     = 'ECH Reduction'
 __script__.version   = '1.0'
-__script__.dict_path = script_source + '/ECH/path_table'
 # Add custom path
 import sys
-if script_source not in sys.path:
-    sys.path = [script_source] + sys.path
 
 ''' User Interface '''
 
 # Output Folder
-out_folder = Par('file', script_source + '/Data/')
+out_folder = Par('file')
 out_folder.dtype = 'folder'
 output_xyd = Par('bool','False')
 output_cif = Par('bool','True')
@@ -306,11 +302,11 @@ def plh_delete_proc():
 # This function is called when pushing the Run button in the control UI.
 def __run_script__(fns):
     
-    from Reduction import reduction
+    from Reduction import reduction,AddCifMetadata
     from os.path import basename
     from os.path import join
     import time           #how fast are we going?
-    import AddCifMetadata,output
+    from Formats import output
     
     elapsed = time.clock()
     print 'Started working at %f' % (time.clock()-elapsed)
@@ -440,7 +436,8 @@ def __run_script__(fns):
            Plot4.set_dataset(Dataset(chisquared))   #chisquared history
            Plot5.set_dataset(fg)   #final gain plot
         if regain_finish.value is True:
-            # we take the output of the refinement as the final data
+            # not yet done - we take the output of the refinement as the final data
+            pass
         # assemble dataset
         if ds.ndim > 2:
             asm_algo = str(asm_algorithm.value)

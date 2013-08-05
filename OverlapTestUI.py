@@ -1,12 +1,8 @@
 # Script control setup area
-script_source = '/home/jrh/programs/echidna/Echidna-Gumtree-Scripts'
-__script__.title     = 'ECH Overlap Test'
+__script__.title     = 'ECH Overlap'
 __script__.version   = '1.0'
-__script__.dict_path = script_source + '/ECH/path_table'
-# Add custom path
+
 import sys
-if script_source not in sys.path:
-    sys.path = [script_source] + sys.path
 
 # Imports
 from Reduction import overlap
@@ -23,7 +19,7 @@ if 'Plot6' not in globals():
 ''' User Interface '''
 
 # Output Folder
-out_folder = Par('file', script_source + '/Data/')
+out_folder = Par('file',"")
 out_folder.dtype = 'folder'
 output_xyd = Par('bool','True')
 output_cif = Par('bool','True')
@@ -221,7 +217,7 @@ def __run_script__(fns):
     from os.path import basename
     from os.path import join
     import time           #how fast are we going?
-    import AddCifMetadata,output
+    from Formats import AddCifMetadata,output
     
     elapsed = time.clock()
     print 'Started working at %f' % (time.clock()-elapsed)

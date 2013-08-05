@@ -306,7 +306,8 @@ def getStitched(ds):
     
 def read_efficiency_cif(filename):
     """Return a dataset,variance stored in a CIF file as efficiency values"""
-    import CifFile,time
+    import time
+    from Formats import CifFile
     print 'Reading in %s as CIF at %s' % (filename,time.asctime())
     eff_cif = CifFile.CifFile(str(filename))
     print 'Finished reading in %s as CIF at %s' % (filename,time.asctime())
