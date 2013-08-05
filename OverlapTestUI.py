@@ -25,7 +25,11 @@ if 'Plot6' not in globals():
 # Output Folder
 out_folder = Par('file', script_source + '/Data/')
 out_folder.dtype = 'folder'
-Group('Output Folder').add(out_folder)
+output_xyd = Par('bool','True')
+output_cif = Par('bool','True')
+output_fxye = Par('bool','False')
+output_stem = Par('string','overlap_')
+Group('Output Folder').add(output_xyd,output_cif,output_fxye,output_stem,out_folder)
 
 # Normalization
 # We link the normalisation sources to actual dataset locations right here, right now
@@ -58,7 +62,9 @@ Group('Horizontal Tube Correction').add(htc_apply, htc_file)
 # Recalculate gain
 regain_apply = Par('bool','True')
 regain_iterno = Par('int','5')
-Group('Recalculate Gain').add(regain_apply,regain_iterno)
+regain_unit_weights = Par('bool','True')
+regain_ignore = Par('int','2')
+Group('Recalculate Gain').add(regain_apply,regain_iterno,regain_unit_weights,regain_ignore)
 
 # Vertical Integration
 vig_lower_boundary = Par('int', '0')
@@ -107,15 +113,11 @@ if not 'eff_map_cache' in globals():
 # show Efficiency Correction Map 
 def eff_show_proc():
     from Reduction import reduction
-    #print "Map cache is " + `eff_map_cache`
-    #print "Our current key is " + `eff_map.value`
-    #print "Our value is" + `eff_map_cache.get(eff_map.value)`
     if not eff_map.value in eff_map_cache:
         eff_map_cache[eff_map.value] = reduction.read_efficiency_cif(eff_map.value)
     else:
         print 'Found in cache ' + `eff_map_cache[eff_map.value]`
     Plot1.clear()
-    # print 'Plotting ' + `eff_map_cache[eff_map.value]`
     Plot1.set_dataset(eff_map_cache[eff_map.value][0])
     Plot1.title = 'Efficiency map'  #add info to this title!
 
@@ -325,33 +327,44 @@ def __run_script__(fns):
         # check if we are recalculating gain
         if regain_apply.value:
             b = ds.intg(axis=1).get_reduced()  #reduce dimension
+            ignore = regain_ignore.value    #Ignore first two tubes
             # Determine pixels per tube interval
             tube_pos = ds.axes[-1]
             tubesep = abs(tube_pos[0]-tube_pos[-1])/(len(tube_pos)-1)
             tube_steps = ds.axes[0]
             bin_size = abs(tube_steps[0]-tube_steps[-1])/(len(tube_steps)-1)
             pixel_step = int(round(tubesep/bin_size))
-            print '%d steps before overlap' % pixel_step
+            bin_size = tubesep/pixel_step
+            print '%f tube separation, %d steps before overlap, ideal binsize %f' % (tubesep,pixel_step,bin_size)
             # Reshape with individual sections summed
             c = b.reshape([b.shape[0]/pixel_step,pixel_step,b.shape[-1]])
             print `b.shape` + "->" + `c.shape`
             # sum the individual unoverlapped sections
             d = c.intg(axis=1)
             e = d.transpose()
-            # we skip the first two tube's data as it is all zero
+            # we skip the first two tubes' data as it is all zero
             # Get an initial average to start with
-            first_gain = array.ones(len(b.transpose())-3)
-            first_ave,x,y = overlap.apply_gain(b.transpose()[3:,:],b.transpose()[3:,:],pixel_step,first_gain)
-            q= iterate_data(e[3:],pixel_step=1,iter_no=int(regain_iterno.value))
-            f,x,y = overlap.apply_gain(b.transpose()[3:,:],b.transpose()[3:,:],pixel_step,q[0])
+            first_gain = array.ones(len(b.transpose())-ignore)
+            first_ave,x,y = overlap.apply_gain(b.transpose()[ignore:,:],b.transpose().var[ignore:,:],pixel_step,first_gain)
+            if regain_unit_weights.value is True:
+                weights = array.ones_like(e[ignore:])
+            else:
+                weights = e[ignore:].var
+            q= iterate_data(e[ignore:],weights,pixel_step=1,iter_no=int(regain_iterno.value))
+            f,x,y = overlap.apply_gain(b.transpose()[ignore:,:],b.transpose().var[ignore:,:],pixel_step,q[0])
             # Get error for full dataset
-            esds = overlap.calc_error_new(b.transpose()[3:,:],f,q[0],pixel_step)
+            esds = overlap.calc_error_new(b.transpose()[ignore:,:],f,q[0],pixel_step)
             f = Dataset(f)
             f.title = "After scaling"
+            # construct the ideal axes
+            axis = arange(len(f))
+            f.axes[0] = axis*bin_size + ds.axes[0][0] + ignore*pixel_step*bin_size
+            f.copy_cif_metadata(ds)
             print `f.shape` + ' ' + `y.shape` + ' ' + `x.shape`
             Plot1.set_dataset(f)
             first_ave = Dataset(first_ave)
             first_ave.title = "Before scaling"
+            first_ave.axes[0] = f.axes[0]
             Plot1.add_dataset(Dataset(first_ave))
             Plot4.set_dataset(Dataset(q[4]))
             fg = Dataset(q[0])
@@ -362,41 +375,25 @@ def __run_script__(fns):
             fgold.var = q[5]
             Plot5.add_dataset(fgold)
             residual_map = Dataset(q[3])
-            print `residual_map`
             try:
                 Plot6.set_dataset(residual_map)
             except:
                 pass
         print 'Finished regain calculation at %f' % (time.clock() - elapsed)
-"""
-        # assemble dataset
-        if ds.ndim > 2:
-            asm_algo = str(asm_algorithm.value)
-            if asm_algo == 'stitch frames':
-                ds = reduction.getStitched(ds)
-            elif asm_algo == 'sum frames':
-                ds = reduction.getSummed(ds)
-            else:
-                print 'specify assemble algorithm'
-                return
-        # Display dataset
-        print 'Finished stitching at %f' % (time.clock()-elapsed)
-        Plot1.set_dataset(ds)
-        if vig_apply_rescale.value:
-            ds = reduction.getVerticalIntegrated(ds, axis=0, normalization=float(vig_rescale_target.value),
-                                                 cluster=float(vig_cluster.value))
-        else:
-            ds = reduction.getVerticalIntegrated(ds, axis=0, cluster=float(vig_cluster.value))
-        print 'Finished vertical integration at %f' % (time.clock()-elapsed)
-        # Display reduced dataset
-        Plot2.set_dataset(ds)
-        ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
-        output.write_cif_data(ds,join(str(out_folder.value), 'reduced_' + basename(str(fn))[:-7]))
+        # Output datasets
+        filename_base = join(str(out_folder.value),str(output_stem.value) + basename(str(fn))[:-7])
+        if output_cif.value:
+            output.write_cif_data(f,filename_base)
+        if output_xyd.value:
+            output.write_xyd_data(f,filename_base)
+        if output_fxye.value:
+            output.write_fxye_data(f,filename_base)
         print 'Finished writing data at %f' % (time.clock()-elapsed)
-        """
-def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None):
+
+def iterate_data(dataset,weights,pixel_step=25,iter_no=5,pixel_mask=None):
     start_gain = array.ones(len(dataset))
-    gain,first_ave,chisquared,residual_map,ar,esds,K = overlap.find_gain_fr(dataset,dataset,pixel_step,start_gain,pixel_mask=pixel_mask)
+    gain,first_ave,ar,esds,K = overlap.find_gain_fr(dataset,weights,pixel_step,start_gain,pixel_mask=pixel_mask)
+    chisquared,residual_map = overlap.get_statistics_fr(gain,first_ave,dataset,dataset.var,pixel_step,pixel_mask)
     Plot1.set_dataset(Dataset(first_ave))
     Plot2.set_dataset(zeros_like(first_ave))
     old_result = first_ave    #store for later
@@ -409,12 +406,13 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None):
         esdflag = cycle_no == iter_no
         if cycle_no > 3 and iter_no < 0:
             esdflag = (esdflag or (abs(chisq_history[-2]-chisq_history[-1]))<0.005)
-        gain,interim_result,chisquared,residual_map,ar,esds,K = overlap.find_gain_fr(dataset,dataset,pixel_step,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
+        gain,interim_result,ar,esds,K = overlap.find_gain_fr(dataset,weights,pixel_step,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
+        chisquared,residual_map = overlap.get_statistics_fr(gain,interim_result,dataset,dataset.var,pixel_step,pixel_mask)
         chisq_history.append(chisquared)
         if not cycle_no % ((iter_no/2)+1):             # +1 to avoid division by zero for single step iterations
             print "Plotting cycle %d" % cycle_no
             Plot1.add_dataset(Dataset(interim_result))#,label="%d" % cycle_no)
-            Plot2.add_dataset(Dataset(interim_result-old_result))#,label="%d" % cycle_no)
+            Plot2.add_dataset(Dataset(interim_result-first_ave))#,label="%d" % cycle_no)
             old_result = interim_result
             Plot3.set_dataset(Dataset(chisq_history))#,label="%d" % cycle_no)
     print 'Maximum shift/error: %f' % max(ar/esds)

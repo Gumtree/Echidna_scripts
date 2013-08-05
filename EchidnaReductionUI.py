@@ -59,6 +59,8 @@ Group('Horizontal Tube Correction').add(htc_apply, htc_file, htc_show)
 # Recalculate gain
 regain_apply = Par('bool','True')
 regain_iterno = Par('int','5')
+regain_exact_angles = Par('bool','False')  #use exact tube angles
+regain_finish = Par('bool','True')         #use output of refinement as final data
 Group('Recalculate Gain').add(regain_apply,regain_iterno)
 
 # Assemble
@@ -434,8 +436,11 @@ def __run_script__(fns):
            Plot5 = Plot(title='Final Gain')
            fg = Dataset(gain)
            fg.var = esds
+           # set horizontal axis (ideal values)
            Plot4.set_dataset(Dataset(chisquared))   #chisquared history
            Plot5.set_dataset(fg)   #final gain plot
+        if regain_finish.value is True:
+            # we take the output of the refinement as the final data
         # assemble dataset
         if ds.ndim > 2:
             asm_algo = str(asm_algorithm.value)

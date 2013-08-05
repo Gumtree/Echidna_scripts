@@ -63,7 +63,11 @@ def apply_gain(full_ds,full_variance,steps_per_tube,gain_array,pixel_mask=None):
        pixel_mask = array.ones_like(full_ds[0])
    #sanitise - we don't like zeros or complicated datastructures
    full_data = full_ds.storage
-   my_variance = copy(full_variance.storage)
+   my_variance = copy(full_variance)
+   try:
+      my_variance = my_variance.storage
+   except AttributeError:
+      pass
    my_variance[my_variance<1.0] = 1.0
    #weighted_data = divide(full_data,my_variance)  #wd = (F_hl^2/sigma_hl^2)
    weighted_data = full_data/my_variance  #wd = (F_hl^2/sigma_hl^2) 
@@ -73,23 +77,18 @@ def apply_gain(full_ds,full_variance,steps_per_tube,gain_array,pixel_mask=None):
    scaled_data = zeros_like(weighted_data)
    for section in range(weighted_data.shape[-1]):
        scaled_data[:,section] = trans_gain*weighted_data[:,section]  #G_l(rho-1)*wd
-   timeit(elapsed,'Finished doing gain multiplication')
    summed_data = shift_tube_add_new(scaled_data,steps_per_tube,pixel_mask) # Sum_l[previous line]
-   timeit(elapsed,'Finished adding tubes together')
    # if True in isnan(summed_data): raise ValueError,"NaN found!"
    scaled_variance = zeros_like(my_variance)
    for section in range(my_variance.shape[-1]):
       scaled_variance[:,section] = trans_gain**2/my_variance[:,section]
-   timeit(elapsed,'Finished scaling variance')
    # if True in isnan(scaled_variance): raise ValueError,"NaN found!"
    summed_denominator = shift_tube_add_new(scaled_variance,steps_per_tube,pixel_mask)
-   timeit(elapsed,'Finished adding variance')
    if 0 in summed_denominator:
           if pixel_mask is None: 
               print "Warning: 0 found in summed denominator"
               print "New minimum is %g" % summed_denominator.min()
           summed_denominator[summed_denominator<1e-10] = 1e-10
-          timeit(elapsed,'Finished clipping denominator')
           #clip(summed_denominator,1e-10,summed_denominator.max(),summed_denominator) 
    outdata = summed_data/summed_denominator #F_h^2 in original paper
    return outdata,weighted_data,my_variance
@@ -389,7 +388,6 @@ def find_gain_fr(data, variance, steps_per_tube, gain_array,arminus1=None,pixel_
    elapsed = time.clock()
    print 'In find_gain: started at %f' % elapsed
    outdata,weighted_data,my_variance = apply_gain(data,variance,steps_per_tube,gain_array,pixel_mask)
-   print 'Applied initial gain: %f' % (time.clock() - elapsed)
    # Inverse variance is our weight
    data_weights = 1.0/my_variance
    # Now calculate A_p (Equation 3 of FR)
@@ -397,12 +395,11 @@ def find_gain_fr(data, variance, steps_per_tube, gain_array,arminus1=None,pixel_
    # index 'h' in FR refers to a particular angle for us
    #           or alternatively, a particular angular range if we are adding first
    # index 'p' in FR refers to a particular tube for which we want the gain
-   # index 'r' is the cycle number in both cases
+   # index 'r' is the cycle number
    # index 'j' in equation (3) is a sum over tubes
    #
    aparray = shift_mult_fr_add(gain_array,outdata,data,data_weights,steps_per_tube,pixel_mask)
    cpr = fr_get_cpr(gain_array,outdata,data,data_weights,aparray,steps_per_tube,pixel_mask)
-   print 'Cpr at %f' % (time.clock() - elapsed)
    #
    dpr = zeros_like(cpr)
    dpr[cpr>0.5*gain_array] = cpr
@@ -424,24 +421,31 @@ def find_gain_fr(data, variance, steps_per_tube, gain_array,arminus1=None,pixel_
       ar = ir/(1.0-K)
       gain = gain_array + ar
    print 'Gain at %f' % (time.clock() - elapsed)
-   # Some statistics
-   #
-   # for each observation, residual is the (observation - pixel gain * the model intensity)^2/sigma^2
-   #
-   residual_map = shift_sub_tube_mult_new(gain,outdata,data,steps_per_tube,pixel_mask)*data_weights
-   print 'New residual at %f' % (time.clock() - elapsed)
-   chisquared = residual_map.sum()/(residual_map.size - gain_array.shape[-1])
-   # following statistic is for statistical inference - normal distribution z value for large
-   # degrees of freedom can be obtained from (chi squared - dof)/sqrt(2 dof)
-   dof = residual_map.size - gain_array.shape[-1]
-   norm_chi = (residual_map.sum() - dof)/math.sqrt(2.0*dof)
-   print 'Chi %s at %f' % (`chisquared`,(time.clock() - elapsed))
-   # calculate the error in each gain  from the rms differences
    if errors:
        esds = calc_error_new(data,outdata,gain,steps_per_tube)
        print 'Final errors at %f' % (time.clock() - elapsed)
    else: esds = array.zeros_like(gain)
-   return gain,outdata,chisquared,residual_map,ar,esds,K
+   return gain,outdata,ar,esds,K
+
+def get_statistics_fr(gain,outdata,data,variances,steps_per_tube,pixel_mask):
+   """Calculate some refinement statistics"""
+   import math
+   #
+   # for each observation, residual is the (observation - pixel gain * the model intensity)^2/sigma^2
+   #
+   if pixel_mask is None:
+       pixel_mask = array.ones_like(data[0])
+   try:
+      my_variances = variances.storage
+   except AttributeError:
+      my_variances = variances
+   residual_map = shift_sub_tube_mult_new(gain,outdata,data,steps_per_tube,pixel_mask)/my_variances
+   chisquared = residual_map.sum()/(residual_map.size - gain.shape[-1])
+   # following statistic is for statistical inference - normal distribution z value for large
+   # degrees of freedom can be obtained from (chi squared - dof)/sqrt(2 dof)
+   dof = residual_map.size - gain.shape[-1]
+   norm_chi = (residual_map.sum() - dof)/math.sqrt(2.0*dof)
+   return chisquared,residual_map
 
 
 # Thus function performs linear interpolation on the input array to calculate intermediate values.

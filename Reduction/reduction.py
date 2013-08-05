@@ -798,6 +798,8 @@ def do_overlap(ds,iterno,algo="FordRollett"):
     print 'Have gains at %f' % time.clock()
     # calculate errors based on full dataset
     # First get a full model
+    # Debug - what are our weights anyway?
+    print 'Weights for gain model: %s' % `b.var.transpose()[3:]`
     model,wd,mv = overlap.apply_gain(b.transpose()[3:],b.var.transpose()[3:],pixel_step,gain)
     esds = overlap.calc_error_new(b.transpose()[3:],model,gain,pixel_step)
     print 'Have full model and errors at %f' % time.clock()
@@ -863,9 +865,9 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True
     import overlap
     start_gain = array.ones(len(dataset))
     if algo == "FordRollett":
-        gain,first_ave,chisquared,residual_map,ar,esds,k = overlap.find_gain_fr(dataset,dataset,pixel_step,start_gain,pixel_mask=pixel_mask)
+        gain,first_ave,chisquared,residual_map,ar,esds,k = overlap.find_gain_fr(dataset,dataset.var,pixel_step,start_gain,pixel_mask=pixel_mask)
     else:
-        gain,first_ave,chisquared,residual_map,esds = overlap.find_gain(dataset,dataset,pixel_step,start_gain,pixel_mask=pixel_mask)
+        gain,first_ave,chisquared,residual_map,esds = overlap.find_gain(dataset,dataset.var,pixel_step,start_gain,pixel_mask=pixel_mask)
     old_result = first_ave    #store for later
     chisq_history = [chisquared]
     k_history = [k]

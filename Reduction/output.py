@@ -114,7 +114,8 @@ def write_xyd_data(ds,filename):
 def output_fxye_data(ds,filename):
     """
  *  This class implements a GSAS FXYE format exporter for powder data.  The specifications were
- *  obtained from Brian Toby.
+ *  obtained from Brian Toby.  Only one histogram is supported, although the format allows
+ *  multiple histograms. 
  *  
  *  For full specification of the format, see GSAS Technical Manual, 26/09/2004 Edition p 217.
  *  Salient points for our output here: 
@@ -133,28 +134,18 @@ def output_fxye_data(ds,filename):
 
     from datetime import datetime
     current_time =  datetime.now().isoformat()
-    """(Java code)
-outputfile.format("BANK %2d %5d %5d CONS %10.3f %7.2f 0 0 FXYE%n", 
-                                                   frame_ct+1,thlen,thlen,100.0*row_iter.getDoubleNext(),grid_spac
-ing*100.0);  //Frame cannot be zero
-                            row_iter = tth_row.getIterator();  //reset iterator
-                                while(row_iter.hasNext()) {
-                                        outputfile.format("%8.2f %8.2f %8.2f%n",100.0*row_iter.getDoubleNext(),dat
-a_iter.getDoubleNext(),
-                                                        Math.sqrt(error_iter.getDoubleNext()));
-                                }
-                                frame_ct++;
-    """
     angles = map(lambda a:("%.5f" % a),ds.axes[0])
+    thlen = len(angles)
     ints = map(lambda a:"%.2f" % a,ds)
     esds = map(lambda a:"%.5f" % math.sqrt(a),ds.var)
     if not filename[-3:]=='xye':
         filename = filename+'.xye'
     fh = open(filename,"w")
-    fh.write("# Data from file %s, written %s. GSAS FXYE format\n" % (ds.title[0:17],str(current_time)))
-    fh.write("# %10s %10s %10s\n" % ("Angle","Intensity","Error"))
-    for point in zip(angles,ints,esds):
-        fh.write("  %10s %10s %10s\n" % (point[0],point[1],point[2]))
+    fh.write("%80s\n" % "# Data from file %s, written %s. GSAS FXYE format" % (ds.title[0:17],str(current_time)))
+    fh.write("BANK 01 %5d %5d CONS %10.3f %7.2f 0 0 FXYE\n", 
+                                                   thlen,thlen,100.0*angles[0],0.0)
+    for ang,intensity,esd in zip(angles,ints,esds):
+        fh.write("%8.2f %8.2f %8.2f\n",100.0*ang,ints,esd)
     fh.close()
 
 ###################################################
