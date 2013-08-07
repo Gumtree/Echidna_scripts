@@ -52,18 +52,16 @@ htc_file.ext = '*.ang,*.*'
 htc_show  = Act('htc_show_proc()', 'Show') 
 Group('Horizontal Tube Correction').add(htc_apply, htc_file, htc_show)
 
-# Recalculate gain
-regain_apply = Par('bool','True')
-regain_iterno = Par('int','5')
-regain_exact_angles = Par('bool','False')  #use exact tube angles
-regain_finish = Par('bool','True')         #use output of refinement as final data
-Group('Recalculate Gain').add(regain_apply,regain_iterno)
-
-# Assemble
+# Assemble (note this is before rescaling)
 asm_algorithm = Par('string', 'stitch frames', options = ['stitch frames', 'sum frames'])
 Group('Assemble').add(asm_algorithm)
 
-# Vertical Integration
+# Recalculate gain
+regain_apply = Par('bool','True')
+regain_iterno = Par('int','5')
+Group('Recalculate Gain').add(regain_apply,regain_iterno)
+
+# Vertical Integration (note that gain recalc will include vertical integration)
 vig_lower_boundary = Par('int', '0')
 vig_upper_boundary = Par('int', '127')
 vig_apply_rescale  = Par('bool', 'True')
@@ -404,6 +402,8 @@ def __run_script__(fns):
         # check if normalized is required 
         if norm_ref:
             ds,norm_tar = reduction.applyNormalization(rs, reference=norm_table[norm_ref], target=norm_tar)
+        else:
+            ds = rs
         if bkg:
             ds = reduction.getBackgroundCorrected(ds, bkg, norm_table[norm_ref], norm_tar)
         
@@ -423,10 +423,11 @@ def __run_script__(fns):
 
         print 'Finished horizontal correction at %f' % (time.clock()-elapsed)
 
-        # check if we are recalculating gain
+        # check if we are recalculating gain 
         if regain_apply.value:
-           print 'ds.has_key(ms): ' + `ds.__dict__.has_key('ms')`
-           ds,gain,esds,chisquared = reduction.do_overlap(ds,regain_iterno.value)
+           bottom = int(vig_lower_boundary.value)
+           top = int(vig_upper_boundary.value)
+           cs,gain,esds,chisquared = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top)
            print 'Have new gains at %f' % (time.clock() - elapsed)
            Plot4 = Plot(title='Chi squared history')
            Plot5 = Plot(title='Final Gain')
@@ -435,10 +436,8 @@ def __run_script__(fns):
            # set horizontal axis (ideal values)
            Plot4.set_dataset(Dataset(chisquared))   #chisquared history
            Plot5.set_dataset(fg)   #final gain plot
-        if regain_finish.value is True:
-            # not yet done - we take the output of the refinement as the final data
-            pass
-        # assemble dataset
+        # assemble dataset, but if we have applied gain this is purely
+        # for display purposes
         if ds.ndim > 2:
             asm_algo = str(asm_algorithm.value)
             if asm_algo == 'stitch frames':
@@ -452,23 +451,26 @@ def __run_script__(fns):
         print 'Finished stitching at %f' % (time.clock()-elapsed)
         Plot1.set_dataset(ds)
         Plot1.title = ds.title
-        if vig_apply_rescale.value:
-            ds = reduction.getVerticalIntegrated(ds, axis=0, normalization=float(vig_rescale_target.value),
-                                                 cluster=float(vig_cluster.value))
+        if not vig_apply_rescale.value:
+            norm_const = -1.0
         else:
-            ds = reduction.getVerticalIntegrated(ds, axis=0, cluster=float(vig_cluster.value))
-        print 'Finished vertical integration at %f' % (time.clock()-elapsed)
+            norm_const = float(vig_rescale_target.value)
+        if not regain_apply.value:  #already done
+            cs = reduction.getVerticalIntegrated(ds, axis=0, normalization=norm_const,
+                                                 cluster=float(vig_cluster.value),bottom = int(vig_lower_boundary.value),
+                                                 top=int(vig_upper_boundary.value))
+            print 'Finished vertical integration at %f' % (time.clock()-elapsed)
         # Display reduced dataset
-        Plot2.set_dataset(ds)
-        Plot2.title = ds.title
+        Plot2.set_dataset(cs)
+        Plot2.title = cs.title
         # Output datasets
         filename_base = join(str(out_folder.value),str(output_stem.value) + basename(str(fn))[:-7])
         if output_cif.value:
-            output.write_cif_data(ds,filename_base)
+            output.write_cif_data(cs,filename_base)
         if output_xyd.value:
-            output.write_xyd_data(ds,filename_base)
+            output.write_xyd_data(cs,filename_base)
         if output_fxye.value:
-            output.write_fxye_data(ds,filename_base)
+            output.write_fxye_data(cs,filename_base)
         # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
         print 'Finished writing data at %f' % (time.clock()-elapsed)
         

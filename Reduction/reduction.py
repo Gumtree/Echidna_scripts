@@ -322,7 +322,7 @@ def read_efficiency_cif(filename):
 # The following routine can be called with unstitched data, in
 # which case we will return the data with the 'axis' dimension
 # summed. The default is for axis=1
-def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0):
+def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0,top=None,bottom=None):
     print 'vertical integration of', ds.title
     start_dim = ds.ndim
 
@@ -340,9 +340,15 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0)
     # Note that we are assuming at least 0.1 count in every valid pixel
     
     import time
-    totals = ds.intg(axis=axis)
-    contrib_map = zeros(ds.shape,dtype=int)
-    contrib_map[ds>0.1] = 1
+    if bottom is None or bottom < 0: bottom = 0
+    if top is None or top >= ds.shape[0]: top = ds.shape[0]-1
+    print 'Integration limits %d to %d' % (bottom,top)
+    working_slice = ds[bottom:top,:]
+    # print 'Debug: starting var step 50: ' + `working_slice[:,50].var`
+    totals = working_slice.intg(axis=axis)
+    # print 'Debug: finishing val %f, var %f step 50: ' % (totals[50],totals.var[50])
+    contrib_map = zeros(working_slice.shape,dtype=int)
+    contrib_map[working_slice>0.1] = 1
     contribs = contrib_map.intg(axis=axis)
     #
     # We have now reduced the scale of the problem by 100
@@ -352,20 +358,23 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0)
     max_contribs = float(contribs.max())
     #
     print 'Maximum no of contributors %f' % max_contribs
-    contribs = contribs/max_contribs
-    totals = totals / contribs
-    
+    contribs = contribs/max_contribs  #
+    save_var = totals.var
+    totals = totals / contribs        #Any way to avoid error propagation here?
+    totals.var = save_var/contribs
+
     # Note that we haven't treated variance yet
-
+    print 'Debug: variances at step 250 were %s (sum %f), now %f, %s contributions' % (`working_slice.var[:,250]`,working_slice.var[:,250].sum(),totals.var[250],`contribs[250]`) 
     # finalize result
-    totals.title = ds.title + ' (Vertically Integrated)'
+    totals.title = ds.title + ' (Summed from %d to %d)' % (bottom,top)
     totals.copy_cif_metadata(ds)
-
+    info_string = "Data were vertically integrated from pixels %d to %d (maximum number of contributors %d)." % (bottom,top,max_contribs)
+    
     # normalize result if required
     if normalization > 0:
         totals *= (float(normalization) / totals.max())
         totals.title = totals.title + ' (x %5.2f)' % (float(normalization)/totals.max())
-
+        info_string += "The maximum intensity was then normalised to %f counts." % float(normalization)
     # check if any axis needs to be converted from boundaries to centers
     new_axes = []
     for i in range(totals.ndim):
@@ -380,6 +389,8 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0)
 
     if cluster > 0:
         totals = debunch(totals,cluster)
+        info_string += "Points within %f of one another were averaged (weighted)." % cluster
+    totals.add_metadata("_pd_proc_info_data_reduction",info_string,append=True)
     return totals
 
 def debunch(totals,cluster_size):
@@ -432,7 +443,7 @@ def debunch(totals,cluster_size):
             #it.
             cluster_begin = new_angle
     # Now we have finished, we just need to handle the last point
-    print 'Finished debunching, nt[1000] = %f' % new_totals[1000]
+    # print 'Finished debunching, nt[1000] = %f' % new_totals[1000]
     nt_iter.next()
     ntv_iter.next()
     nt_iter.set_curr(total_intensity/bunch_points)
@@ -442,7 +453,7 @@ def debunch(totals,cluster_size):
     newlen = len(new_axis)
     print 'Clustered axis has length %d, running from %f to %f' % (newlen,new_axis[0],new_axis[-1])
     print 'Cluster factor %d/%d =  %f' % (len(totals),newlen,1.0*len(totals)/newlen)
-    print 'Totals[1000] = %f, new totals[1000] = %f' % (totals[1000],new_totals[1000])
+    #print 'Totals[1000] = %f, new totals[1000] = %f' % (totals[1000],new_totals[1000])
     new_totals = new_totals[:newlen]
     new_totals.copy_cif_metadata(totals)
     new_totals.axes[0] = new_axis
@@ -625,9 +636,9 @@ def getEfficiencyCorrected(ds, (eff,eff_metadata)):
         # finalize result
         rs.title = ds.title + ' (Eff)'
         rs.copy_cif_metadata(ds)
-        # now include all the efficiency file metadata
+        # now include all the efficiency file metadata, except data reduction
         for key in eff_metadata.keys():
-            if key not in ("_[local]_efficiency_data","_[local]_efficiency_variance"):
+            if key not in ("_[local]_efficiency_data","_[local]_efficiency_variance","_pd_proc_info_data_reduction"):
                 rs.add_metadata(key,eff_metadata[key])
 
         print 'efficiency corrected frames:', rs.shape[0]
@@ -776,88 +787,68 @@ def getHorizontallyCorrected(ds, offsets_filename):
 
 # Calculate adjusted gain based on matching intensities between overlapping
 # sections of data from different detectors
-def do_overlap(ds,iterno,algo="FordRollett"):
+def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,bottom=None):
+    """Calculate rescaling factors for tubes based on overlapping data
+    regions. The ignore parameter specifies the number of initial tubes for
+    which data are unreliable and should be ignored. Specifying unit weights
+    = False will use the variances contained in the input dataset. Note that
+    the output dataset has already been vertically integrated as part of the
+    algorithm. The vertical integration limits are set by top and bottom, if
+    None all points are included."""
     import time
     from Reduction import overlap
-    b = ds.intg(axis=1).get_reduced()  
+    # Get sensible values
+    if top is None: top = ds.shape[1]-1
+    if bottom is None: bottom = 0
+    b = ds[:,bottom:top,:].intg(axis=1).get_reduced()  
     # Determine pixels per tube interval
     tube_pos = ds.axes[-1]
     tubesep = abs(tube_pos[0]-tube_pos[-1])/(len(tube_pos)-1)
     tube_steps = ds.axes[0]
     bin_size = abs(tube_steps[0]-tube_steps[-1])/(len(tube_steps)-1)
     pixel_step = int(round(tubesep/bin_size))
-    print '%d steps before overlap' % pixel_step
+    bin_size = tubesep/pixel_step
+    print '%f tube separation, %d steps before overlap, ideal binsize %f' % (tubesep,pixel_step,bin_size)
     # Reshape with individual sections summed
     c = b.reshape([b.shape[0]/pixel_step,pixel_step,b.shape[-1]])
     print `b.shape` + "->" + `c.shape`
     # sum the individual unoverlapped sections
     d = c.intg(axis=1)
     e = d.transpose()
-    # we skip the first two tubes' data as it is all zero
     gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave = \
-        iterate_data(e[3:],pixel_step=1,iter_no=iterno)
+        iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
     print 'Have gains at %f' % time.clock()
     # calculate errors based on full dataset
     # First get a full model
-    # Debug - what are our weights anyway?
-    print 'Weights for gain model: %s' % `b.var.transpose()[3:]`
-    model,wd,mv = overlap.apply_gain(b.transpose()[3:],b.var.transpose()[3:],pixel_step,gain)
-    esds = overlap.calc_error_new(b.transpose()[3:],model,gain,pixel_step)
+    model,wd,model_var = overlap.apply_gain(b.transpose()[ignore:],1.0/b.transpose().var[ignore:],pixel_step,gain,calc_var=True)
+    esds = overlap.calc_error_new(b.transpose()[ignore:],model,gain,pixel_step)
     print 'Have full model and errors at %f' % time.clock()
-    """ The following lines are intended to improve efficiency
-    by a factor of about 10, by using Arrays instead of datasets
-    and avoiding the [] operator, which currently involves too
-    many lines of Python code per invocation. Note that 
-    ArraySectionIter.next() is also code heavy, so calculate the
-    sections ourselves."""
-    final_gains = array.ones(ds.shape[-1])
-    final_gains[3:] = gain
-    final_errors = array.zeros(ds.shape[-1])
-    final_errors[3:] = esds
-    ds_as_array = ds.storage
-    rs = array.zeros_like(ds)
-    rs_var = array.zeros_like(ds)
-    gain_iter = final_gains.__iter__()
-    gain_var_iter = final_errors.__iter__()
-    print 'RS shape: ' + `rs.shape`
-    print 'Gain shape: ' + `final_gains.shape`
-    target_shape = [rs.shape[0],rs.shape[1],1]
-    print 'Before correction: tube 47, step 10, pixel 64: %f' % (ds_as_array[10,64,47])
-    print 'Shape: %s, target %s' % (`ds_as_array[:,:,0].shape`,`target_shape`)
-    for atubeno in range(len(final_gains)):
-        fgn = gain_iter.next()
-        fgvn = gain_var_iter.next()
-        if atubeno == 47:
-            print 'Gain for tube 47 is %f(+/- %f)' % (fgn,fgvn)
-            print 'Re-refine tube 47 before: %s' % `ds_as_array[10,64,47]`
-        rs[:,:,atubeno] = ds_as_array[:,:,atubeno]*fgn
-        if atubeno == 47:
-            print 'Re-refine tube 47 after: %s' % `rs[10,64,47]`
-        rtav = rs_var.get_section([0,0,atubeno],target_shape)
-        # sigma^2(a*b) = a^2 sigma^2(b) + b^2 sigma^2(a)
-        rtav += ds.var.storage.get_section([0,0,atubeno],target_shape)*fgn*fgn + \
-                fgvn * ds_as_array[:,:,atubeno]**2
     # Now build up the important information
-    cs = copy(ds)
-    cs.storage = rs
-    cs.var = rs_var
+    cs = Dataset(model)
+    cs.title = ds.title + ' Regain x %d' % iterno
+    cs.var = model_var
+    # construct the ideal axes
+    axis = arange(len(model))
+    cs.axes[0] = axis*bin_size + ds.axes[0][0] + ignore*pixel_step*bin_size
     cs.copy_cif_metadata(ds)
     # prepare info for CIF file
     import math
-    detno = map(lambda a:"%d" % a,range(len(final_gains)))
-    gain_as_strings = map(lambda a:"%.4f" % a,final_gains)
-    gain_esd = map(lambda a:"%.4f" % math.sqrt(a),final_errors)
+    detno = map(lambda a:"%d" % a,range(len(gain)))
+    gain_as_strings = map(lambda a:"%.4f" % a,gain)
+    gain_esd = map(lambda a:"%.4f" % math.sqrt(a),esds)
     cs.harvest_metadata("CIF").AddCifItem((
         (("_[local]_detector_number","_[local]_refined_gain","_[local]_refined_gain_esd"),),
         ((detno,gain_as_strings,gain_esd),))
         )
-    cs.title = cs.title + '(Regainx%d)' % iterno
-    print 'Final regain check: tube 47,step 10, pixel 64: %f' % cs[10,64,47]
+    info_string = "After vertical integration between pixels %d and %d," % (bottom,top) + \
+        " individual tube gains were iteratively refined using the Ford/Rollett algorithm. Final gains " + \
+        "are stored in the _[local]_refined_gain loop."
+    cs.add_metadata("_pd_proc_info_data_reduction",info_string,append=True)
     return cs,gain,esds,chisquared
 
 # Do an iterative refinement of the gain values. We calculate errors only when chisquared shift is
 # small, and aim for a shift/esd of <0.1
-def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True,algo="FordRollett"):
+def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True,algo="FordRollett",unit_weights=True):
     """Iteratively refine the gain. The pixel_step is the number of steps a tube takes before it
     overlaps with the next tube. iter_no is the number of iterations, if negative the routine will iterate
     until chisquared does not change by more than 0.01 or abs(iter_no) steps, whichever comes first. Pixel_mask 
@@ -865,10 +856,15 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True
     Acta Cryst. (1968) B24, p293"""
     import overlap
     start_gain = array.ones(len(dataset))
-    if algo == "FordRollett":
-        gain,first_ave,chisquared,residual_map,ar,esds,k = overlap.find_gain_fr(dataset,dataset.var,pixel_step,start_gain,pixel_mask=pixel_mask)
+    if unit_weights is True:
+        weights = array.ones_like(dataset)
     else:
-        gain,first_ave,chisquared,residual_map,esds = overlap.find_gain(dataset,dataset.var,pixel_step,start_gain,pixel_mask=pixel_mask)
+        weights = 1.0/dataset.var
+    if algo == "FordRollett":
+        gain,first_ave,ar,esds,k = overlap.find_gain_fr(dataset,weights,pixel_step,start_gain,pixel_mask=pixel_mask)
+    else:
+        gain,first_ave,esds = overlap.find_gain(dataset,dataset.var,pixel_step,start_gain,pixel_mask=pixel_mask)
+    chisquared,residual_map = overlap.get_statistics_fr(gain,first_ave,dataset,dataset.var,pixel_step,pixel_mask)
     old_result = first_ave    #store for later
     chisq_history = [chisquared]
     k_history = [k]
@@ -881,9 +877,10 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True
         if cycle_no > 3 and iter_no < 0:
             esdflag = (esdflag or (abs(chisq_history[-2]-chisq_history[-1]))<0.005)
         if algo == "FordRollett":
-            gain,interim_result,chisquared,residual_map,ar,esds,k = overlap.find_gain_fr(dataset,dataset,pixel_step,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
+            gain,interim_result,ar,esds,k = overlap.find_gain_fr(dataset,weights,pixel_step,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
         else:
-            gain,interim_result,chisquared,residual_map,ar,esds = overlap.find_gain(dataset,dataset,pixel_step,gain,pixel_mask=pixel_mask,errors=esdflag)
+            gain,interim_result,ar,esds = overlap.find_gain(dataset,dataset,pixel_step,gain,pixel_mask=pixel_mask,errors=esdflag)
+        chisquared,residual_map = overlap.get_statistics_fr(gain,interim_result,dataset,dataset.var,pixel_step,pixel_mask)
         chisq_history.append(chisquared)
         k_history.append(k)
         if esdflag is True:

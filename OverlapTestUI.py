@@ -212,12 +212,12 @@ def plh_delete_proc():
 # This function is called when pushing the Run button in the control UI.
 def __run_script__(fns):
     global Plot4,Plot5,Plot6
-    from Reduction import reduction
+    from Reduction import reduction,AddCifMetadata
  
     from os.path import basename
     from os.path import join
     import time           #how fast are we going?
-    from Formats import AddCifMetadata,output
+    from Formats import output
     
     elapsed = time.clock()
     print 'Started working at %f' % (time.clock()-elapsed)
@@ -338,27 +338,29 @@ def __run_script__(fns):
             # sum the individual unoverlapped sections
             d = c.intg(axis=1)
             e = d.transpose()
-            # we skip the first two tubes' data as it is all zero
+            # we skip the first tubes' data as it is all zero
             # Get an initial average to start with
             first_gain = array.ones(len(b.transpose())-ignore)
-            first_ave,x,y = overlap.apply_gain(b.transpose()[ignore:,:],b.transpose().var[ignore:,:],pixel_step,first_gain)
+            first_ave,x,first_var = overlap.apply_gain(b.transpose()[ignore:,:],1.0/b.transpose().var[ignore:,:],pixel_step,first_gain, calc_var=True)
             if regain_unit_weights.value is True:
                 weights = array.ones_like(e[ignore:])
             else:
-                weights = e[ignore:].var
+                weights = 1.0/e[ignore:].var
             q= iterate_data(e[ignore:],weights,pixel_step=1,iter_no=int(regain_iterno.value))
-            f,x,y = overlap.apply_gain(b.transpose()[ignore:,:],b.transpose().var[ignore:,:],pixel_step,q[0])
+            f,x, varf = overlap.apply_gain(b.transpose()[ignore:,:],1.0/b.transpose().var[ignore:,:],pixel_step,q[0],calc_var=True)
             # Get error for full dataset
             esds = overlap.calc_error_new(b.transpose()[ignore:,:],f,q[0],pixel_step)
             f = Dataset(f)
             f.title = "After scaling"
+            f.var = varf
             # construct the ideal axes
             axis = arange(len(f))
             f.axes[0] = axis*bin_size + ds.axes[0][0] + ignore*pixel_step*bin_size
             f.copy_cif_metadata(ds)
-            print `f.shape` + ' ' + `y.shape` + ' ' + `x.shape`
+            print `f.shape` + ' ' + `x.shape`
             Plot1.set_dataset(f)
             first_ave = Dataset(first_ave)
+            first_ave.var = first_var
             first_ave.title = "Before scaling"
             first_ave.axes[0] = f.axes[0]
             Plot1.add_dataset(Dataset(first_ave))

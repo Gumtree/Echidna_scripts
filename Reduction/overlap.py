@@ -20,12 +20,12 @@ def find_gain(data, variance, steps_per_tube, gain_array,pixel_mask=None,errors=
        pixel_mask = array.ones_like(data[0])
    elapsed = time.clock()
    print 'In find_gain: started at %f' % elapsed
-   outdata,weighted_data,my_variance = apply_gain(data,variance,steps_per_tube,gain_array,pixel_mask)
+   outdata,weighted_data,dummy = apply_gain(data,variance,steps_per_tube,gain_array,pixel_mask)
    print 'Applied initial gain: %f' % (time.clock() - elapsed)
    #
    # for each observation, residual is the (observation - pixel gain * the model intensity)^2/sigma^2
    #
-   residual_map = shift_sub_tube_mult_new(gain_array,outdata,data,steps_per_tube,pixel_mask)/my_variance
+   residual_map = shift_sub_tube_mult_new(gain_array,outdata,data,steps_per_tube,pixel_mask)*my_weights
    print 'New residual at %f' % (time.clock() - elapsed)
    chisquared = residual_map.sum()/(residual_map.size - gain_array.shape[-1])
    # following statistic is for statistical inference - normal distribution z value for large
@@ -36,7 +36,7 @@ def find_gain(data, variance, steps_per_tube, gain_array,pixel_mask=None,errors=
    # if True in isnan(outdata): raise ValueError, "NaN found!"
    # calculate our next round of scales (Eq (2) in paper)
    summed_data = shift_mult_tube_add_new(weighted_data,outdata,steps_per_tube,pixel_mask)
-   summed_denominator = shift_mult_tube_add_new(1.0/my_variance,outdata,steps_per_tube,pixel_mask,squareit=True)
+   summed_denominator = shift_mult_tube_add_new(my_weights,outdata,steps_per_tube,pixel_mask,squareit=True)
    # clip the denominator
    print 'Summed everything at %f ' % (time.clock() - elapsed)
    summed_denominator[summed_denominator<1e-10]=1e-10
@@ -53,24 +53,26 @@ def timeit(relativeto,message):
    import time
    print message + `time.clock()-relativeto`
 
-def apply_gain(full_ds,full_variance,steps_per_tube,gain_array,pixel_mask=None):
+def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_mask=None):
    """ This utility routine applies the result of the find_gain routine to the full data,
-   to obtain the best estimate of the actual intensities.  We have a separate routine
-   as we may work with summed data during iteration"""
+   to obtain the best estimate of the actual intensities. If calc_var is true, the
+   variance of the estimate is calculated as well. Currently this is simply the variance
+   obtained by ignoring the error in the gain estimates."""
    import time
    elapsed = time.clock()
    if pixel_mask is None:
        pixel_mask = array.ones_like(full_ds[0])
    #sanitise - we don't like zeros or complicated datastructures
    full_data = full_ds.storage
-   my_variance = copy(full_variance)
+   my_weights = copy(weights)
    try:
-      my_variance = my_variance.storage
+      my_weights = my_weights.storage
    except AttributeError:
       pass
-   my_variance[my_variance<1.0] = 1.0
+   if calc_var is True:  #we assume variance is 1/weights for esd calcs
+      my_variance = 1.0/my_weights
    #weighted_data = divide(full_data,my_variance)  #wd = (F_hl^2/sigma_hl^2)
-   weighted_data = full_data/my_variance  #wd = (F_hl^2/sigma_hl^2) 
+   weighted_data = full_data*my_weights  #wd = (F_hl^2/sigma_hl^2) 
    trans_gain = gain_array.reshape([len(gain_array),1])
    #scaled_data = multiply(trans_gain,weighted_data)  #G_l(rho-1)*wd ; should broadcast to all scans
    # gumpy doesn't have broadcasting, so...
@@ -78,12 +80,15 @@ def apply_gain(full_ds,full_variance,steps_per_tube,gain_array,pixel_mask=None):
    for section in range(weighted_data.shape[-1]):
        scaled_data[:,section] = trans_gain*weighted_data[:,section]  #G_l(rho-1)*wd
    summed_data = shift_tube_add_new(scaled_data,steps_per_tube,pixel_mask) # Sum_l[previous line]
+   if calc_var is True:
+      # Calculate variance as well
+      summed_vars = shift_tube_add_new(my_variance,steps_per_tube,pixel_mask) #Sum of variances
    # if True in isnan(summed_data): raise ValueError,"NaN found!"
-   scaled_variance = zeros_like(my_variance)
-   for section in range(my_variance.shape[-1]):
-      scaled_variance[:,section] = trans_gain**2/my_variance[:,section]
+   scaled_weights = zeros_like(my_weights)
+   for section in range(my_weights.shape[-1]):
+      scaled_weights[:,section] = trans_gain**2*my_weights[:,section]
    # if True in isnan(scaled_variance): raise ValueError,"NaN found!"
-   summed_denominator = shift_tube_add_new(scaled_variance,steps_per_tube,pixel_mask)
+   summed_denominator = shift_tube_add_new(scaled_weights,steps_per_tube,pixel_mask)
    if 0 in summed_denominator:
           if pixel_mask is None: 
               print "Warning: 0 found in summed denominator"
@@ -91,7 +96,13 @@ def apply_gain(full_ds,full_variance,steps_per_tube,gain_array,pixel_mask=None):
           summed_denominator[summed_denominator<1e-10] = 1e-10
           #clip(summed_denominator,1e-10,summed_denominator.max(),summed_denominator) 
    outdata = summed_data/summed_denominator #F_h^2 in original paper
-   return outdata,weighted_data,my_variance
+   # Get a proper error for observations using gain esd
+   if calc_var is True:
+      variance_denom = shift_tube_add_new(ones_like(my_variance),steps_per_tube,pixel_mask)
+      final_variances = summed_vars/variance_denom
+   else:
+      final_variances = zeros_like(outdata)
+   return outdata,weighted_data,final_variances
 
 def shift_add(inarray,offset,pixel_mask,average=False):
     """Return the sum of the 2D slices in inarray, with each slice shifted by offset pixels
@@ -372,7 +383,7 @@ def calc_error_new(obs,model,gain_vector,offset):
 
 # The treatment of Ford and Rollett  Acta Cryst. (1968) B24,293
 # In find_gain, we do not want to use datapoints that are zero.  We have to mask these out
-def find_gain_fr(data, variance, steps_per_tube, gain_array,arminus1=None,pixel_mask=None,errors=False,accel_flag=True):
+def find_gain_fr(data, data_weights, steps_per_tube, gain_array,arminus1=None,pixel_mask=None,errors=False,accel_flag=True):
    import math,time
    """usage: data is a 2D gumpy Array consisting of vertically-integrated scans from multiple tubes on Echidna, 
       where successive scans start overlapping neighbouring tubes after steps_per_tube steps. 
@@ -387,9 +398,7 @@ def find_gain_fr(data, variance, steps_per_tube, gain_array,arminus1=None,pixel_
        pixel_mask = array.ones_like(data[0])
    elapsed = time.clock()
    print 'In find_gain: started at %f' % elapsed
-   outdata,weighted_data,my_variance = apply_gain(data,variance,steps_per_tube,gain_array,pixel_mask)
-   # Inverse variance is our weight
-   data_weights = 1.0/my_variance
+   outdata,weighted_data,outdata_vars = apply_gain(data,data_weights,steps_per_tube,gain_array,pixel_mask)
    # Now calculate A_p (Equation 3 of FR)
    # Refresher: 
    # index 'h' in FR refers to a particular angle for us
