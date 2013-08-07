@@ -428,16 +428,17 @@ def __run_script__(fns):
            bottom = int(vig_lower_boundary.value)
            top = int(vig_upper_boundary.value)
            cs,gain,esds,chisquared = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top)
-           print 'Have new gains at %f' % (time.clock() - elapsed)
-           Plot4 = Plot(title='Chi squared history')
-           Plot5 = Plot(title='Final Gain')
-           fg = Dataset(gain)
-           fg.var = esds
+           if cs is not None:
+               print 'Have new gains at %f' % (time.clock() - elapsed)
+               Plot4 = Plot(title='Chi squared history')
+               Plot5 = Plot(title='Final Gain')
+               fg = Dataset(gain)
+               fg.var = esds
            # set horizontal axis (ideal values)
-           Plot4.set_dataset(Dataset(chisquared))   #chisquared history
-           Plot5.set_dataset(fg)   #final gain plot
-        # assemble dataset, but if we have applied gain this is purely
-        # for display purposes
+               Plot4.set_dataset(Dataset(chisquared))   #chisquared history
+               Plot5.set_dataset(fg)   #final gain plot
+           # assemble dataset, but if we have applied gain this is purely
+           # for display purposes
         if ds.ndim > 2:
             asm_algo = str(asm_algorithm.value)
             if asm_algo == 'stitch frames':
@@ -455,7 +456,7 @@ def __run_script__(fns):
             norm_const = -1.0
         else:
             norm_const = float(vig_rescale_target.value)
-        if not regain_apply.value:  #already done
+        if not regain_apply.value or cs is None:  #already done
             cs = reduction.getVerticalIntegrated(ds, axis=0, normalization=norm_const,
                                                  cluster=float(vig_cluster.value),bottom = int(vig_lower_boundary.value),
                                                  top=int(vig_upper_boundary.value))

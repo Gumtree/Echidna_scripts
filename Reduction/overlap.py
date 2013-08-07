@@ -209,15 +209,9 @@ def shift_mult_tube_add(fixed_array, sliding_vector,tube_offset, pixel_mask,squa
     if not squareit:
         for atubeno in range(numslices):
             result[atubeno] = ((fixed_array[atubeno]*pixel_mask)*(sliding_vector[tube_offset*atubeno:scanlen + tube_offset*atubeno])).sum()
-            if atubeno == 64:
-               sv = sliding_vector[tube_offset*atubeno:scanlen + tube_offset*atubeno]
-               print 'obi,sv,rta: ' + `fixed_array[atubeno]` + '\n' + `sv` + '\n' + `result[atubeno]`
     else:
         for atubeno in range(numslices):
             result[atubeno] = ((fixed_array[atubeno]*pixel_mask)*(sliding_vector[tube_offset*atubeno:scanlen + tube_offset*atubeno]**2)).sum()
-            if atubeno == 64:
-               sv = sliding_vector[tube_offset*atubeno:scanlen + tube_offset*atubeno]
-               print 'obi,sv,rta: ' + `fixed_array[atubeno]` + '\n' + `sv` + '\n' + `result[atubeno]`
     return result
 
 def shift_mult_tube_add_new(fixed_array, sliding_vector,tube_offset, pixel_mask,squareit = False):
@@ -259,19 +253,15 @@ def shift_mult_fr_add(gain_array,model_array,obs_array,weight_array,offset,pixel
    # This is the sum of all gains contributing to range h. We divide gains by
    # variance, then do a shift-sum to get the totals
    scaled_weight = array.zeros_like(weight_array)
-   print '%f: Weight array shape ' % time.clock() + `scaled_weight.shape`
    swlen = scaled_weight.shape[1]
    for tube_no in range(len(gain_array)):  
       sws = scaled_weight.get_section([tube_no,0],[1,swlen])
       was = weight_array.get_section([tube_no,0],[1,swlen])
       sws += gain_array[tube_no]**2 * was
-      if tube_no == 64:
-         print 'scaled_weight (64) = %s, from gain %f and weights %s' % (`scaled_weight[64]`,gain_array[64],`weight_array[64]`)
    scale_factors = shift_tube_add_new(scaled_weight,offset,pixel_mask)
    # Now for the other terms
    a_p_array = array.zeros_like(gain_array)
    tube_steps = obs_array.shape[1]   #How many steps each tube takes
-   print '%f: before a_p calculation' % time.clock()
    try:
       oba = obs_array.storage
    except AttributeError:
@@ -283,7 +273,6 @@ def shift_mult_fr_add(gain_array,model_array,obs_array,weight_array,offset,pixel
       a_p_array[tube_no] = (wt_section*(mod_section**2) + \
           wt_section**2 * obs_section * (obs_section - 2.0*mod_section*gain_array[tube_no]) / \
           scale_factors.get_section([offset*tube_no],[tube_steps])).sum()
-   print '%f: after a_p calculation' % time.clock()
    return a_p_array
 
 def fr_get_cpr(gain_array,model_array,obs_array,weight_array,aparray,offset,pixel_mask):
@@ -397,7 +386,6 @@ def find_gain_fr(data, data_weights, steps_per_tube, gain_array,arminus1=None,pi
    if pixel_mask is None:
        pixel_mask = array.ones_like(data[0])
    elapsed = time.clock()
-   print 'In find_gain: started at %f' % elapsed
    outdata,weighted_data,outdata_vars = apply_gain(data,data_weights,steps_per_tube,gain_array,pixel_mask)
    # Now calculate A_p (Equation 3 of FR)
    # Refresher: 
@@ -429,10 +417,8 @@ def find_gain_fr(data, data_weights, steps_per_tube, gain_array,arminus1=None,pi
             K=0.3
       ar = ir/(1.0-K)
       gain = gain_array + ar
-   print 'Gain at %f' % (time.clock() - elapsed)
    if errors:
        esds = calc_error_new(data,outdata,gain,steps_per_tube)
-       print 'Final errors at %f' % (time.clock() - elapsed)
    else: esds = array.zeros_like(gain)
    return gain,outdata,ar,esds,K
 

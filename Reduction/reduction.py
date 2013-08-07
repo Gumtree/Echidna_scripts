@@ -8,24 +8,6 @@
 
 '''
 
-'''
-Issues:
-    !!! float_copy doesn't deep-copy meta data
-
-    !!! Normalization doesn't effect monitor_data, detector_data, ...
-    !!! Stitching - do I need to sum monitor_data, detector_data, etc ?
-    
-            rs.total_counts  += ds_frame.total_counts
-            rs.monitor_data  += ds_frame.monitor_data
-            rs.detector_time += ds_frame.detector_time
-            rs.detector_data += ds_frame.detector_data
-
-    following is assumed at the moment:
-    
-        bm1_counts ~ bm2_counts ~ bm3_counts ~ detector_time
-
-'''
-
 from ECH import *
 
 from gumpy.nexus import *
@@ -342,11 +324,8 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0,
     import time
     if bottom is None or bottom < 0: bottom = 0
     if top is None or top >= ds.shape[0]: top = ds.shape[0]-1
-    print 'Integration limits %d to %d' % (bottom,top)
     working_slice = ds[bottom:top,:]
-    # print 'Debug: starting var step 50: ' + `working_slice[:,50].var`
     totals = working_slice.intg(axis=axis)
-    # print 'Debug: finishing val %f, var %f step 50: ' % (totals[50],totals.var[50])
     contrib_map = zeros(working_slice.shape,dtype=int)
     contrib_map[working_slice>0.1] = 1
     contribs = contrib_map.intg(axis=axis)
@@ -363,8 +342,6 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0,
     totals = totals / contribs        #Any way to avoid error propagation here?
     totals.var = save_var/contribs
 
-    # Note that we haven't treated variance yet
-    print 'Debug: variances at step 250 were %s (sum %f), now %f, %s contributions' % (`working_slice.var[:,250]`,working_slice.var[:,250].sum(),totals.var[250],`contribs[250]`) 
     # finalize result
     totals.title = ds.title + ' (Summed from %d to %d)' % (bottom,top)
     totals.copy_cif_metadata(ds)
@@ -443,7 +420,6 @@ def debunch(totals,cluster_size):
             #it.
             cluster_begin = new_angle
     # Now we have finished, we just need to handle the last point
-    # print 'Finished debunching, nt[1000] = %f' % new_totals[1000]
     nt_iter.next()
     ntv_iter.next()
     nt_iter.set_curr(total_intensity/bunch_points)
@@ -453,122 +429,12 @@ def debunch(totals,cluster_size):
     newlen = len(new_axis)
     print 'Clustered axis has length %d, running from %f to %f' % (newlen,new_axis[0],new_axis[-1])
     print 'Cluster factor %d/%d =  %f' % (len(totals),newlen,1.0*len(totals)/newlen)
-    #print 'Totals[1000] = %f, new totals[1000] = %f' % (totals[1000],new_totals[1000])
     new_totals = new_totals[:newlen]
     new_totals.copy_cif_metadata(totals)
     new_totals.axes[0] = new_axis
     new_totals.axes[0].title = totals.axes[0].title
     new_totals.title = totals.title
     return new_totals
-
-def oldgetVerticalIntegrated(ds, okMap=None, normalization=-1):
-    print 'vertical integration of', ds.title
-
-    # check dimensions
-    if ds.ndim != 2:
-        raise AttributeError('ds.ndim != 2')
-    if (okMap is not None) and (okMap.ndim != 2):
-        raise AttributeError('okMap.ndim != 2')
-
-    # check shape
-    if (okMap is not None) and (ds.shape != okMap.shape):
-        raise AttributeError('ds.shape != okMap.shape')    
-
-    # result
-    rs = ds[0].float_copy()
-    rs.fill(0)
-    # used to count integrated pixels (dependent on okMap and ds[x,y] > 0)
-    rc = simpledata.instance(rs.shape, 0, int)
-
-    # source iterators 
-    ds_val_iter = ds.item_iter()
-    ds_var_iter = ds.var.item_iter()
-
-    # special check for okMap
-    if okMap is not None:
-        ok_iter = okMap.item_iter()
-    else:
-        ok_iter = DefaultOkIter()
-
-    try:
-        while True:
-            # update source iterators
-            ds_val = ds_val_iter.next()
-            ds_var = ds_var_iter.next()
-            # OK map
-            ok_val = ok_iter.next()
-
-            # target iterators (start over for every row)
-            rs_val_iter = rs.item_iter()
-            rs_var_iter = rs.var.item_iter()
-            # used to count integrated pixels (dependent on okMap and ds[x,y] > 0)
-            rc_iter = rc.item_iter()
-
-            rs_val = rs_val_iter.next()
-            rs_var = rs_var_iter.next()
-            rc_val = rc_iter.next()
-
-            try:
-                while True:                
-                    if (ok_val > epsilon) and (ds_val > epsilon): # to compensate for floating-point error
-                        # accumulate events
-                        rs_val_iter.set_curr(rs_val + ds_val)
-                        rs_var_iter.set_curr(rs_var + ds_var)
-                        # increase counter
-                        rc_iter.set_curr(rc_val + 1)
-
-                    # update target iterators
-                    rs_val = rs_val_iter.next() # at the end of each row, the inner loop will break here
-                    rs_var = rs_var_iter.next()
-                    rc_val = rc_iter.next()
-
-                    # update source iterators
-                    ds_val = ds_val_iter.next()
-                    ds_var = ds_var_iter.next()
-                    ok_val = ok_iter.next()
-
-            # for rs_val_iter
-            except StopIteration:
-                pass
-
-    # ds_val_iter 
-    except StopIteration:
-        pass
-
-    # execute normalization in regards to contributers
-    rs_val_iter = rs.item_iter()
-    rs_var_iter = rs.var.item_iter()
-    rc_iter     = rc.item_iter()
-    rc_max      = float(rc.max())
-    try:
-        while True:
-            rs_val = rs_val_iter.next()
-            rs_var = rs_var_iter.next()
-            rc_val = rc_iter.next()
-
-            # avoid division by zero
-            if rc_val > 0:
-                f = rc_max / rc_val
-                rs_val_iter.set_curr(rs_val * (f))
-                rs_var_iter.set_curr(rs_var * (f * f)) # f^2 for Poisson statistics
-
-    except StopIteration:
-        pass
-
-    # finalize result
-    rs.title = ds.title + ' (Vertically Integrated)'
-
-    # normalize result if required
-    if normalization > 0:
-        rs *= (float(normalization) / rs.max())
-        rs.title = rs.title + ' (Normalized)'
-
-    # check if x-axis needs to be converted from boundaries to centers
-    if len(ds.axes[1]) == (ds.shape[1] + 1):
-        rs.set_axes([getCenters(ds.axes[1])])
-        rs.axes[0].title = ds.axes[1].title
-
-    return rs
 
 def getBackgroundCorrected(ds, bkg, norm_ref=None, norm_target=-1):
     """Subtract the background from the supplied dataset, after normalising the
@@ -812,12 +678,13 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     # Reshape with individual sections summed
     c = b.reshape([b.shape[0]/pixel_step,pixel_step,b.shape[-1]])
     print `b.shape` + "->" + `c.shape`
+    if c.shape[0] == 1:   #can't be done, there is no overlap
+        return None,None,None,None
     # sum the individual unoverlapped sections
     d = c.intg(axis=1)
     e = d.transpose()
     gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave = \
         iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
-    print 'Have gains at %f' % time.clock()
     # calculate errors based on full dataset
     # First get a full model
     model,wd,model_var = overlap.apply_gain(b.transpose()[ignore:],1.0/b.transpose().var[ignore:],pixel_step,gain,calc_var=True)
