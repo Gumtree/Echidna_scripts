@@ -1,12 +1,8 @@
 # Script control setup area
-script_source = '/home/jrh/programs/echidna/Echidna-Gumtree-Scripts'
 __script__.title     = 'ECH Calibration'
 __script__.version   = '1.0'
-__script__.dict_path = script_source + '/ECH/path_table'
-# Add custom path
+
 import sys
-if script_source not in sys.path:
-    sys.path = [script_source] + sys.path
 
 ''' User Interface '''
 
@@ -23,7 +19,7 @@ in_bkg_show = Act('in_bkg_show_proc()', 'Show')
 Group('Input').add(in_van_run, in_van_show, in_bkg_run, in_bkg_show)
 
 # Output Folder
-out_folder = Par('file', script_source + '/Data/')
+out_folder = Par('file')
 out_folder.dtype = 'folder'
 Group('Output Folder').add(out_folder)
 
