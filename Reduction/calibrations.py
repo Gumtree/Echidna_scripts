@@ -87,9 +87,14 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     print 'Using %s and %s' % (str(vanad.location),str(backgr.location))
     # Subtract the background
     vanad,norm_target = reduction.applyNormalization(vanad,norm_ref,-1)
+    # store for checking later
+    check_val = backgr[12,64,64]
     backgr,nn = reduction.applyNormalization(backgr,norm_ref,norm_target)
+    # 
+    print 'Normalising background to %f'  % norm_target
     pure_vanad = (vanad - backgr).get_reduced()    #remove the annoying 2nd dimension
     pure_vanad.copy_cif_metadata(vanad)
+    print 'Check: %f, %f -> %f' % (vanad[12,64,64],check_val,pure_vanad[12,64,64])
     #
     # move the vertical pixels to correct positions
     #

@@ -133,12 +133,16 @@ def bkg_show_proc():
 # show Efficiency Correction Map 
 def eff_show_proc():
     from Reduction import reduction
-    if not eff_map.value in eff_map_cache:
-        eff_map_cache[eff_map.value] = reduction.read_efficiency_cif(eff_map.value)
+    eff_map_canonical = eff_map.value
+    if eff_map.value[0:5] != 'file:':
+        eff_map_canonical = 'file:' + eff_map.value
+    if not eff_map_canonical in eff_map_cache:
+        eff_map_cache[eff_map_canonical] = reduction.read_efficiency_cif(eff_map_canonical)
     else:
-        print 'Found in cache ' + `eff_map_cache[eff_map.value]`
-    Plot1.set_dataset(eff_map_cache[eff_map.value][0])
-    Plot1.title = 'Efficiency map'
+        print 'Found in cache ' + `eff_map_cache[eff_map_canonical]`
+    Plot1.clear()
+    Plot1.set_dataset(eff_map_cache[eff_map_canonical][0])
+    Plot1.title = 'Efficiency map'  #add info to this title!
 
 # For HDF files
 # show_helper(eff_map.value, Plot1, "Efficiency Map: ")
@@ -360,11 +364,14 @@ def __run_script__(fns):
             eff = None
             print 'WARNING: no eff-map was specified'
         else:
-            if not eff_map.value in eff_map_cache:
-                eff_map_cache[eff_map.value] = reduction.read_efficiency_cif(str(eff_map.value))
+            eff_map_canonical = str(eff_map.value)
+            if eff_map_canonical[0:5] != 'file:':
+                eff_map_canonical = 'file:' + eff_map_canonical
+            if not eff_map_canonical in eff_map_cache:
+                eff_map_cache[eff_map_canonical] = reduction.read_efficiency_cif(eff_map_canonical)
             else:
-                print 'Found cached efficiency map ' + str(eff_map.value)
-            eff = eff_map_cache[eff_map.value]
+                print 'Found in cache ' + `eff_map_canonical`
+        eff = eff_map_cache[eff_map_canonical]
     else:
         eff = None
     

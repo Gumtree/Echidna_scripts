@@ -50,10 +50,10 @@ eff_show  = Act('eff_show_proc()', 'Show')
 Group('Efficiency Correction').add(eff_apply, eff_map, eff_show)
 
 # Horizontal Tube Correction
-htc_apply = Par('bool', 'True')
-htc_file  = Par('file', '')
-htc_file.ext = '*.ang,*.*'
-Group('Horizontal Tube Correction').add(htc_apply, htc_file)
+#htc_apply = Par('bool', 'True')
+#htc_file  = Par('file', '')
+#htc_file.ext = '*.ang,*.*'
+#Group('Horizontal Tube Correction').add(htc_apply, htc_file)
 
 # Recalculate gain
 regain_apply = Par('bool','True')
@@ -65,10 +65,10 @@ Group('Recalculate Gain').add(regain_apply,regain_iterno,regain_unit_weights,reg
 # Vertical Integration
 vig_lower_boundary = Par('int', '0')
 vig_upper_boundary = Par('int', '127')
-vig_apply_rescale  = Par('bool', 'True')
-vig_rescale_target = Par('float', '10000.0')
-vig_cluster = Par('float','0.03')
-Group('Vertical Integration').add(vig_lower_boundary, vig_upper_boundary, vig_cluster, vig_apply_rescale, vig_rescale_target)
+#vig_apply_rescale  = Par('bool', 'True')
+#vig_rescale_target = Par('float', '10000.0')
+#vig_cluster = Par('float','0.03')
+Group('Vertical Integration').add(vig_lower_boundary, vig_upper_boundary)
 
 # Plot Helper
 plh_from = Par('string', 'Plot 2', options = ['Plot 1', 'Plot 2', 'Plot 3'])
@@ -109,12 +109,15 @@ if not 'eff_map_cache' in globals():
 # show Efficiency Correction Map 
 def eff_show_proc():
     from Reduction import reduction
-    if not eff_map.value in eff_map_cache:
-        eff_map_cache[eff_map.value] = reduction.read_efficiency_cif(eff_map.value)
+    eff_map_canonical = eff_map.value
+    if eff_map.value[0:5] != 'file:':
+        eff_map_canonical = 'file:' + eff_map.value
+    if not eff_map_canonical in eff_map_cache:
+        eff_map_cache[eff_map_canonical] = reduction.read_efficiency_cif(eff_map_canonical)
     else:
-        print 'Found in cache ' + `eff_map_cache[eff_map.value]`
+        print 'Found in cache ' + `eff_map_cache[eff_map_canonical]`
     Plot1.clear()
-    Plot1.set_dataset(eff_map_cache[eff_map.value][0])
+    Plot1.set_dataset(eff_map_cache[eff_map_canonical][0])
     Plot1.title = 'Efficiency map'  #add info to this title!
 
 def plh_copy_proc():
@@ -263,11 +266,14 @@ def __run_script__(fns):
             eff = None
             print 'WARNING: no eff-map was specified'
         else:
-            if not eff_map.value in eff_map_cache:
-                eff_map_cache[eff_map.value] = reduction.read_efficiency_cif(str(eff_map.value))
+            eff_map_canonical = str(eff_map.value)
+            if eff_map_canonical[0:5] != 'file:':
+                eff_map_canonical = 'file:' + eff_map_canonical
+            if not eff_map_canonical in eff_map_cache:
+                eff_map_cache[eff_map_canonical] = reduction.read_efficiency_cif(eff_map_canonical)
             else:
-                print 'Found cached efficiency map ' + str(eff_map.value)
-            eff = eff_map_cache[eff_map.value]
+                print 'Found in cache ' + `eff_map_canonical`
+        eff = eff_map_cache[eff_map_canonical]
     else:
         eff = None
     
@@ -281,16 +287,6 @@ def __run_script__(fns):
     else:
         vtc = None
     
-    # check if horizontal tube correction needs to be loaded
-    if htc_apply.value:
-        if not htc_file.value:
-            htc = None
-            print 'WARNING: no htc-file was specified'
-        else:
-            htc = str(htc_file.value)
-    else:
-        htc = None
-        
     # iterate through input datasets
     # note that the normalisation target (an arbitrary number) is set by
     # the first dataset unless it has already been specified.
@@ -316,10 +312,6 @@ def __run_script__(fns):
             ds = reduction.getEfficiencyCorrected(ds, eff)
         
         print 'Finished efficiency correction at %f' % (time.clock()-elapsed)
-        # check if horizontal tube correction is required
-        if htc:
-            ds = reduction.getHorizontallyCorrected(ds, htc)
-        print 'Finished horizontal correction at %f' % (time.clock()-elapsed)
         # check if we are recalculating gain
         if regain_apply.value:
             b = ds.intg(axis=1).get_reduced()  #reduce dimension
@@ -340,14 +332,20 @@ def __run_script__(fns):
             e = d.transpose()
             # we skip the first tubes' data as it is all zero
             # Get an initial average to start with
+            bottom = vig_lower_boundary.value
+            top = vig_upper_boundary.value
+            resummed = ds[:,bottom:top,:]
+            resummed = resummed.intg(axis=1).get_reduced()
             first_gain = array.ones(len(b.transpose())-ignore)
-            first_ave,x,first_var = overlap.apply_gain(b.transpose()[ignore:,:],1.0/b.transpose().var[ignore:,:],pixel_step,first_gain, calc_var=True)
+            first_ave,x,first_var = overlap.apply_gain(resummed.transpose()[ignore:,:],1.0/resummed.transpose().var[ignore:,:],pixel_step,first_gain, calc_var=True)
             if regain_unit_weights.value is True:
                 weights = array.ones_like(e[ignore:])
             else:
                 weights = 1.0/e[ignore:].var
             q= iterate_data(e[ignore:],weights,pixel_step=1,iter_no=int(regain_iterno.value))
-            f,x, varf = overlap.apply_gain(b.transpose()[ignore:,:],1.0/b.transpose().var[ignore:,:],pixel_step,q[0],calc_var=True)
+            # Now we actually apply the vertical limits requested
+           
+            f,x, varf = overlap.apply_gain(resummed.transpose()[ignore:,:],1.0/resummed.transpose().var[ignore:,:],pixel_step,q[0],calc_var=True)
             # Get error for full dataset
             esds = overlap.calc_error_new(b.transpose()[ignore:,:],f,q[0],pixel_step)
             f = Dataset(f)
