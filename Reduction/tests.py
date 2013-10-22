@@ -3,6 +3,7 @@
 import unittest
 from gumpy.nexus import *
 from Reduction import reduction
+from Reduction import AddCifMetadata
 
 class NormalisationTestCase(unittest.TestCase):
     def setUp(self):
@@ -129,6 +130,50 @@ class VerticalTubeTestCase(unittest.TestCase):
         self.failUnless("vertically translated" in str(pf["_pd_proc_info_data_reduction"]))
 
 # Horizontal correction is not worth testing, the code is self-explanatory
+# Test functions that combine datasets
+class DatasetCombineTestCase(unittest.TestCase):
+    def setUp(self):
+        self.first_dataset = Dataset([1,2,3,4])
+        self.first_dataset.var = Array([1,1,1,1])
+        self.first_dataset.axes[0] = Array([0.9,1.9,2.9,3.9])
+        AddCifMetadata.add_standard_metadata(self.first_dataset)
+        self.second_dataset = Dataset([2,3,4,5])
+        self.second_dataset.var = Array([1,1,1,1])
+        self.second_dataset.axes[0] = Array([1.1,2.1,3.1,4.1])
+        AddCifMetadata.add_standard_metadata(self.second_dataset)
+        self.third_dataset = Dataset([3,4,5,6])
+        self.third_dataset.var = Array([1.5,1.5,1.5,1.5])
+        self.third_dataset.axes[0] = Array([1.06,2.06,3.06,4.06])
+        AddCifMetadata.add_standard_metadata(self.third_dataset)
 
+    def testMerge(self):
+        """Test that simple merging works"""
+        output = reduction.merge_datasets([self.first_dataset,self.second_dataset,self.third_dataset])
+        self.assertEqual(output[0], 1)
+        self.assertEqual(output[1], 3)
+        self.assertEqual(output[2], 2)
+        self.assertEqual(output[-1], 5)
+
+    def testSumMerge(self):
+        """Test that adding datasets together works"""
+        output = reduction.sum_datasets([self.first_dataset,self.second_dataset,self.third_dataset])
+        self.assertEqual(output[0], 6)
+        self.assertEqual(output[1], 9)
+        self.assertEqual(output[-1], 15)
+        self.assertEqual(output.var[0], 3.5)
+        self.assertEqual(output.axes[0],0.9)
+
+    def testClusterMerge(self):
+         """Test that values are clustered correctly"""
+         output = reduction.merge_datasets([self.first_dataset,self.second_dataset,self.third_dataset])
+         output = reduction.debunch(output,0.25)
+         self.assertEqual(output[0],2)
+         self.assertAlmostEqual(output.var[0], 3.5/9.0)
+         self.assertEqual(output.axes[0],1.02)
+        
 if __name__=="__main__":
     unittest.main()
+
+# or run from the interactive interpreter:
+# suite = unittest.TestLoader().loadTestsFromTestCase(tests.NormalisationTestCase)
+# unittest.TextTestRunner().run(suite)

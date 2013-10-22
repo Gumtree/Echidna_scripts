@@ -804,3 +804,39 @@ def get_stepsize(ds):
     pixel_step = int(round(tubesep/bin_size))
     bin_size = tubesep/pixel_step
     return bin_size
+
+def merge_datasets(dslist):
+    """Merge all of the datasets in dslist into a single dataset"""
+    # We use a variant of our fast stitching routine
+    # So first create a sorted list of angles and source files
+    container = []
+    print 'Passed %d datasets for merging ' % len(dslist)
+    proc_info = """This dataset was created by collating points from multiple datasets. Data reduction 
+    information for the individual source datasets is as follows:"""
+    for num,dataset in enumerate(dslist):
+        storage_info = zip(dataset.axes[0],dataset.storage,dataset.var.storage)
+        container.extend(storage_info)
+        try:
+            proc_info += "\n\n===Dataset %d===\n" % num + dataset.harvest_metadata("CIF")["_pd_proc_info_data_reduction"]
+        except KeyError:
+            pass
+    # So we have a list of angle,intensity,variance triples which we sort on angle
+    container = sorted(container, key=lambda(angle,intensity,variance):angle)
+    angles = map(lambda (a,b,c):a,container)
+    intensities = map(lambda (a,b,c):b,container)
+    variances = map(lambda (a,b,c):c,container)
+    rs = Dataset(intensities)
+    rs.var = variances
+    rs.axes[0] = angles
+    # Add metadata
+    AddCifMetadata.add_standard_metadata(rs)
+    rs.add_metadata("_pd_proc_info_data_reduction",proc_info,"CIF")
+    return rs
+
+def sum_datasets(dslist):
+    """Add the provided datasets together"""
+    #Assume all same length, same axis values
+    newds = zeros_like(dslist[0])
+    for one_ds in dslist:
+        newds += one_ds
+    return newds

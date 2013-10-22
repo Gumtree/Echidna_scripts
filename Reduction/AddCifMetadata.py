@@ -37,11 +37,17 @@ def add_metadata_methods(rawfile):
     rawfile.__class__.__dict__['harvest_metadata'] = h
     rawfile.__class__.__dict__['copy_cif_metadata'] = c
 
-def extract_metadata(rawfile):
-    import datetime
-    add_metadata_methods(rawfile)
+def add_standard_metadata(dataset):
+    add_metadata_methods(dataset)
     for key,val in fixed_table.items():
-        rawfile.add_metadata(key,val,tag="CIF")
+        dataset.add_metadata(key,val,tag="CIF")
+    dataset.add_metadata("_computing_data_reduction", "Gumtree Echidna/Python routines","CIF")
+    dataset.add_metadata("_diffrn_radiation_probe", "neutron","CIF")
+
+def extract_metadata(rawfile):
+    """This transfers NeXuS metadata to CIF metadata"""
+    import datetime
+    add_standard_metadata(rawfile)
     # get monochromator-related information
     mom = average_metadata(rawfile['$entry/instrument/crystal/omega'])
     tk_angle = average_metadata(rawfile['$entry/instrument/crystal/takeoff_angle'])
@@ -102,7 +108,6 @@ def extract_metadata(rawfile):
     rawfile.add_metadata("_pd_instr_dist_mono/spec", "%.1f" % average_metadata(rawfile[ "$entry/sample/mono_sample_mm"]),"CIF")
     rawfile.add_metadata("_pd_instr_dist_spec/detc","%.1f" % average_metadata(rawfile["$entry/instrument/detector/radius"]),"CIF")
     rawfile.add_metadata("_diffrn_source_power", "%.2f" % (average_metadata(rawfile["$entry/instrument/source/power"])*1000),"CIF")
-    rawfile.add_metadata("_diffrn_radiation_probe", "neutron","CIF")
     return rawfile
 
 def average_metadata(entrytable):

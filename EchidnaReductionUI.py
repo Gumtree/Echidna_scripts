@@ -96,9 +96,11 @@ plh_copy = Act('plh_copy_proc()', 'Copy plot')
 Group('Copy 1D Datasets to Plot 3').add(plh_copy)
 
 # Allow summation of plots
-plh_add = Act('plh_add_proc()','Sum datasets')
+plh_sum = Act('plh_sum_proc()','Sum datasets')
+plh_sum_type = Par('string','Ideal',options=['Ideal','Cluster','Merge Only'])
+plh_cluster = Par('string','0.03')
 plh_file = Par('file','')
-Group('Sum 1D datasets in Plot 3').add(plh_file,plh_add)
+Group('Sum 1D datasets in Plot 3').add(plh_file,plh_sum_type,plh_cluster,plh_sum)
 
 # Delete plots
 plh_dataset = Par('string', 'All', options = ['All'])
@@ -221,6 +223,7 @@ def htc_show_proc():
                 f.close()
     else:
         print 'no valid filename was specified'
+
 def plh_copy_proc():
     # We copy from Plot 2 to Plot 3 only
     print 'Test printing from button actions'
@@ -300,6 +303,20 @@ def plh_delete_proc():
         for ds in target_ds:
             if ds.title == dataset:
                 target_plot.remove_dataset(ds)
+
+def plh_sum_proc():
+    """Sum all datasets contained in plot 3"""
+    datasets = Plot3.ds
+    approach = str(plh_sum_type.value)
+    if approach == 'Ideal':
+        newds = reduction.sum_datasets(datasets)
+        Plot2.set_dataset(newds)
+    else:
+        fs = reduction.merge_datasets(datasets)
+        if approach == 'Cluster':
+            cluster = float(plh_cluster.value)
+            fs = reduction.debunch(fs,cluster)
+        Plot2.set_dataset(fs)
 
 # The preference system: 
 def load_user_prefs():
@@ -484,6 +501,8 @@ def __run_script__(fns):
         # set the cluster value
         if vig_cluster.value is True:
             cluster = stepsize * 0.6  #60 percent of ideal
+        else:
+            cluster = 0.0
         if not regain_apply.value or cs is None:  #already done
             cs = reduction.getVerticalIntegrated(ds, axis=0, normalization=norm_const,
                                                  cluster=cluster,bottom = int(vig_lower_boundary.value),
@@ -524,4 +543,5 @@ def run_action(act):
         raise Exception, 'Error in running <' + act.text + '>'
 
 ''' Execute this each time it is loaded to reload user preferences '''
+
 load_user_prefs()
