@@ -10,96 +10,106 @@ import sys
 out_folder = Par('file')
 out_folder.dtype = 'folder'
 output_xyd = Par('bool','False')
+output_xyd.title = "XYD"
 output_cif = Par('bool','True')
+output_cif.title = "CIF"
 output_fxye = Par('bool','True')
-output_stem = Par('string','reduced_')
-Group('Output Folder').add(output_xyd,output_cif,output_fxye,output_stem,out_folder)
-
+output_fxye.title = "GSAS FXYE"
+output_stem = Par('string','reduced')
+output_stem.title = "Include in filename:"
+Group('Output Format').add(output_xyd,output_cif,output_fxye,out_folder)
+Group('Output Filename: ECH00NNNNN_+...').add(output_stem)
 # Normalization
 # We link the normalisation sources to actual dataset locations right here, right now
 norm_table = {'Monitor 1':'bm1_counts','Monitor 2':'bm2_counts',
               'Monitor 3':'bm3_counts','Detector time':'detector_time'}
 norm_apply     = Par('bool', 'True')
+norm_apply.title = 'Apply'
 norm_reference = Par('string', 'Monitor 3', options = norm_table.keys())
-norm_target    = Par('string', 'auto')
-Group('Normalization').add(norm_apply, norm_reference, norm_target)
+norm_reference.title = 'Source'
+norm_target    = 'auto'
+Group('Normalization').add(norm_apply, norm_reference)
 
 # Background Correction
 bkg_apply = Par('bool', 'False')
+bkg_apply.title = 'Apply'
 bkg_map   = Par('file', '')
+bkg_map.title = 'Bkg File'
 bkg_map.ext = '*.hdf'
 bkg_show  = Act('bkg_show_proc()', 'Show') 
 Group('Background Correction').add(bkg_apply, bkg_map, bkg_show)
 
 # Vertical Tube Correction
 vtc_apply = Par('bool', 'True')
+vtc_apply.title = 'Apply'
 vtc_file  = Par('file', '')
+vtc_file.title = 'VTC file'
 vtc_file.ext = '*.txt,*.*'
 vtc_show  = Act('vtc_show_proc()', 'Show') 
 Group('Vertical Tube Correction').add(vtc_apply, vtc_file, vtc_show)
 
 # Efficiency Correction
 eff_apply = Par('bool', 'True')
+eff_apply.title = 'Apply'
 eff_map   = Par('file', '')
+eff_map.title = 'Efficiency File'
 eff_map.ext = '*.*'
 eff_show  = Act('eff_show_proc()', 'Show') 
 Group('Efficiency Correction').add(eff_apply, eff_map, eff_show)
 
 # Horizontal Tube Correction
 htc_apply = Par('bool', 'True')
+htc_apply.title = 'Apply'
 htc_file  = Par('file', '')
+htc_file.title = 'HTC file'
 htc_file.ext = '*.ang,*.*'
 htc_show  = Act('htc_show_proc()', 'Show') 
 Group('Horizontal Tube Correction').add(htc_apply, htc_file, htc_show)
 
 # Assemble (note this is before rescaling)
-asm_algorithm = Par('string', 'stitch frames', options = ['stitch frames', 'sum frames'])
-Group('Assemble').add(asm_algorithm)
-
-# Recalculate gain
-regain_apply = Par('bool','True')
-regain_iterno = Par('int','5')
-Group('Recalculate Gain').add(regain_apply,regain_iterno)
+asm_drop_frames = Par('string')
+asm_drop_frames.title = 'Remove frames:'
+Group('Assemble frames').add(asm_drop_frames)
 
 # Vertical Integration (note that gain recalc will include vertical integration)
 vig_lower_boundary = Par('int', '0')
+vig_lower_boundary.title = 'Lower limit'
 vig_upper_boundary = Par('int', '127')
-vig_apply_rescale  = Par('bool', 'True')
+vig_upper_boundary.title = 'Upper limit'
+vig_apply_rescale  = Par('bool', 'False')
+vig_apply_rescale.title = 'Rescale'
 vig_rescale_target = Par('float', '10000.0')
-vig_cluster = Par('float','0.03')
+vig_rescale_target.title = 'Rescale target:'
+vig_cluster = Par('bool',True)
+vig_cluster.title = 'Merge close points'
 Group('Vertical Integration').add(vig_lower_boundary, vig_upper_boundary, vig_cluster, vig_apply_rescale, vig_rescale_target)
 
-# Plot Helper
-plh_from = Par('string', 'Plot 2', options = ['Plot 1', 'Plot 2', 'Plot 3'])
-plh_to   = Par('string', 'Plot 3', options = ['Plot 1', 'Plot 2', 'Plot 3'])
-plh_copy = Act('plh_copy_proc()', 'Copy')
-Group('Copy 1D Datasets').add(plh_from, plh_to, plh_copy)
+# Recalculate gain
+regain_apply = Par('bool','False')
+regain_apply.title = 'Apply'
+regain_iterno = Par('int','5')
+regain_iterno.title = 'Iterations'
+Group('Recalculate Gain').add(regain_apply,regain_iterno)
 
-plh_plot    = Par('string', '', options = ['Plot 1', 'Plot 2', 'Plot 3'], command = 'plh_plot_changed()')
-plh_dataset = Par('string', '', options = ['All'])
+# Plot Helper: always Plot2 to Plot 3
+plh_copy = Act('plh_copy_proc()', 'Copy plot')
+Group('Copy 1D Datasets to Plot 3').add(plh_copy)
+
+# Allow summation of plots
+plh_add = Act('plh_add_proc()','Sum datasets')
+plh_file = Par('file','')
+Group('Sum 1D datasets in Plot 3').add(plh_file,plh_add)
+
+# Delete plots
+plh_dataset = Par('string', 'All', options = ['All'])
 plh_delete  = Act('plh_delete_proc()', 'Delete')
-Group('Delete 1D Datasets').add(plh_plot, plh_dataset, plh_delete)
+Group('Delete 1D Datasets').add(plh_dataset, plh_delete)
 
+#Preferences
+pref_act = Act('save_user_prefs()','Save Defaults')
+pref_load = Act('load_user_prefs()','Load Defaults')
+Group('Preferences').add(pref_act,pref_load)
 
-''' Load Preferences '''
-
-efficiency_file_uri     = __UI__.getPreference("au.gov.ansto.bragg.echidna.ui:efficiency_file_uri")
-angular_offset_file     = __UI__.getPreference("au.gov.ansto.bragg.echidna.ui:angular_offset_file")
-normalisation_reference = __UI__.getPreference("au.gov.ansto.bragg.echidna.ui:normalisation_reference")
-user_output_dir         = __UI__.getPreference("au.gov.ansto.bragg.echidna.ui:user_output_dir")
-#
-# Set the optional values to those in the preferences file
-#
-if user_output_dir:
-    out_folder.value = user_output_dir
-if angular_offset_file:
-    htc_file.value = angular_offset_file
-if normalisation_reference:  #saved as location, need label instead
-        vals = filter(lambda a:a[1]==normalisation_reference,norm_table.items())
-        if vals: norm_reference.value = vals[0]
-if efficiency_file_uri:
-    eff_map.value = efficiency_file_uri
-    
 # Storage for efficiency map
 if not 'eff_map_cache' in globals():
     eff_map_cache = {}
@@ -182,6 +192,7 @@ def vtc_show_proc():
         print 'no valid filename was specified'
 # show Horizontal Tube Correction
 def htc_show_proc():
+    global Plot3
     if htc_file.value:
         f = None
         try:
@@ -203,7 +214,7 @@ def htc_show_proc():
             ds.title = 'Horizontal Tube Correction'
             
             # show plot
-            Plot1.set_dataset(ds)
+            Plot3.set_dataset(ds)
 
         finally:
             if f != None:
@@ -211,22 +222,13 @@ def htc_show_proc():
     else:
         print 'no valid filename was specified'
 def plh_copy_proc():
-    
-    src = str(plh_from.value)
-    dst = str(plh_to.value)
+    # We copy from Plot 2 to Plot 3 only
+    print 'Test printing from button actions'
+    src = 'Plot 2'
+    dst = 'Plot 3'
     
     plots = {'Plot 1': Plot1, 'Plot 2': Plot2, 'Plot 3': Plot3}
 
-    if not src in plots:
-        print 'specify source plot'
-        return
-    if not dst in plots:
-        print 'specify target plot'
-        return
-    if src == dst:
-        print 'specify a different target plot'
-        return
-        
     src_plot = plots[src]
     dst_plot = plots[dst]
     
@@ -272,8 +274,8 @@ def plh_plot_changed():
     plh_dataset.value   = 'All'
 
 def plh_delete_proc():
-    
-    target  = str(plh_plot.value)
+    # Plot 3 hard-coded for simplicity
+    target  = 'Plot 3'
     dataset = str(plh_dataset.value)
     
     plots = {'Plot 1': Plot1, 'Plot 2': Plot2, 'Plot 3': Plot3}
@@ -298,6 +300,27 @@ def plh_delete_proc():
         for ds in target_ds:
             if ds.title == dataset:
                 target_plot.remove_dataset(ds)
+
+# The preference system: 
+def load_user_prefs():
+    print 'In load user prefs'
+    # Run through our parameters, looking for the corresponding
+    # preferences
+    p = globals().scope_keys()
+    for name in p:
+        if eval('isinstance('+ name + ',Par)'):
+            execstring = name + '.value = "' + get_prof_value(name) + '"'
+            exec execstring in globals()
+            print 'Set %s to %s' % (name,str(eval(name+'.value')))
+
+def save_user_prefs():
+    print 'In save user prefs'
+    # sneaky way to get all the preferences
+    p = globals().scope_keys()
+    for name in p:
+        if eval('isinstance('+ name + ',Par)'):
+            set_prof_value(name,str(eval(name + '.value')))
+            print 'Set %s to %s' % (name,str(get_prof_value(name)))
 
 ''' Script Actions '''
 
@@ -326,7 +349,7 @@ def __run_script__(fns):
         # by multiplication.  If 'auto', the maximum value of norm_ref
         # for the first dataset is used, otherwise any number may be entered.
         norm_ref = str(norm_reference.value)
-        norm_tar = str(norm_target.value).lower()
+        norm_tar = str(norm_target).lower()
 
         # check if normalization target needs to be determined
         if len(norm_tar) == 0:
@@ -384,7 +407,6 @@ def __run_script__(fns):
             vtc = str(vtc_file.value)
     else:
         vtc = None
-    
     # check if horizontal tube correction needs to be loaded
     if htc_apply.value:
         if not htc_file.value:
@@ -424,6 +446,9 @@ def __run_script__(fns):
             ds = reduction.getEfficiencyCorrected(ds, eff)
         
         print 'Finished efficiency correction at %f' % (time.clock()-elapsed)
+        # Before fiddling with axes, get the ideal stepsize
+        stepsize = reduction.get_stepsize(ds)
+        print 'Ideal stepsize determined to be %f' % stepsize
         # check if horizontal tube correction is required
         if htc:
             ds = reduction.getHorizontallyCorrected(ds, htc)
@@ -447,14 +472,7 @@ def __run_script__(fns):
            # assemble dataset, but if we have applied gain this is purely
            # for display purposes
         if ds.ndim > 2:
-            asm_algo = str(asm_algorithm.value)
-            if asm_algo == 'stitch frames':
-                ds = reduction.getStitched(ds)
-            elif asm_algo == 'sum frames':
-                ds = reduction.getSummed(ds)
-            else:
-                print 'specify assemble algorithm'
-                return
+            ds = reduction.getStitched(ds)
         # Display dataset
         print 'Finished stitching at %f' % (time.clock()-elapsed)
         Plot1.set_dataset(ds)
@@ -463,16 +481,19 @@ def __run_script__(fns):
             norm_const = -1.0
         else:
             norm_const = float(vig_rescale_target.value)
+        # set the cluster value
+        if vig_cluster.value is True:
+            cluster = stepsize * 0.6  #60 percent of ideal
         if not regain_apply.value or cs is None:  #already done
             cs = reduction.getVerticalIntegrated(ds, axis=0, normalization=norm_const,
-                                                 cluster=float(vig_cluster.value),bottom = int(vig_lower_boundary.value),
+                                                 cluster=cluster,bottom = int(vig_lower_boundary.value),
                                                  top=int(vig_upper_boundary.value))
             print 'Finished vertical integration at %f' % (time.clock()-elapsed)
         # Display reduced dataset
         Plot2.set_dataset(cs)
         Plot2.title = cs.title
         # Output datasets
-        filename_base = join(str(out_folder.value),str(output_stem.value) + basename(str(fn))[:-7])
+        filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + str(output_stem.value))
         if output_cif.value:
             output.write_cif_data(cs,filename_base)
         if output_xyd.value:
@@ -502,3 +523,5 @@ def run_action(act):
         traceback.print_exc(file = sys.stdout)
         raise Exception, 'Error in running <' + act.text + '>'
 
+''' Execute this each time it is loaded to reload user preferences '''
+load_user_prefs()

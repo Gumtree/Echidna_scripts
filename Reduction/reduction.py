@@ -185,7 +185,11 @@ def getSummed(ds, floatCopy=True, applyStth=True):
 
     return rs
 
-def getStitched(ds):
+def getStitched(ds,ignore=None):
+    """The returned dataset is 2D after each segment of data from the multiple detectors has
+    been placed at the correct angular position.  Ignore is a string specifying which frames
+    should be ignored.  The format is 'a:b,c:d' to ignore from a to b inclusive and from c to
+    d inclusive."""
     print 'stitching of', ds.title
 
     # check arguments
@@ -197,6 +201,11 @@ def getStitched(ds):
         raise AttributeError('ds.axes[3].title != x_pixel_angular_offset')
     if len(ds.stth) != ds.shape[0]:
         raise AttributeError('len(ds.stth) != ds.shape[0]')
+
+    if ignore is not None:
+        drop_frames = parse_ignore_spec(ignore)
+    else:
+        drop_frames = set([])
 
     frame_count = ds.shape[0]
     y_count     = ds.shape[1]
@@ -219,18 +228,20 @@ def getStitched(ds):
     # actual angle that each column has come from.  The 'enumerate (axisX + stth)' phrase creates a list
     # of angles for each tube at each step (step position given by stth).
     for src_frame, stth in enumerate(ds.stth):
-        container.extend(map(lambda (src_column, angle): (angle, src_frame, src_column), enumerate(axisX + stth)))
+        if src_frame not in drop_frames:
+            container.extend(map(lambda (src_column, angle): (angle, src_frame, src_column), enumerate(axisX + stth)))
 
     # sort by angles
     container = sorted(container, key=lambda (angle, src_frame, src_column): angle)
+    print 'Check: total angles %d' % len(container)
 
     # resulting dataset
-    rs = zeros([y_count, x_count * frame_count])
+    rs = zeros([y_count, x_count * (frame_count-len(drop_frames))])
 
     # copy meta data
     copy_metadata_deep(rs, ds[0]) # for Echidna second dimension is just legacy
     rs.copy_cif_metadata(ds)
-    for src_frame in xrange(1, frame_count):
+    for src_frame in set(xrange(0, frame_count-1)) - drop_frames:
         ds_frame = ds[src_frame]
 
         # !!! what needs to be added?
@@ -274,6 +285,12 @@ def getStitched(ds):
 
     # finalize result
     rs.title = ds.title + ' (St)'
+    info_string = "\nData from individual detectors arranged in order of ascending angle."
+    if len(drop_frames)>0:
+        info_string += "\nFrames in the following list were excluded from the final dataset:\n"
+        for i in sorted(drop_frames):
+            info_string +="%d " % i
+    rs.add_metadata("_pd_proc_info_data_reduction",info_string,tag="CIF",append=True)
     # axes
     rs.axes[0].title = ds.axes[1].title
     rs.axes[1].title = ds.axes[2].title
@@ -286,6 +303,25 @@ def getStitched(ds):
     return rs
 
     
+def parse_ignore_spec(ignore_string):
+    """A helper function to parse a string of form a:b,c:d returning
+    (a,b),(c,d)"""
+    import re
+    p = ignore_string.split(',')
+    q = map(lambda a:a.split(':'),p)
+    # q is now  a sequence of string values
+    final = []
+    for strval in q:
+        try:
+            ranges = map(lambda a:int(a.strip()),strval)
+            if len(ranges) == 1:
+                final.append(ranges[0])
+            else:
+                final = final + range(ranges[0],ranges[1]+1)
+        except ValueError:
+            pass
+    return set(final)   # a set to avoid duplications
+
 def read_efficiency_cif(filename):
     """Return a dataset,variance stored in a CIF file as efficiency values"""
     import time
@@ -757,3 +793,14 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True
     print 'Total cycles: %d' % cycle_no
     print 'Maximum shift/error: %f' % max(ar/esds)
     return gain,dataset,interim_result,residual_map,chisq_history,esds,first_ave
+
+def get_stepsize(ds):
+    """A utility function to determine the step size of the given dataset. This
+    will only work if the data have not yet been stitched."""
+    tube_pos = ds.axes[-1]
+    tubesep = abs(tube_pos[0]-tube_pos[-1])/(len(tube_pos)-1)
+    tube_steps = ds.axes[0]
+    bin_size = abs(tube_steps[0]-tube_steps[-1])/(len(tube_steps)-1)
+    pixel_step = int(round(tubesep/bin_size))
+    bin_size = tubesep/pixel_step
+    return bin_size
