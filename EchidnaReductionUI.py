@@ -1,24 +1,11 @@
 # Script control setup area
 __script__.title     = 'ECH Reduction'
 __script__.version   = '1.0'
-# Add custom path
-import sys
+# For direct access to the selected filenames
+__datasource__ = __register__.getDataSourceViewer()
 
 ''' User Interface '''
 
-# Output Folder
-out_folder = Par('file')
-out_folder.dtype = 'folder'
-output_xyd = Par('bool','False')
-output_xyd.title = "XYD"
-output_cif = Par('bool','True')
-output_cif.title = "CIF"
-output_fxye = Par('bool','True')
-output_fxye.title = "GSAS FXYE"
-output_stem = Par('string','reduced')
-output_stem.title = "Include in filename:"
-Group('Output Format').add(output_xyd,output_cif,output_fxye,out_folder)
-Group('Output Filename: ECH00NNNNN_+...').add(output_stem)
 # Normalization
 # We link the normalisation sources to actual dataset locations right here, right now
 norm_table = {'Monitor 1':'bm1_counts','Monitor 2':'bm2_counts',
@@ -28,7 +15,8 @@ norm_apply.title = 'Apply'
 norm_reference = Par('string', 'Monitor 3', options = norm_table.keys())
 norm_reference.title = 'Source'
 norm_target    = 'auto'
-Group('Normalization').add(norm_apply, norm_reference)
+norm_plot = Act('plot_norm_proc()','Plot')
+Group('Normalization').add(norm_apply, norm_reference,norm_plot)
 
 # Background Correction
 bkg_apply = Par('bool', 'False')
@@ -138,6 +126,18 @@ def show_helper(filename, plot, pre_title = ''):
     else:
         print 'no valid filename was specified'
             
+# Plot normalisation info
+def plot_norm_proc():
+    norm_source = norm_table[str(norm_reference.value)]
+    dss = __datasource__.getSelectedDatasets()
+    Plot2.clear()
+    for fn in dss:
+        loc = fn.getLocation()
+        print `loc`
+        dset = df[str(loc)]
+        plot_data = getattr(dset,norm_source)
+        Plot2.add_dataset(Dataset(plot_data))
+
 # show Background Correction Map
 def bkg_show_proc():
     show_helper(bkg_map.value, Plot1, "Background Map: ")
@@ -250,6 +250,13 @@ def plh_copy_proc():
         if id(ds) not in dst_ds_ids:
             dst_plot.add_dataset(ds)
 
+    # Update the options for deleting datasets
+    target_list = ['All']
+    for ds in src_plot.ds:
+        target_list.append(ds.title)
+    plh_dataset.options = target_list
+    plh_dataset.value   = 'All'
+
 def plh_plot_changed():
     
     target = str(plh_plot.value)
@@ -299,10 +306,16 @@ def plh_delete_proc():
     if dataset == 'All':
         for ds in target_ds:
             target_plot.remove_dataset(ds)
+        plh_dataset.options = []
     else:
         for ds in target_ds:
             if ds.title == dataset:
                 target_plot.remove_dataset(ds)
+        target_list = ['All']
+        for ds in target_plot.ds:
+            target_list.append(ds.title)
+        plh_dataset.options = target_list
+        plh_dataset.value   = 'All'
 
 def plh_sum_proc():
     """Sum all datasets contained in plot 3"""
@@ -533,6 +546,7 @@ def __dispose__():
 ''' Quick-Fix '''
 
 def run_action(act):
+    import sys
     act.set_running_status()
     try:
         exec(act.command)
