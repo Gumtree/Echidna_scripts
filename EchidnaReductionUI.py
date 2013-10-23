@@ -5,7 +5,19 @@ __script__.version   = '1.0'
 __datasource__ = __register__.getDataSourceViewer()
 
 ''' User Interface '''
-
+# Output Folder
+out_folder = Par('file')
+out_folder.dtype = 'folder'
+output_xyd = Par('bool','False')
+output_xyd.title = "XYD"
+output_cif = Par('bool','True')
+output_cif.title = "CIF"
+output_fxye = Par('bool','True')
+output_fxye.title = "GSAS FXYE"
+output_stem = Par('string','reduced')
+output_stem.title = "Include in filename:"
+Group('Output Format').add(output_xyd,output_cif,output_fxye,out_folder)
+Group('Output Filename: ECH00NNNNN_+...').add(output_stem)
 # Normalization
 # We link the normalisation sources to actual dataset locations right here, right now
 norm_table = {'Monitor 1':'bm1_counts','Monitor 2':'bm2_counts',
@@ -97,8 +109,7 @@ Group('Delete 1D Datasets').add(plh_dataset, plh_delete)
 
 #Preferences
 pref_act = Act('save_user_prefs()','Save Defaults')
-pref_load = Act('load_user_prefs()','Load Defaults')
-Group('Preferences').add(pref_act,pref_load)
+Group('Preferences').add(pref_act)
 
 # Storage for efficiency map
 if not 'eff_map_cache' in globals():
@@ -133,10 +144,11 @@ def plot_norm_proc():
     Plot2.clear()
     for fn in dss:
         loc = fn.getLocation()
-        print `loc`
         dset = df[str(loc)]
-        plot_data = getattr(dset,norm_source)
-        Plot2.add_dataset(Dataset(plot_data))
+        plot_data = Dataset(getattr(dset,norm_source))
+        plot_data = plot_data/plot_data.max()
+        plot_data.title = os.path.basename(str(loc))+':' + str(norm_reference.value)
+        Plot2.add_dataset(plot_data)
 
 # show Background Correction Map
 def bkg_show_proc():
