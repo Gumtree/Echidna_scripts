@@ -137,8 +137,6 @@ def applyNormalization(ds, reference, target=-1):
         info_string = "No normalisation applied to data."
     rs.add_metadata('_pd_proc_info_data_reduction',info_string, append=True)
     print 'normalized:', ds.title
-    # finalize result
-    rs.title += '-(N)'
     return rs,target
 
 def getSummed(ds, floatCopy=True, applyStth=True):
@@ -169,9 +167,7 @@ def getSummed(ds, floatCopy=True, applyStth=True):
         rs.detector_time += ds_frame.detector_time
         rs.total_counts  += ds_frame.total_counts
 
-    # finalize result
-    rs.title = ds.title + ' (Summed)'
-
+    #finalise result
     if applyStth:
         stth = rs.stth
         axis = rs.axes[1]
@@ -284,7 +280,6 @@ def getStitched(ds,ignore=None):
     rs.axes[1] = map(lambda (angle, src_frame, src_column): angle, container)
 
     # finalize result
-    rs.title = ds.title + ' (St)'
     info_string = "\nData from individual detectors arranged in order of ascending angle."
     if len(drop_frames)>0:
         info_string += "\nFrames in the following list were excluded from the final dataset:\n"
@@ -299,7 +294,7 @@ def getStitched(ds,ignore=None):
     rs.stth = 0
 
     print 'stitched:', ds.title
-
+    rs.title = ds.title
     return rs
 
     
@@ -379,15 +374,14 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0,
     totals.var = save_var/contribs
 
     # finalize result
-    totals.title = ds.title + ' (Summed from %d to %d)' % (bottom,top)
+    totals.title = ds.title
     totals.copy_cif_metadata(ds)
     info_string = "Data were vertically integrated from pixels %d to %d (maximum number of contributors %d)." % (bottom,top,max_contribs)
     
     # normalize result if required
     if normalization > 0:
         totals *= (float(normalization) / totals.max())
-        totals.title = totals.title + ' (x %5.2f)' % (float(normalization)/totals.max())
-        info_string += "The maximum intensity was then normalised to %f counts." % float(normalization)
+        info_string += "The maximum intensity was then multiplied by %f." % (float(normalization)/ totals.max())
     # check if any axis needs to be converted from boundaries to centers
     new_axes = []
     for i in range(totals.ndim):
@@ -396,7 +390,11 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0,
         else:
             new_axes.append(totals.axes[i])
         print 'Axis %d: %s' % (i,totals.axes[i].title)
-    totals.set_axes(new_axes)
+    old_names = map(lambda a:a.title,totals.axes)
+    old_units = map(lambda a:a.units,totals.axes)
+    old_names[-1] = 'Two theta'
+    old_units[-1] = 'Degrees'
+    totals.set_axes(new_axes,anames=old_names,aunits=old_units)
     
     # Finally, cluster points together if they are close enough
 
@@ -404,6 +402,8 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0,
         totals = debunch(totals,cluster)
         info_string += "Points within %f of one another were averaged (weighted)." % cluster
     totals.add_metadata("_pd_proc_info_data_reduction",info_string,append=True)
+    axislist = map(lambda a:a.title,totals.axes)
+    print 'Axes: ' + `axislist`
     return totals
 
 def debunch(totals,cluster_size):
@@ -467,8 +467,7 @@ def debunch(totals,cluster_size):
     print 'Cluster factor %d/%d =  %f' % (len(totals),newlen,1.0*len(totals)/newlen)
     new_totals = new_totals[:newlen]
     new_totals.copy_cif_metadata(totals)
-    new_totals.axes[0] = new_axis
-    new_totals.axes[0].title = totals.axes[0].title
+    new_totals.set_axes(new_axis,anames=[totals.axes[0].title],aunits = totals.axes[0].units)
     new_totals.title = totals.title
     return new_totals
 
@@ -493,7 +492,7 @@ def getBackgroundCorrected(ds, bkg, norm_ref=None, norm_target=-1):
     rs[rs < 0] = 0
 
         # finalize result
-    rs.title = ds.title + ' (B)'
+    rs.title = ds.title
     info_string = 'Background subtracted using %s' % str(bkg.title)
     if norm_ref:
         info_string += 'after normalising to %f using monitor %s.' % (norm_target,norm_ref)
@@ -520,7 +519,7 @@ def getEfficiencyCorrected(ds, (eff,eff_metadata)):
         rs = ds * eff
 
         # finalize result
-        rs.title = ds.title + ' (Efficiency Corrected)'
+        rs.title = ds.title
         print 'efficiency corrected frames:', 1
 
     elif ds.ndim == 3:
@@ -536,7 +535,7 @@ def getEfficiencyCorrected(ds, (eff,eff_metadata)):
             rs[frame] *= eff
 
         # finalize result
-        rs.title = ds.title + ' (Eff)'
+        rs.title = ds.title
         rs.copy_cif_metadata(ds)
         # now include all the efficiency file metadata, except data reduction
         for key in eff_metadata.keys():
@@ -617,7 +616,7 @@ def getVerticallyCorrected(ds, offsets_filename):
                             setter(rs, dst_sl, x_index, 0)
 
         # finalize result
-        rs.title = ds.title + ' (V)'
+        rs.title = ds.title
 
         print 'vertically corrected:', ds.title
         info_string = "Pixels vertically translated according to contents of file %s" % offsets_filename
@@ -676,7 +675,7 @@ def getHorizontallyCorrected(ds, offsets_filename):
                     index        += 1
 
         # finalize result
-        rs.title = ds.title + ' (H)'
+        rs.title = ds.title
         info_string = "Ideal detector tube positions were adjusted based on standard file."
         rs.add_metadata("_pd_proc_info_data_reduction",info_string,"CIF",append=True)
         print 'horizontally corrected:', ds.title
@@ -728,7 +727,7 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     print 'Have full model and errors at %f' % time.clock()
     # Now build up the important information
     cs = Dataset(model)
-    cs.title = ds.title + ' Regain x %d' % iterno
+    cs.title = ds.title
     cs.var = model_var
     # construct the ideal axes
     axis = arange(len(model))
@@ -813,13 +812,16 @@ def merge_datasets(dslist):
     print 'Passed %d datasets for merging ' % len(dslist)
     proc_info = """This dataset was created by collating points from multiple datasets. Data reduction 
     information for the individual source datasets is as follows:"""
+    title_info = "Merge:"
     for num,dataset in enumerate(dslist):
         storage_info = zip(dataset.axes[0],dataset.storage,dataset.var.storage)
         container.extend(storage_info)
+        proc_info += "\n\n===Dataset %s===\n" % str(dataset.title)
         try:
-            proc_info += "\n\n===Dataset %d===\n" % num + dataset.harvest_metadata("CIF")["_pd_proc_info_data_reduction"]
+            proc_info += dataset.harvest_metadata("CIF")["_pd_proc_info_data_reduction"]
         except KeyError:
             pass
+        title_info = title_info + dataset.title + ':'
     # So we have a list of angle,intensity,variance triples which we sort on angle
     container = sorted(container, key=lambda(angle,intensity,variance):angle)
     angles = map(lambda (a,b,c):a,container)
@@ -828,6 +830,8 @@ def merge_datasets(dslist):
     rs = Dataset(intensities)
     rs.var = variances
     rs.axes[0] = angles
+    rs.axes[0].title = 'Two theta (degrees)'
+    rs.title = title_info
     # Add metadata
     AddCifMetadata.add_standard_metadata(rs)
     rs.add_metadata("_pd_proc_info_data_reduction",proc_info,"CIF")
@@ -837,6 +841,17 @@ def sum_datasets(dslist):
     """Add the provided datasets together"""
     #Assume all same length, same axis values
     newds = zeros_like(dslist[0])
+    title_info = ""
+    proc_info = """This dataset was created by summing points from multiple datasets. Points were 
+    assumed to coincide exactly. Data reduction information for the individual source datasets is as follows:"""
     for one_ds in dslist:
         newds += one_ds
+        title_info = title_info + one_ds.title + ":"
+        proc_info += "\n\n===Dataset %s===\n" % str(one_ds.title) 
+        try:
+            proc_info += dataset.harvest_metadata("CIF")["_pd_proc_info_data_reduction"]
+        except KeyError:
+            pass
+    newds.title = title_info
+    newds.axes[0] = dslist[0].axes[0]
     return newds

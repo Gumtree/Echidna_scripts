@@ -1,3 +1,16 @@
+"""
+Echidna Reduction Main GUI.  Please be aware of the following conventions when
+changing this file:
+
+(1) 1D Dataset titles must be unique to allow simple selection in the GUI. The format
+used here is '<filenumber>-<filetime>', where filetime is the time of day that
+this dataset was plotted.  For synthetic datasets (e.g. summed or subtracted)
+for which there are no filenumbers, the filenames with the appropriate operator are
+used.
+
+(2) Details on the precise data reduction settings should be stored in the file
+metadata, which can be interrogated if the origin of a plot is uncertain. 
+"""
 # Script control setup area
 __script__.title     = 'ECH Reduction'
 __script__.version   = '1.0'
@@ -107,9 +120,10 @@ plh_dataset = Par('string', 'All', options = ['All'])
 plh_delete  = Act('plh_delete_proc()', 'Delete')
 Group('Delete 1D Datasets').add(plh_dataset, plh_delete)
 
-#Preferences
-pref_act = Act('save_user_prefs()','Save Defaults')
-Group('Preferences').add(pref_act)
+# Plot settings
+ps_plotname = Par('string','Plot 2',options=['Plot 2','Plot 3'])
+ps_dspacing = Par('bool',False,command='dspacing_change()')
+Group('Plot settings').add(ps_plotname,ps_dspacing)
 
 # Storage for efficiency map
 if not 'eff_map_cache' in globals():
@@ -148,7 +162,7 @@ def plot_norm_proc():
         plot_data = Dataset(getattr(dset,norm_source))
         plot_data = plot_data/plot_data.max()
         plot_data.title = os.path.basename(str(loc))+':' + str(norm_reference.value)
-        Plot2.add_dataset(plot_data)
+        send_to_plot(plot_data,Plot2,add=True)
 
 # show Background Correction Map
 def bkg_show_proc():
@@ -335,34 +349,51 @@ def plh_sum_proc():
     approach = str(plh_sum_type.value)
     if approach == 'Ideal':
         newds = reduction.sum_datasets(datasets)
-        Plot2.set_dataset(newds)
+        send_to_plot(newds,Plot2,add=False)
     else:
         fs = reduction.merge_datasets(datasets)
         if approach == 'Cluster':
             cluster = float(plh_cluster.value)
             fs = reduction.debunch(fs,cluster)
-        Plot2.set_dataset(fs)
+        send_to_plot(fs,Plot2,add=False)
+
+def dspacing_change():
+    """Toggle the display of d spacing on the horizontal axis"""
+    global Plot2,Plot3
+    plot_table = {'Plot 2':Plot2, 'Plot 3':Plot3}
+    target_plot = plot_table[str(ps_plotname.value)]
+    change_dss = target_plot.ds.copy()
+    target_plot.clear()
+    for ds in change_dss:
+        wavelength = float(ds.harvest_metadata()["_wavelength"])
+        ds.axes[0] = map(lambda a:wavelength/(2.0*sin(a/2)),ds.axes[0])
+        target_plot.add_dataset(ds)
 
 # The preference system: 
-def load_user_prefs():
-    print 'In load user prefs'
+def load_user_prefs(prefix = ''):
+    """Load preferences, optionally prepending the value of
+    prefix in the preference search.  This is typically used
+    to load an alternative set of preferences"""
     # Run through our parameters, looking for the corresponding
     # preferences
     p = globals().scope_keys()
     for name in p:
         if eval('isinstance('+ name + ',Par)'):
-            execstring = name + '.value = "' + get_prof_value(name) + '"'
+            execstring = name + '.value = "' + get_prof_value(prefix+name) + '"'
             exec execstring in globals()
             print 'Set %s to %s' % (name,str(eval(name+'.value')))
 
-def save_user_prefs():
+def save_user_prefs(prefix=''):
+    """Save user preferences, optionally prepending the value of
+    prefix to the preferences. This prefix is typically used to
+    save an alternative set of preferences"""
     print 'In save user prefs'
     # sneaky way to get all the preferences
     p = globals().scope_keys()
     for name in p:
         if eval('isinstance('+ name + ',Par)'):
-            set_prof_value(name,str(eval(name + '.value')))
-            print 'Set %s to %s' % (name,str(get_prof_value(name)))
+            set_prof_value(prefix+name,str(eval(name + '.value')))
+            print 'Set %s to %s' % (prefix+name,str(get_prof_value(prefix+name)))
 
 ''' Script Actions '''
 
@@ -379,6 +410,9 @@ def __run_script__(fns):
     print 'Started working at %f' % (time.clock()-elapsed)
     df.datasets.clear()
     
+    # save user preferences
+    save_user_prefs()
+
     # check input
     if (fns is None or len(fns) == 0) :
         print 'no input datasets'
@@ -466,7 +500,7 @@ def __run_script__(fns):
         # load dataset
         ds = df[fn]
         # extract basic metadata
-        ds = reduction.AddCifMetadata.extract_metadata(ds)
+        ds = AddCifMetadata.extract_metadata(ds)
         # remove redundant dimensions
         rs = ds.get_reduced()
         rs.copy_cif_metadata(ds)
@@ -534,7 +568,7 @@ def __run_script__(fns):
                                                  top=int(vig_upper_boundary.value))
             print 'Finished vertical integration at %f' % (time.clock()-elapsed)
         # Display reduced dataset
-        Plot2.set_dataset(cs)
+        send_to_plot(cs,Plot2)
         Plot2.title = cs.title
         # Output datasets
         filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + str(output_stem.value))
@@ -547,6 +581,21 @@ def __run_script__(fns):
         # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
         print 'Finished writing data at %f' % (time.clock()-elapsed)
         
+''' Utility functions for plots '''
+def send_to_plot(dataset,plot,add=False,change_title=True):
+    """This routine appends a timestamp to the dataset title
+    in order to keep uniqueness of the title for later 
+    identification purposes"""
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    dataset.title = dataset.title + timestamp
+    if add:
+        plot.add_dataset(dataset)
+    else:
+        plot.set_dataset(dataset)
+    if change_title:
+        plot.title = dataset.title
+
 # dispose
 def __dispose__():
     global Plot1,Plot2,Plot3
