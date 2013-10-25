@@ -467,7 +467,7 @@ def debunch(totals,cluster_size):
     print 'Cluster factor %d/%d =  %f' % (len(totals),newlen,1.0*len(totals)/newlen)
     new_totals = new_totals[:newlen]
     new_totals.copy_cif_metadata(totals)
-    new_totals.set_axes(new_axis,anames=[totals.axes[0].name],aunits = totals.axes[0].units)
+    new_totals.set_axes([new_axis],anames=[totals.axes[0].name],aunits = [totals.axes[0].units])
     new_totals.title = totals.title
     return new_totals
 
