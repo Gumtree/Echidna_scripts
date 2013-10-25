@@ -846,12 +846,12 @@ def sum_datasets(dslist):
     assumed to coincide exactly. Data reduction information for the individual source datasets is as follows:"""
     for one_ds in dslist:
         newds += one_ds
-        title_info = title_info + one_ds.title + ":"
+        title_info = title_info + one_ds.title + "+"
         proc_info += "\n\n===Dataset %s===\n" % str(one_ds.title) 
         try:
-            proc_info += dataset.harvest_metadata("CIF")["_pd_proc_info_data_reduction"]
-        except KeyError:
+            proc_info += one_ds.harvest_metadata("CIF")["_pd_proc_info_data_reduction"]
+        except KeyError,AttributeError:
             pass
-    newds.title = title_info
+    newds.title = title_info[:-1]  #chop off trailing '+'
     newds.axes[0] = dslist[0].axes[0]
     return newds

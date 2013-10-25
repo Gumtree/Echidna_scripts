@@ -162,13 +162,16 @@ def show_helper(filename, plot, pre_title = ''):
 def plot_norm_proc():
     norm_source = norm_table[str(norm_reference.value)]
     dss = __datasource__.getSelectedDatasets()
-    Plot2.clear()
+    if Plot2.ds:
+        remove_list = copy(Plot2.ds)  #otherwise dynamically changes
+        for ds in Plot2.ds:
+            Plot2.remove_dataset(ds)  #clear doesn't work
     for fn in dss:
         loc = fn.getLocation()
         dset = df[str(loc)]
         plot_data = Dataset(getattr(dset,norm_source))
         plot_data = plot_data/plot_data.max()
-        plot_data.title = os.path.basename(str(loc))+':' + str(norm_reference.value)
+        plot_data.title = os.path.basename(str(loc))+':' + str(norm_reference.value) + '_'
         send_to_plot(plot_data,Plot2,add=True)
 
 # show Background Correction Map
@@ -322,7 +325,7 @@ def plh_delete_proc():
         return
     
     target_plot = plots[target]
-    target_ds   = target_plot.ds
+    target_ds   = copy(target_plot.ds)
     
     if (type(target_ds) is not list) or (len(target_ds) == 0):
         print 'target plot does not contain 1D datasets'
@@ -345,6 +348,7 @@ def plh_delete_proc():
 
 def plh_sum_proc():
     """Sum all datasets contained in plot 3"""
+    from Reduction import reduction
     datasets = Plot3.ds
     approach = str(plh_sum_type.value)
     if approach == 'Ideal':
@@ -364,6 +368,11 @@ def dspacing_change():
     target_plot = plot_table[str(ps_plotname.value)]
     if target_plot.ds is None:
         return
+    # Preliminary check we are not displaying something
+    # irrelevant, e.g. monitor counts
+    for ds in target_plot.ds:
+        if ds.axes[0].name not in ['Two theta','d-spacing']:
+            return
     change_dss = copy(target_plot.ds)
     # Check to see what change is required
     need_d_spacing = ps_dspacing.value
