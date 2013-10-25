@@ -30,13 +30,13 @@ out_folder = Par('file')
 out_folder.dtype = 'folder'
 output_xyd = Par('bool','False')
 output_xyd.title = "XYD"
-output_cif = Par('bool','True')
-output_cif.title = "CIF"
+#output_cif = Par('bool','True')   #always True
+#output_cif.title = "CIF"
 output_fxye = Par('bool','True')
 output_fxye.title = "GSAS FXYE"
 output_stem = Par('string','reduced')
 output_stem.title = "Include in filename:"
-Group('Output Format').add(output_xyd,output_cif,output_fxye,out_folder)
+Group('Output Format').add(output_xyd,output_fxye,out_folder)
 Group('Output Filename: ECH00NNNNN_+...').add(output_stem)
 # Normalization
 # We link the normalisation sources to actual dataset locations right here, right now
@@ -281,14 +281,7 @@ def plh_copy_proc():
     
     for ds in src_ds:
         if id(ds) not in dst_ds_ids:
-            dst_plot.add_dataset(ds)
-
-    # Update the options for deleting datasets
-    target_list = ['All']
-    for ds in src_plot.ds:
-        target_list.append(ds.title)
-    plh_dataset.options = target_list
-    plh_dataset.value   = 'All'
+            send_to_plot(ds,dst_plot,add=True,add_timestamp=False)
 
 def plh_plot_changed():
     
@@ -376,20 +369,23 @@ def dspacing_change():
     need_d_spacing = ps_dspacing.value
     # target_plot.clear() causes problems; use 'remove' instead
     # need to set the xlabel by hand due to gplot bug
+    if need_d_spacing: target_plot.x_label = 'd-spacing (Angstroms)'
+    elif not need_d_spacing: target_plot.x_label = 'Two theta (Degrees)'
+    target_plot.y_label = 'Intensity'
     for ds in change_dss:
         current_axis = ds.axes[0].name
         print '%s has axis %s' % (ds.title,current_axis)
-        if current_axis == 'd-spacing' and not need_d_spacing or \
-        current_axis == 'Two theta' and need_d_spacing:  
-            if current_axis == 'Two theta' and need_d_spacing:    
-                convert_to_dspacing(ds)
-            elif current_axis == 'd-spacing' and not need_d_spacing:
-                convert_to_twotheta(ds)
+        if need_d_spacing:    
+            convert_to_dspacing(ds)
+        elif not need_d_spacing:
+            convert_to_twotheta(ds)
         target_plot.remove_dataset(ds)
         target_plot.add_dataset(ds)
 
 def convert_to_dspacing(ds):
     import math
+    if ds.axes[0].name == 'd-spacing':
+        return
     wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
     print 'Wavelength for %s is %f' % (ds.title,wavelength)
     new_axis = wavelength/(2.0*sin(ds.axes[0]*3.14159/360.0))
@@ -397,6 +393,8 @@ def convert_to_dspacing(ds):
 
 def convert_to_twotheta(ds):
     import math
+    if ds.axes[0].name == 'Two theta':
+        return
     wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
     print 'Wavelength for %s is %f' % (ds.title,wavelength)
     new_axis = arcsin(wavelength/(2.0*ds.axes[0]))*360/3.14159
@@ -419,14 +417,21 @@ def load_user_prefs(prefix = ''):
 def save_user_prefs(prefix=''):
     """Save user preferences, optionally prepending the value of
     prefix to the preferences. This prefix is typically used to
-    save an alternative set of preferences"""
+    save an alternative set of preferences.  Return lists of values
+    as ASCII strings for logging purposes"""
     print 'In save user prefs'
+    prof_names = []
+    prof_vals = []
     # sneaky way to get all the preferences
     p = globals().scope_keys()
     for name in p:
         if eval('isinstance('+ name + ',Par)'):
-            set_prof_value(prefix+name,str(eval(name + '.value')))
+            prof_val = str(eval(name + '.value'))
+            set_prof_value(prefix+name,prof_val)
             print 'Set %s to %s' % (prefix+name,str(get_prof_value(prefix+name)))
+            prof_names.append(name)
+            prof_vals.append(prof_val)
+    return prof_names,prof_vals        
 
 ''' Script Actions '''
 
@@ -444,7 +449,7 @@ def __run_script__(fns):
     df.datasets.clear()
     
     # save user preferences
-    save_user_prefs()
+    prof_names,prof_values = save_user_prefs()
 
     # check input
     if (fns is None or len(fns) == 0) :
@@ -526,6 +531,8 @@ def __run_script__(fns):
     else:
         htc = None
         
+    # Store the reduction settings as metadata for reference
+    
     # iterate through input datasets
     # note that the normalisation target (an arbitrary number) is set by
     # the first dataset unless it has already been specified.
@@ -534,6 +541,7 @@ def __run_script__(fns):
         ds = df[fn]
         # extract basic metadata
         ds = AddCifMetadata.extract_metadata(ds)
+        AddCifMetadata.store_reduction_preferences(ds,prof_names,prof_values)
         # remove redundant dimensions
         rs = ds.get_reduced()
         rs.copy_cif_metadata(ds)
@@ -604,8 +612,7 @@ def __run_script__(fns):
         send_to_plot(cs,Plot2)
         # Output datasets
         filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + str(output_stem.value))
-        if output_cif.value:
-            output.write_cif_data(cs,filename_base)
+        output.write_cif_data(cs,filename_base)
         if output_xyd.value:
             output.write_xyd_data(cs,filename_base)
         if output_fxye.value:
@@ -614,24 +621,32 @@ def __run_script__(fns):
         print 'Finished writing data at %f' % (time.clock()-elapsed)
         
 ''' Utility functions for plots '''
-def send_to_plot(dataset,plot,add=False,change_title=True):
+def send_to_plot(dataset,plot,add=False,change_title=True,add_timestamp=True):
     """This routine appends a timestamp to the dataset title
     in order to keep uniqueness of the title for later 
     identification purposes. It also maintains plot
     consistency in terms of displaying d-spacing."""
     from datetime import datetime
-    timestamp = datetime.now().strftime("%H:%M:%S")
-    dataset.title = dataset.title + timestamp
+    if add_timestamp:
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        dataset.title = dataset.title + timestamp
     # Check d-spacing status
-    if plot.ds is not None:
-        if plot.ds[0].axes[0].title == 'd-spacing':
+    if plot.ds:
+        if plot.ds[0].axes[0].name == 'd-spacing':
             convert_to_dspacing(dataset)
+        elif plot.ds[0].axes[0].name == 'Two theta':
+            convert_to_twotheta(dataset)
     if add:
         plot.add_dataset(dataset)
     else:
         plot.set_dataset(dataset)
     if change_title:
         plot.title = dataset.title
+    #Update any widgets that keep a track of the plots
+    if plot == Plot3:   #Delete only operates on plot 3
+        curves = ['All'] + map(lambda a:a.title,plot.ds)
+        plh_dataset.options = curves
+        plh_dataset.value = 'All'
 
 # dispose
 def __dispose__():

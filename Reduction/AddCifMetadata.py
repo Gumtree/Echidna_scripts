@@ -110,6 +110,12 @@ def extract_metadata(rawfile):
     rawfile.add_metadata("_diffrn_source_power", "%.2f" % (average_metadata(rawfile["$entry/instrument/source/power"])*1000),"CIF")
     return rawfile
 
+def store_reduction_preferences(rawfile,prof_names,prof_values):
+    """Store the preferences for all parameters used in data reduction"""
+    names = (('_[local]_proc_reduction_parameter',
+                                       '_[local]_proc_reduction_value'),)
+    rawfile.__dict__['ms'].AddCifItem((names,((prof_names,prof_values),)))
+
 def average_metadata(entrytable):
     try:
         return sum(entrytable)/len(entrytable)
