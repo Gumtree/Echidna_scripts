@@ -390,7 +390,7 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0,
         else:
             new_axes.append(totals.axes[i])
         print 'Axis %d: %s' % (i,totals.axes[i].title)
-    old_names = map(lambda a:a.title,totals.axes)
+    old_names = map(lambda a:a.name,totals.axes)
     old_units = map(lambda a:a.units,totals.axes)
     old_names[-1] = 'Two theta'
     old_units[-1] = 'Degrees'
@@ -467,7 +467,7 @@ def debunch(totals,cluster_size):
     print 'Cluster factor %d/%d =  %f' % (len(totals),newlen,1.0*len(totals)/newlen)
     new_totals = new_totals[:newlen]
     new_totals.copy_cif_metadata(totals)
-    new_totals.set_axes(new_axis,anames=[totals.axes[0].title],aunits = totals.axes[0].units)
+    new_totals.set_axes(new_axis,anames=[totals.axes[0].name],aunits = totals.axes[0].units)
     new_totals.title = totals.title
     return new_totals
 

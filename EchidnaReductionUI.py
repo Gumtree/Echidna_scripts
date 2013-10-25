@@ -3,13 +3,20 @@ Echidna Reduction Main GUI.  Please be aware of the following conventions when
 changing this file:
 
 (1) 1D Dataset titles must be unique to allow simple selection in the GUI. The format
-used here is '<filenumber>-<filetime>', where filetime is the time of day that
+used here is '<filenumber>_<filetime>', where filetime is the time of day that
 this dataset was plotted.  For synthetic datasets (e.g. summed or subtracted)
 for which there are no filenumbers, the filenames with the appropriate operator are
 used.
 
 (2) Details on the precise data reduction settings should be stored in the file
-metadata, which can be interrogated if the origin of a plot is uncertain. 
+metadata, which can be interrogated if the origin of a plot is uncertain.
+
+(3) The axis names are not arbitrary and, in addition to those defined by the
+NeXuS standard, should be chosen from the following predefined set: 
+'Two theta'
+'d-spacing'
+These names are used by the d-spacing conversion to check which representation
+the dataset is currently in.
 """
 # Script control setup area
 __script__.title     = 'ECH Reduction'
@@ -362,12 +369,38 @@ def dspacing_change():
     global Plot2,Plot3
     plot_table = {'Plot 2':Plot2, 'Plot 3':Plot3}
     target_plot = plot_table[str(ps_plotname.value)]
-    change_dss = target_plot.ds.copy()
-    target_plot.clear()
+    if target_plot.ds is None:
+        return
+    change_dss = copy(target_plot.ds)
+    # Check to see what change is required
+    need_d_spacing = ps_dspacing.value
+    # target_plot.clear() causes problems; use 'remove' instead
+    # need to set the xlabel by hand due to gplot bug
     for ds in change_dss:
-        wavelength = float(ds.harvest_metadata()["_wavelength"])
-        ds.axes[0] = map(lambda a:wavelength/(2.0*sin(a/2)),ds.axes[0])
+        current_axis = ds.axes[0].name
+        print '%s has axis %s' % (ds.title,current_axis)
+        if current_axis == 'd-spacing' and not need_d_spacing or \
+        current_axis == 'Two theta' and need_d_spacing:  
+            if current_axis == 'Two theta' and need_d_spacing:    
+                convert_to_dspacing(ds)
+            elif current_axis == 'd-spacing' and not need_d_spacing:
+                convert_to_twotheta(ds)
+        target_plot.remove_dataset(ds)
         target_plot.add_dataset(ds)
+
+def convert_to_dspacing(ds):
+    import math
+    wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
+    print 'Wavelength for %s is %f' % (ds.title,wavelength)
+    new_axis = wavelength/(2.0*sin(ds.axes[0]*3.14159/360.0))
+    ds.set_axes([new_axis],anames=['d-spacing'],aunits=['Angstroms'])
+
+def convert_to_twotheta(ds):
+    import math
+    wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
+    print 'Wavelength for %s is %f' % (ds.title,wavelength)
+    new_axis = arcsin(wavelength/(2.0*ds.axes[0]))*360/3.14159
+    ds.set_axes([new_axis],anames=['Two theta'],aunits=['Degrees'])
 
 # The preference system: 
 def load_user_prefs(prefix = ''):
@@ -569,7 +602,6 @@ def __run_script__(fns):
             print 'Finished vertical integration at %f' % (time.clock()-elapsed)
         # Display reduced dataset
         send_to_plot(cs,Plot2)
-        Plot2.title = cs.title
         # Output datasets
         filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + str(output_stem.value))
         if output_cif.value:
@@ -585,10 +617,15 @@ def __run_script__(fns):
 def send_to_plot(dataset,plot,add=False,change_title=True):
     """This routine appends a timestamp to the dataset title
     in order to keep uniqueness of the title for later 
-    identification purposes"""
+    identification purposes. It also maintains plot
+    consistency in terms of displaying d-spacing."""
     from datetime import datetime
     timestamp = datetime.now().strftime("%H:%M:%S")
     dataset.title = dataset.title + timestamp
+    # Check d-spacing status
+    if plot.ds is not None:
+        if plot.ds[0].axes[0].title == 'd-spacing':
+            convert_to_dspacing(dataset)
     if add:
         plot.add_dataset(dataset)
     else:
