@@ -118,7 +118,7 @@ Group('Copy 1D Datasets to Plot 3').add(plh_copy)
 # Allow summation of plots
 plh_sum = Act('plh_sum_proc()','Sum datasets')
 plh_sum_type = Par('string','Ideal',options=['Ideal','Cluster','Merge Only'])
-plh_cluster = Par('string','0.03')
+plh_cluster = Par('float','0.03')
 plh_file = Par('file','')
 Group('Sum 1D datasets in Plot 3').add(plh_file,plh_sum_type,plh_cluster,plh_sum)
 
@@ -349,17 +349,27 @@ def plh_delete_proc():
 def plh_sum_proc():
     """Sum all datasets contained in plot 3"""
     from Reduction import reduction
+    from Formats import output
+    filename = str(plh_file.value)
     datasets = Plot3.ds
     approach = str(plh_sum_type.value)
     if approach == 'Ideal':
         newds = reduction.sum_datasets(datasets)
         send_to_plot(newds,Plot2,add=False)
     else:
-        fs = reduction.merge_datasets(datasets)
+        newds = reduction.merge_datasets(datasets)
         if approach == 'Cluster':
             cluster = float(plh_cluster.value)
-            fs = reduction.debunch(fs,cluster)
-        send_to_plot(fs,Plot2,add=False)
+            if cluster > 0:
+                newds = reduction.debunch(newds,cluster)
+        send_to_plot(newds,Plot2,add=False)
+        # Write to file
+        if filename != '':
+            output.write_cif_data(newds,filename)
+            if output_xyd.value:
+                output.write_xyd_data(newds,filename)
+            if output_fxye.value:
+                output.write_fxye_data(newds,filename)
 
 def dspacing_change():
     """Toggle the display of d spacing on the horizontal axis"""
@@ -395,8 +405,12 @@ def convert_to_dspacing(ds):
     import math
     if ds.axes[0].name == 'd-spacing':
         return
-    wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
-    print 'Wavelength for %s is %f' % (ds.title,wavelength)
+    try:
+        wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
+        print 'Wavelength for %s is %f' % (ds.title,wavelength)
+    except KeyError:
+        print 'Unable to find a wavelength, no conversion attempted'
+        return   #Unable to convert anything
     new_axis = wavelength/(2.0*sin(ds.axes[0]*3.14159/360.0))
     ds.set_axes([new_axis],anames=['d-spacing'],aunits=['Angstroms'])
 
@@ -404,7 +418,11 @@ def convert_to_twotheta(ds):
     import math
     if ds.axes[0].name == 'Two theta':
         return
-    wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
+    try:
+        wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
+    except KeyError:
+        print 'Unable to find a wavelength, no conversion attempted'
+        return   #Unable to convert anything
     print 'Wavelength for %s is %f' % (ds.title,wavelength)
     new_axis = arcsin(wavelength/(2.0*ds.axes[0]))*360/3.14159
     ds.set_axes([new_axis],anames=['Two theta'],aunits=['Degrees'])

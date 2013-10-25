@@ -841,6 +841,7 @@ def sum_datasets(dslist):
     """Add the provided datasets together"""
     #Assume all same length, same axis values
     newds = zeros_like(dslist[0])
+    AddCifMetadata.add_standard_metadata(newds)
     title_info = ""
     proc_info = """This dataset was created by summing points from multiple datasets. Points were 
     assumed to coincide exactly. Data reduction information for the individual source datasets is as follows:"""
@@ -854,4 +855,7 @@ def sum_datasets(dslist):
             pass
     newds.title = title_info[:-1]  #chop off trailing '+'
     newds.axes[0] = dslist[0].axes[0]
+    # Add some basic metadata based on metadata of first dataset
+    newds.copy_cif_metadata(dslist[0])
+    newds.add_metadata('_pd_proc_info_data_reduction',proc_info,"CIF")
     return newds
