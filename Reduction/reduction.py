@@ -859,3 +859,31 @@ def sum_datasets(dslist):
     newds.copy_cif_metadata(dslist[0])
     newds.add_metadata('_pd_proc_info_data_reduction',proc_info,"CIF")
     return newds
+
+def convert_to_dspacing(ds):
+    if ds.axes[0].name == 'd-spacing':
+        return
+    try:
+        wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
+        print 'Wavelength for %s is %f' % (ds.title,wavelength)
+    except KeyError:
+        print 'Unable to find a wavelength, no conversion attempted'
+        return   #Unable to convert anything
+    # Funny call of sin below to avoid problems with sin being shadowed by the
+    # standard maths library
+    new_axis = wavelength/(2.0*(ds.axes[0]*3.14159/360.0).__sin__())
+    ds.set_axes([new_axis],anames=['d-spacing'],aunits=['Angstroms'])
+    return 'Changed'
+
+def convert_to_twotheta(ds):
+    if ds.axes[0].name == 'Two theta':
+        return
+    try:
+        wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
+    except KeyError:
+        print 'Unable to find a wavelength, no conversion attempted'
+        return   #Unable to convert anything
+    print 'Wavelength for %s is %f' % (ds.title,wavelength)
+    new_axis = arcsin(wavelength/(2.0*ds.axes[0]))*360/3.14159
+    ds.set_axes([new_axis],anames=['Two theta'],aunits=['Degrees'])
+    return 'Changed'

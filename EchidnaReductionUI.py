@@ -25,6 +25,11 @@ __script__.version   = '1.0'
 __datasource__ = __register__.getDataSourceViewer()
 
 ''' User Interface '''
+# Plot Helper: always Plot2 to Plot 3
+# At the top for convenience
+plh_copy = Act('plh_copy_proc()', 'Copy plot')
+Group('Copy 1D Datasets to Plot 3').add(plh_copy)
+
 # Output Folder
 out_folder = Par('file')
 out_folder.dtype = 'folder'
@@ -48,7 +53,8 @@ norm_reference = Par('string', 'Monitor 3', options = norm_table.keys())
 norm_reference.title = 'Source'
 norm_target    = 'auto'
 norm_plot = Act('plot_norm_proc()','Plot')
-Group('Normalization').add(norm_apply, norm_reference,norm_plot)
+norm_plot_all = Act('plot_all_norm_proc()','Plot all')
+Group('Normalization').add(norm_apply, norm_reference,norm_plot_all,norm_plot)
 
 # Background Correction
 bkg_apply = Par('bool', 'False')
@@ -111,9 +117,6 @@ regain_iterno = Par('int','5')
 regain_iterno.title = 'Iterations'
 Group('Recalculate Gain').add(regain_apply,regain_iterno)
 
-# Plot Helper: always Plot2 to Plot 3
-plh_copy = Act('plh_copy_proc()', 'Copy plot')
-Group('Copy 1D Datasets to Plot 3').add(plh_copy)
 
 # Allow summation of plots
 plh_sum = Act('plh_sum_proc()','Sum datasets')
@@ -160,20 +163,32 @@ def show_helper(filename, plot, pre_title = ''):
             
 # Plot normalisation info
 def plot_norm_proc():
-    norm_source = norm_table[str(norm_reference.value)]
+    plot_norm_master()
+
+def plot_all_norm_proc():
+    """Plot all normalisation values found in file"""
+    plot_norm_master(all_mons=True)
+
+def plot_norm_master(all_mons = False):
     dss = __datasource__.getSelectedDatasets()
     if Plot2.ds:
         remove_list = copy(Plot2.ds)  #otherwise dynamically changes
-        for ds in Plot2.ds:
+        for ds in remove_list:
             Plot2.remove_dataset(ds)  #clear doesn't work
     for fn in dss:
         loc = fn.getLocation()
         dset = df[str(loc)]
-        plot_data = Dataset(getattr(dset,norm_source))
-        plot_data = plot_data/plot_data.max()
-        plot_data.title = os.path.basename(str(loc))+':' + str(norm_reference.value) + '_'
-        send_to_plot(plot_data,Plot2,add=True)
-
+        print 'Dataset %s' % os.path.basename(str(loc))
+        for monitor_loc in norm_table.keys():
+            if all_mons or monitor_loc == str(norm_reference.value):
+                norm_source = norm_table[monitor_loc]
+                plot_data = Dataset(getattr(dset,norm_source))
+                if norm_apply.value or all_mons:
+                    ave_val = plot_data.sum()/len(plot_data)
+                    plot_data = plot_data/ave_val
+                plot_data.title = os.path.basename(str(loc))+':' + str(monitor_loc) + '_'
+                send_to_plot(plot_data,Plot2,add=True)
+        
 # show Background Correction Map
 def bkg_show_proc():
     show_helper(bkg_map.value, Plot1, "Background Map: ")
@@ -374,6 +389,7 @@ def plh_sum_proc():
 def dspacing_change():
     """Toggle the display of d spacing on the horizontal axis"""
     global Plot2,Plot3
+    from Reduction import reduction
     plot_table = {'Plot 2':Plot2, 'Plot 3':Plot3}
     target_plot = plot_table[str(ps_plotname.value)]
     if target_plot.ds is None:
@@ -395,37 +411,12 @@ def dspacing_change():
         current_axis = ds.axes[0].name
         print '%s has axis %s' % (ds.title,current_axis)
         if need_d_spacing:    
-            convert_to_dspacing(ds)
+            result = reduction.convert_to_dspacing(ds)
         elif not need_d_spacing:
-            convert_to_twotheta(ds)
-        target_plot.remove_dataset(ds)
-        target_plot.add_dataset(ds)
-
-def convert_to_dspacing(ds):
-    import math
-    if ds.axes[0].name == 'd-spacing':
-        return
-    try:
-        wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
-        print 'Wavelength for %s is %f' % (ds.title,wavelength)
-    except KeyError:
-        print 'Unable to find a wavelength, no conversion attempted'
-        return   #Unable to convert anything
-    new_axis = wavelength/(2.0*sin(ds.axes[0]*3.14159/360.0))
-    ds.set_axes([new_axis],anames=['d-spacing'],aunits=['Angstroms'])
-
-def convert_to_twotheta(ds):
-    import math
-    if ds.axes[0].name == 'Two theta':
-        return
-    try:
-        wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
-    except KeyError:
-        print 'Unable to find a wavelength, no conversion attempted'
-        return   #Unable to convert anything
-    print 'Wavelength for %s is %f' % (ds.title,wavelength)
-    new_axis = arcsin(wavelength/(2.0*ds.axes[0]))*360/3.14159
-    ds.set_axes([new_axis],anames=['Two theta'],aunits=['Degrees'])
+            result = reduction.convert_to_twotheta(ds)
+        if result == 'Changed':
+            target_plot.remove_dataset(ds)
+            target_plot.add_dataset(ds)
 
 # The preference system: 
 def load_user_prefs(prefix = ''):
@@ -438,7 +429,10 @@ def load_user_prefs(prefix = ''):
     for name in p:
         if eval('isinstance('+ name + ',Par)'):
             execstring = name + '.value = "' + get_prof_value(prefix+name) + '"'
-            exec execstring in globals()
+            try:
+                exec execstring in globals()
+            except:
+                print 'Failure setting %s to %s' % (name,str(get_prof_value(prefix+name)))
             print 'Set %s to %s' % (name,str(eval(name+'.value')))
 
 def save_user_prefs(prefix=''):

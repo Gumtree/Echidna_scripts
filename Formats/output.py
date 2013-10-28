@@ -134,7 +134,7 @@ def write_fxye_data(ds,filename):
 
     from datetime import datetime
     current_time =  datetime.now().isoformat()
-    angles = map(lambda a:("%8.0f" % a),ds.axes[0]*100.0)
+    angles = map(lambda a:("%8.2f" % a),ds.axes[0]*100.0)
     thlen = len(angles)
     ints = map(lambda a:"%7.4f" % a,ds)
     esds = map(lambda a:"%5.4f" % math.sqrt(a),ds.var)
