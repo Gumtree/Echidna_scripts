@@ -31,6 +31,11 @@ mult_ds = Par('string','',options=[])
 mult_fact = Par('string','1.0')
 mult_act = Act('mult_proc()','Multiply')
 Group('Multiplication').add(mult_ds,mult_fact,mult_act)
+# Import external file
+external_filename = Par('file','')
+external_wavelength = Par('float',1.622)
+import_act = Act('import_proc()','Import File')
+Group('Import').add(external_filename,external_wavelength,import_act)
 
 ''' Button callbacks '''
 
@@ -104,3 +109,37 @@ def info_show_proc():
                 value = value[0]
             print '%20s:  %s' % (key,value)
         
+def import_proc():
+    """Import a three-column ASCII file (TODO: CIF). Any line whose first non-whitespace character
+    is not [0-9.+-] is considered to be a comment and ignored. Columns are assumed to be in
+    order of angle,intensity,error."""
+    from Reduction import AddCifMetadata
+    import_file = str(external_filename.value)
+    import_wl = float(external_wavelength.value)
+    lines = open(import_file).readlines()
+    print 'File %s: %d lines read in' % (import_file,len(lines))
+    # Remove empty lines
+    lines = map(lambda a:a.strip(),lines)
+    lines = filter(lambda a:len(a)>0,lines)
+    # Choose only numeric-valued lines
+    lines = filter(lambda a:a.strip()[0] in '0123456789.+-',lines)
+    print 'File %s: %d lines accepted' % (import_file,len(lines))
+    split_lines = map(lambda a:a.split(),lines)
+    float_lines = map(lambda b:map(lambda a:float(a),b),split_lines)
+    columns = zip(*float_lines)
+    # Now create the dataset
+    ds = Dataset(columns[1])
+    # Auto-detect GSAS centidegrees
+    axis = Array(columns[0])
+    if axis.max() > 361:
+        # Assume centidegrees
+        axis = axis/100.0
+    ds.set_axes([axis],anames=['Two theta'],aunits=['Degrees'])
+    if len(columns)>=3:
+        ds.var = Array(columns[2])**2
+    AddCifMetadata.add_metadata_methods(ds)
+    ds.add_metadata("_diffrn_radiation_wavelength",import_wl,"CIF")
+    ds.title = os.path.basename(import_file)
+    Plot2.set_dataset(ds)
+    Plot2.title = ds.title
+    
