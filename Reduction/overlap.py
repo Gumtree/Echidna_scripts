@@ -1,7 +1,9 @@
 # These routines calculate an Echidna tube gain correction based on overlapping tube measurements.
 
 """
-The treatment follows the paper of Monahan, Schriffer and Schriffer in Acta Cryst, 1967 p 322.
+The original treatment follows the paper of Monahan, Schriffer and Schriffer in Acta Cryst, 1967 p 322. This
+has been replaced by routines appended with '_fr_' for routines derived from 
+Fox and Rollet, Acta Cryst. B24, p293(1968).
 """
 from gumpy.nexus import *
 
@@ -240,10 +242,63 @@ def shift_mult_tube_add_new(fixed_array, sliding_vector,tube_offset, pixel_mask,
             rti.set_next(sum((obi*pixel_mask)*sv))
     else:
         for atubeno in range(numslices):
-            sv = sliding_vector.get_section([tube_offset*atubeno],[scanlen])
+            sv = sliding_vector.get_section([tube_offset*atubeno],[scanlen]) 
             obi = obs_i.next()
             rti.set_next(sum((obi*pixel_mask)*sv**2))
     return result
+
+def get_weighted_gains(gain_array,gain_variance,weight_array,offset):
+   """Calculate the w_h G_p/Sum(w_h G_p) term for each distinct set of angles. The gain array
+   is a flat array with the number of entries corresponding to the number of tubes. The
+   observed array has n entries of length m, where n is the number of tubes and m is the
+   number of distinct steps that tube takes. """
+   weighted_gain = array.zeros_like(weight_array)
+   swlen = weight_array.shape[1]  #number of distinct angular areas per tube
+   gai = gain_array.__iter__()
+   wgi = weighted_gain.__iter__()
+   wai = weight_array.__iter__()
+   while gai.has_next():  #do this for each tube
+      gan = gai.next()
+      wg = wgi.next()
+      was = wai.next()
+      wg += gan * was  #weight
+   # These are the denominators in Eqn 1
+   scale_factors = 1.0/shift_tube_add_new(weighted_gain,offset,None)
+   # Weighted_gain has the w_h G_p terms for each tube. Now we just create an
+   # array where each entry is divided by the appropriate denominator
+   ones_array = array.ones_like(weighted_gain[0]) # for convenience
+   final_var = array.zeros_like(weighted_gain)
+   for tube_no in range(len(weighted_gain)):  #all tubes
+      weighted_gain[tube_no] = weighted_gain[tube_no]*scale_factors.get_section([offset*tube_no],[swlen])#w_{hp}G_p/sum(w_{hp}G_p)
+      # The variance is calculated as (f/G_i * (1-f))^2 * sigma^2(G_i), where f = w_i G_i/sum(w_p G_p)
+      final_var[tube_no] = ((ones_array - weighted_gain[tube_no])* weighted_gain[tube_no]/gain_array[tube_no])**2 \
+          * gain_variance[tube_no]
+   return weighted_gain,final_var #a set of m n-element arrays, m is number of tubes, n is number of distinct angular regions
+
+# This routine calculates the above gain applied to the given dataset as a pointwise scale factor
+# For each distinct angular region covered by a detector we have a different scale factor
+def apply_point_gain(gain_array,gain_variance,dataset,variance,offset):
+   """Gain_array is an nxm array of m angular regions covered by each of n tubes. dataset has a similar structure,
+   except that the m angular regions have expanded to cover offset points."""
+   final_array = zeros_like(dataset)
+   final_variance = zeros_like(dataset)
+   gain_iter = gain_array.__iter__()
+   final_iter = final_array.__iter__()
+   dataset_iter = dataset.__iter__()
+   variance_iter = variance.__iter__()
+   gain_variance_iter = gain_variance.__iter__()
+   ones_array = ones_like(dataset[0]) # for convenience
+   while gain_iter.has_next():
+      fan = final_iter.next()
+      gin = gain_iter.next()
+      dan = dataset_iter.next()
+      van = variance_iter.next()
+      gvn = gain_variance_iter.next()
+      for region in range(len(gin)):
+         fan[region*offset:(region+1)*offset] += gin[region]*dan[region*offset:(region+1)*offset] 
+         van[region*offset:(region+1)*offset] += dan[region*offset:(region+1)*offset]**2 * gvn[region] + \
+             (ones_array *gin[region])**2 * van**2
+      return final_array,final_variance
 
 def shift_mult_fr_add(gain_array,model_array,obs_array,weight_array,offset,pixel_mask):
    """ Perform the summation in eqn 3 of Fox and Rollet """
@@ -372,7 +427,8 @@ def calc_error_new(obs,model,gain_vector,offset):
 
 # The treatment of Ford and Rollett  Acta Cryst. (1968) B24,293
 # In find_gain, we do not want to use datapoints that are zero.  We have to mask these out
-def find_gain_fr(data, data_weights, steps_per_tube, gain_array,arminus1=None,pixel_mask=None,errors=False,accel_flag=True):
+def find_gain_fr(data, data_weights, steps_per_tube, gain_array,arminus1=None,pixel_mask=None,errors=False,
+                 accel_flag=True):
    import math,time
    """usage: data is a 2D gumpy Array consisting of vertically-integrated scans from multiple tubes on Echidna, 
       where successive scans start overlapping neighbouring tubes after steps_per_tube steps. 
@@ -382,7 +438,8 @@ def find_gain_fr(data, data_weights, steps_per_tube, gain_array,arminus1=None,pi
       Pixel mask is a data-shaped array containing 0s in those positions
       where the pixel information should not be used.  If None, all pixels are used.
       If errors is True, errors are calculated.
-      If accel_flag is True, the accelerated version of Ford and Rollett is used."""
+      If accel_flag is True, the accelerated version of Ford and Rollett is used.
+      """
    if pixel_mask is None:
        pixel_mask = array.ones_like(data[0])
    elapsed = time.clock()
@@ -422,6 +479,21 @@ def find_gain_fr(data, data_weights, steps_per_tube, gain_array,arminus1=None,pi
    else: esds = array.zeros_like(gain)
    return gain,outdata,ar,esds,K
 
+def get_per_point_gain(data, data_weights, steps_per_tube, gain_array,gain_errors):
+   """Return a gain array suitable for multiplication by the individual observations (i.e. without
+   immediate summation to get the overall value).  This is notionally just the gain divided by
+   the appropriate Sum(G_l)*w_hl over each tube l contributing at angle h. Variable 'data' is
+   an array where each element is the observations from a single tube, with each step_per_tube
+   amount corresponding to a new overlap section."""
+   # We shift gain_array by one for each step_per_tube, summing in a weighted sense
+   """
+   The actual angles for each detector do not as a rule match up perfectly between detectors, therefore
+   we prefer to apply scales separately for each measurement and not sum all measurements together. This
+   means that we multiply each observation by G_l(rho)/(Sum(G_l)w_hl), where the sum is over tubes contributing
+   to this (approximate) angular position together with the weights of the contributing reflections at these
+   points. Sum(G_l) can be calculated by summing G_l with itself shifted by one for each overlap.
+   """
+   
 def get_statistics_fr(gain,outdata,data,variances,steps_per_tube,pixel_mask):
    """Calculate some refinement statistics"""
    import math

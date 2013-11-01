@@ -688,14 +688,16 @@ def getHorizontallyCorrected(ds, offsets_filename):
 
 # Calculate adjusted gain based on matching intensities between overlapping
 # sections of data from different detectors
-def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,bottom=None):
+def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,bottom=None,point_result=True):
     """Calculate rescaling factors for tubes based on overlapping data
     regions. The ignore parameter specifies the number of initial tubes for
     which data are unreliable and should be ignored. Specifying unit weights
     = False will use the variances contained in the input dataset. Note that
     the output dataset has already been vertically integrated as part of the
     algorithm. The vertical integration limits are set by top and bottom, if
-    None all points are included."""
+    None all points are included.  If point_result is True, the data are not
+    averaged, but instead scaled on the assumption that the calling routine
+    will average the points."""
     import time
     from Reduction import overlap
     # Get sensible values
@@ -718,21 +720,29 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     # sum the individual unoverlapped sections
     d = c.intg(axis=1)
     e = d.transpose()
-    gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave = \
+    gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
         iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
     # calculate errors based on full dataset
     # First get a full model
     model,wd,model_var = overlap.apply_gain(b.transpose()[ignore:],1.0/b.transpose().var[ignore:],pixel_step,gain,calc_var=True)
     esds = overlap.calc_error_new(b.transpose()[ignore:],model,gain,pixel_step)
     print 'Have full model and errors at %f' % time.clock()
+    # Now we apply the gain in such a way as to allow the points not to be averaged
+    # at the same time. To do this we obtain the 'point scale gains' and apply them
+    if point_result:
+        p_s_g,p_s_g_vars = overlap.get_weighted_gains(gain,esds**2,weights,1)
+        model,model_var = overlap.apply_point_gain(p_s_g,p_s_g_vars,b.transpose()[ignore:],1.0/b.transpose().var[ignore:],pixel_step)
     # Now build up the important information
     cs = Dataset(model)
     cs.title = ds.title
     cs.var = model_var
-    # construct the ideal axes
-    axis = arange(len(model))
-    cs.axes[0] = axis*bin_size + ds.axes[0][0] + ignore*pixel_step*bin_size
     cs.copy_cif_metadata(ds)
+    # construct the ideal axes
+    if not point_model:
+        axis = arange(len(model))
+        cs.axes[0] = axis*bin_size + ds.axes[0][0] + ignore*pixel_step*bin_size
+    else:
+        cs.axes = ds.axes
     # prepare info for CIF file
     import math
     detno = map(lambda a:"%d" % a,range(len(gain)))
@@ -752,7 +762,8 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
 # small, and aim for a shift/esd of <0.1
 def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True,algo="FordRollett",unit_weights=True):
     """Iteratively refine the gain. The pixel_step is the number of steps a tube takes before it
-    overlaps with the next tube. iter_no is the number of iterations, if negative the routine will iterate
+    overlaps with the next tube. Parameter 'dataset' is an n x m array, for m distinct angular regions covered by 
+    detector number n. iter_no is the number of iterations, if negative the routine will iterate
     until chisquared does not change by more than 0.01 or abs(iter_no) steps, whichever comes first. Pixel_mask 
     has a zero for any tube that should be excluded. Algo 'ford rollett' applies the algorithm of Ford and Rollet, 
     Acta Cryst. (1968) B24, p293"""
@@ -791,7 +802,7 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True
     print 'K: ' + `k_history`
     print 'Total cycles: %d' % cycle_no
     print 'Maximum shift/error: %f' % max(ar/esds)
-    return gain,dataset,interim_result,residual_map,chisq_history,esds,first_ave
+    return gain,dataset,interim_result,residual_map,chisq_history,esds,first_ave,weights
 
 def get_stepsize(ds):
     """A utility function to determine the step size of the given dataset. This
