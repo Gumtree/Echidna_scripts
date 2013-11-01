@@ -648,15 +648,16 @@ def send_to_plot(dataset,plot,add=False,change_title=True,add_timestamp=True):
     identification purposes. It also maintains plot
     consistency in terms of displaying d-spacing."""
     from datetime import datetime
+    from Reduction import reduction
     if add_timestamp:
         timestamp = datetime.now().strftime("%H:%M:%S")
         dataset.title = dataset.title + timestamp
     # Check d-spacing status
     if plot.ds:
         if plot.ds[0].axes[0].name == 'd-spacing':
-            convert_to_dspacing(dataset)
+            reduction.convert_to_dspacing(dataset)
         elif plot.ds[0].axes[0].name == 'Two theta':
-            convert_to_twotheta(dataset)
+            reduction.convert_to_twotheta(dataset)
     if add:
         plot.add_dataset(dataset)
     else:
