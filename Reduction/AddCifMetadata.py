@@ -91,7 +91,7 @@ def extract_metadata(rawfile):
     rawfile.add_metadata("_computing_data_collection",str(rawfile["$entry/program_name"]) + " " + \
                          str(rawfile["$entry/sics_release"]),"CIF")
     rawfile.add_metadata("_computing_data_reduction", "Gumtree Echidna/Python routines","CIF")
-    rawfile.add_metadata("_pd_spec_special_details",str(rawfile["$entry/sample/name"]),"CIF")
+    rawfile.add_metadata("_pd_spec_special_details",sanitize(str(rawfile["$entry/sample/name"])),"CIF")
     rawfile.add_metadata("_[local]_data_collection_description",str(rawfile["$entry/sample/description"]),"CIF")
     start_time = str(rawfile["$entry/start_time"]).replace(" ","T")
     end_time = str(rawfile["$entry/end_time"]).replace(" ","T")
@@ -101,7 +101,7 @@ def extract_metadata(rawfile):
         username = str(rawfile["user_name"])
     except:
         username = "?"
-    rawfile.add_metadata("_pd_meas_info_author_name", username,"CIF")
+    rawfile.add_metadata("_pd_meas_info_author_name", sanitize(username),"CIF")
     rawfile.add_metadata("_pd_meas_info_author_email", str(rawfile[ "$entry/user/email"]),"CIF")
     rawfile.add_metadata("_pd_meas_info_author_phone", str(rawfile[ "$entry/user/phone"]),"CIF")
     rawfile.add_metadata("_pd_instr_2theta_monochr_pre","%.3f" % tk_angle,"CIF")
@@ -141,3 +141,7 @@ def pick_hkl(offset,monotype):
     best = filter(lambda a:abs(abs(offset) - offset_table[a])<2.5,offset_table.keys())
     if len(best)>1 or len(best)==0: return "Unknown"
     return best[0]
+
+def sanitize(instring):
+    """Translate non-allowed characters in user-supplied strings"""
+    return instring.encode('ascii','replace')
