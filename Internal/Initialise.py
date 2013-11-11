@@ -14,6 +14,8 @@ from org.eclipse.swt.widgets import Display
 from java.lang import Runnable
 from java.lang import System
 from java.io import File
+from os import listdir
+from os.path import isfile, join
 from time import strftime, localtime
 import traceback
 
@@ -39,6 +41,12 @@ __history_log_file__ = __buffer_log_file__ + '/History.txt'
 __buffer_log_file__ += '/LogFile.txt'
 __buffer_logger__ = open(__buffer_log_file__, 'a')
 __history_logger__ = open(__history_log_file__, 'a')
+
+for file in listdir(__data_folder__):
+    if isfile(join(__data_folder__,file)) and file.endswith(".hdf"):
+        __DATASOURCE__.addDataset(join(__data_folder__,file), False)
+        
+
 
 print 'Waiting for SICS connection'
 while sics.getSicsController() == None:
