@@ -270,13 +270,9 @@ def getStitched(ds,ignore=None):
         src_org[0] = src_frame
         src_org[2] = src_column  #i.e. tube number
         dst_org[1] = dst_column  #i.e. new tube position
-        target_pos = rs_storage.get_section(dst_org, dst_shp)
         # copy storage
-        target_pos = ds_storage.get_section(src_org, src_shp)
-        rs_storage[:,dst_column] = ds_storage[src_frame,:,src_column].get_reduced()
-        # copy variance
-        target_pos = rs_var.get_section(dst_org, dst_shp)
-        target_pos = ds_var.get_section(src_org, src_shp)
+        rs_storage[:,dst_column] = ds_storage.get_section(src_org,src_shp)
+        rs_var[:,dst_column] = ds_var.get_section(src_org,src_shp)
 
     # assign axis values
     rs.axes[0] = axisY
