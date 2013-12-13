@@ -250,17 +250,17 @@ def getStitched(ds,ignore=None):
         ds_frame = ds[src_frame]
 
     # java helper
-    ds_storage = ds.storage.__iArray__.getArrayUtils()
-    rs_storage = rs.storage.__iArray__.getArrayUtils()
+    ds_storage = ds.storage
+    rs_storage = rs.storage
 
-    ds_var = ds.var.__iArray__.getArrayUtils()
-    rs_var = rs.var.__iArray__.getArrayUtils()
+    ds_var = ds.var
+    rs_var = rs.var
 
-    src_org = jintcopy([0, 0      , 0])    #origins and shapes for section copies
-    src_shp = jintcopy([1, y_count, 1])
+    src_org = [0, 0      , 0]    #origins and shapes for section copies
+    src_shp = [1, y_count, 1]
 
-    dst_org = jintcopy([0      , 0])       #destinations
-    dst_shp = jintcopy([y_count, 1])
+    dst_org = [0      , 0]       #destinations
+    dst_shp = [y_count, 1]
 
     # copy columns.  As container is already sorted, we are simply copying in
     # columns starting at the beginning and moving along the destination array
@@ -270,15 +270,13 @@ def getStitched(ds,ignore=None):
         src_org[0] = src_frame
         src_org[2] = src_column  #i.e. tube number
         dst_org[1] = dst_column  #i.e. new tube position
-
+        target_pos = rs_storage.get_section(dst_org, dst_shp)
         # copy storage
-        src_array = ds_storage.section(src_org, src_shp).getArray()
-        dst_array = rs_storage.section(dst_org, dst_shp).getArray()
-        src_array.getArrayUtils().copyTo(dst_array)
+        target_pos = ds_storage.get_section(src_org, src_shp)
+        rs_storage[:,dst_column] = ds_storage[src_frame,:,src_column].get_reduced()
         # copy variance
-        src_array = ds_var.section(src_org, src_shp).getArray()
-        dst_array = rs_var.section(dst_org, dst_shp).getArray()
-        src_array.getArrayUtils().copyTo(dst_array)
+        target_pos = rs_var.get_section(dst_org, dst_shp)
+        target_pos = ds_var.get_section(src_org, src_shp)
 
     # assign axis values
     rs.axes[0] = axisY
