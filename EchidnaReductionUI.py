@@ -477,6 +477,8 @@ def __run_script__(fns):
         print 'no input datasets'
         return
 
+    # set control values not presented in the GUI
+    point_result = True
     # check if input needs to be normalized
     if norm_apply.value:
         # norm_ref is the source of information for normalisation
@@ -592,12 +594,22 @@ def __run_script__(fns):
             ds = reduction.getHorizontallyCorrected(ds, htc)
 
         print 'Finished horizontal correction at %f' % (time.clock()-elapsed)
-
+        # Stitching. If we are recalculating gain, this is purely for
+        # informational purposes. We don't want to take the 100x time penalty of
+        # multiplying a 2D array by the gain factor for each tube, so we
+        # stitch on a 1D array after doing the gain re-refinement.
+        if ds.ndim > 2:
+            stitched = reduction.getStitched(ds,ignore=str(asm_drop_frames.value))
+        # Display dataset
+        print 'Finished stitching at %f' % (time.clock()-elapsed)
+        Plot1.set_dataset(stitched)
+        Plot1.title = stitched.title
         # check if we are recalculating gain 
         if regain_apply.value:
            bottom = int(vig_lower_boundary.value)
            top = int(vig_upper_boundary.value)
-           cs,gain,esds,chisquared = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top)
+           cs,gain,esds,chisquared = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
+                                                          point_result=point_result)
            if cs is not None:
                print 'Have new gains at %f' % (time.clock() - elapsed)
                Plot4 = Plot(title='Chi squared history')
@@ -607,14 +619,13 @@ def __run_script__(fns):
            # set horizontal axis (ideal values)
                Plot4.set_dataset(Dataset(chisquared))   #chisquared history
                Plot5.set_dataset(fg)   #final gain plot
-           # assemble dataset, but if we have applied gain this is purely
-           # for display purposes
-        if ds.ndim > 2:
-            ds = reduction.getStitched(ds)
-        # Display dataset
-        print 'Finished stitching at %f' % (time.clock()-elapsed)
-        Plot1.set_dataset(ds)
-        Plot1.title = ds.title
+               if point_result:
+                   # assemble dataset, then remove dummy dimension
+                   cs = reduction.getStitched(cs)
+                   es = cs.reshape([cs.shape[1]])
+                   es.copy_cif_metadata(cs)
+                   es.set_axes([cs.axes[1]],anames=[cs.axes[1].name],aunits=[cs.axes[1].units])
+        # Continue with vertical integration
         if not vig_apply_rescale.value:
             norm_const = -1.0
         else:
@@ -624,20 +635,25 @@ def __run_script__(fns):
             cluster = stepsize * 0.6  #60 percent of ideal
         else:
             cluster = 0.0
-        if not regain_apply.value or cs is None:  #already done
-            cs = reduction.getVerticalIntegrated(ds, axis=0, normalization=norm_const,
+        if not regain_apply.value:  #already done
+            final_result = reduction.getVerticalIntegrated(stitched, axis=0, normalization=norm_const,
                                                  cluster=cluster,bottom = int(vig_lower_boundary.value),
                                                  top=int(vig_upper_boundary.value))
             print 'Finished vertical integration at %f' % (time.clock()-elapsed)
+        elif regain_apply.value:
+            if point_result:
+                final_result = es
+            else:
+                final_result = cs
         # Display reduced dataset
-        send_to_plot(cs,Plot2)
+        send_to_plot(final_result,Plot2)
         # Output datasets
         filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + str(output_stem.value))
-        output.write_cif_data(cs,filename_base)
+        output.write_cif_data(final_result,filename_base)
         if output_xyd.value:
-            output.write_xyd_data(cs,filename_base)
+            output.write_xyd_data(final_result,filename_base)
         if output_fxye.value:
-            output.write_fxye_data(cs,filename_base)
+            output.write_fxye_data(final_result,filename_base)
         # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
         print 'Finished writing data at %f' % (time.clock()-elapsed)
         
@@ -648,15 +664,21 @@ def send_to_plot(dataset,plot,add=False,change_title=True,add_timestamp=True):
     identification purposes. It also maintains plot
     consistency in terms of displaying d-spacing."""
     from datetime import datetime
+    from Reduction import reduction
     if add_timestamp:
         timestamp = datetime.now().strftime("%H:%M:%S")
         dataset.title = dataset.title + timestamp
     # Check d-spacing status
     if plot.ds:
-        if plot.ds[0].axes[0].name == 'd-spacing':
-            convert_to_dspacing(dataset)
-        elif plot.ds[0].axes[0].name == 'Two theta':
-            convert_to_twotheta(dataset)
+        axis_name = ''
+        try:
+            axis_name = plot.ds[0].axes[0].name
+        except IndexError:
+            pass
+        if axis_name == 'd-spacing':
+            reduction.convert_to_dspacing(dataset)
+        elif axis_name == 'Two theta':
+            reduction.convert_to_twotheta(dataset)
     if add:
         plot.add_dataset(dataset)
     else:

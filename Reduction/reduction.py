@@ -194,19 +194,22 @@ def getStitched(ds,ignore=None):
     if ds.axes[0].title != 'azimuthal_angle':
         raise AttributeError('ds.axes[0].title != azimuthal_angle')
     if ds.axes[2].title != 'x_pixel_angular_offset':
-        raise AttributeError('ds.axes[3].title != x_pixel_angular_offset')
-    if len(ds.stth) != ds.shape[0]:
-        raise AttributeError('len(ds.stth) != ds.shape[0]')
+        raise AttributeError('ds.axes[2].title != x_pixel_angular_offset')
 
     if ignore is not None:
         drop_frames = parse_ignore_spec(ignore)
     else:
         drop_frames = set([])
 
+    print 'Dropping frames ' + `drop_frames`
     frame_count = ds.shape[0]
     y_count     = ds.shape[1]
     x_count     = ds.shape[2]
 
+    print 'Input shape:' + `ds.shape`
+    print 'Input storage shape:' + `ds.storage.shape`
+    print 'Input var shape:' + `ds.var.shape`
+    print 'X axis length:' + `len(ds.axes[2])`
     axisY = ds.axes[1]
     axisX = ds.axes[2]
 
@@ -223,8 +226,13 @@ def getStitched(ds,ignore=None):
     # this neato code creates a list of (angle, step number, tube number) tuples where angle is the
     # actual angle that each column has come from.  The 'enumerate (axisX + stth)' phrase creates a list
     # of angles for each tube at each step (step position given by stth).
-    for src_frame, stth in enumerate(ds.stth):
+    # We have switched to an imgCIF description of the axes (see AddCifMetadata module). Therefore our
+    # axis values are kept in a CIF loop
+    stth_info = ds.harvest_metadata("CIF").GetLoop("_diffrn_scan_frame_axis.frame_id")
+    for info_packet in stth_info:
+        src_frame = int(getattr(info_packet,"_diffrn_scan_frame_axis.frame_id"))
         if src_frame not in drop_frames:
+            stth = float(getattr(info_packet,"_diffrn_scan_frame_axis.angle"))
             container.extend(map(lambda (src_column, angle): (angle, src_frame, src_column), enumerate(axisX + stth)))
 
     # sort by angles
@@ -237,11 +245,9 @@ def getStitched(ds,ignore=None):
     # copy meta data
     copy_metadata_deep(rs, ds[0]) # for Echidna second dimension is just legacy
     rs.copy_cif_metadata(ds)
+    # for debugging, not otherwise used
     for src_frame in set(xrange(0, frame_count-1)) - drop_frames:
         ds_frame = ds[src_frame]
-
-        # !!! what needs to be added?
-        rs.total_counts  += ds_frame.total_counts
 
     # java helper
     ds_storage = ds.storage.__iArray__.getArrayUtils()
@@ -269,6 +275,8 @@ def getStitched(ds,ignore=None):
         src_array = ds_storage.section(src_org, src_shp).getArray()
         dst_array = rs_storage.section(dst_org, dst_shp).getArray()
         src_array.getArrayUtils().copyTo(dst_array)
+        if dst_column < 200:
+            print '%f' % angle + `src_org` + ':' +  `src_array`
 
         # copy variance
         src_array = ds_var.section(src_org, src_shp).getArray()
@@ -289,10 +297,6 @@ def getStitched(ds,ignore=None):
     # axes
     rs.axes[0].title = ds.axes[1].title
     rs.axes[1].title = ds.axes[2].title
-    # sth/stth is included in x-axis
-    rs.sth  = 0
-    rs.stth = 0
-
     print 'stitched:', ds.title
     rs.title = ds.title
     return rs
@@ -703,7 +707,13 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     # Get sensible values
     if top is None: top = ds.shape[1]-1
     if bottom is None: bottom = 0
-    b = ds[:,bottom:top,:].intg(axis=1).get_reduced()  
+    b = ds[:,bottom:top,:].intg(axis=1).get_reduced()
+    print 'Check: input dataset [62,22]:'
+    print `ds[22,:,62+ignore].storage`
+    print `ds[22,:,62+ignore].var`
+    print 'Summed dataset'
+    print `b[22,62+ignore]`
+    print `b.var[22,62+ignore]`
     # Determine pixels per tube interval
     tube_pos = ds.axes[-1]
     tubesep = abs(tube_pos[0]-tube_pos[-1])/(len(tube_pos)-1)
@@ -718,31 +728,55 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     if c.shape[0] == 1:   #can't be done, there is no overlap
         return None,None,None,None
     # sum the individual unoverlapped sections
-    d = c.intg(axis=1)
-    e = d.transpose()
+    d = c.intg(axis=1) #array of [rangeno,stepno,tubeno]
+    e = d.transpose()  #array of [rangestep,tubeno]
     gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
         iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
     # calculate errors based on full dataset
     # First get a full model
-    model,wd,model_var = overlap.apply_gain(b.transpose()[ignore:],1.0/b.transpose().var[ignore:],pixel_step,gain,calc_var=True)
-    esds = overlap.calc_error_new(b.transpose()[ignore:],model,gain,pixel_step)
+    start_ds = b.transpose()[ignore:] #array of [tubeno,stepno]
+    start_var = start_ds.var
+    model,wd,model_var = overlap.apply_gain(start_ds,start_var,pixel_step,gain,calc_var=True)
+    # model and model_var have shape tubeno*pixel_step + no_steps (see shift_tube_add_new)
+    esds = overlap.calc_error_new(start_ds,model,gain,pixel_step)
     print 'Have full model and errors at %f' % time.clock()
     # Now we apply the gain in such a way as to allow the points not to be averaged
     # at the same time. To do this we obtain the 'point scale gains' and apply them
     if point_result:
         p_s_g,p_s_g_vars = overlap.get_weighted_gains(gain,esds**2,weights,1)
-        model,model_var = overlap.apply_point_gain(p_s_g,p_s_g_vars,b.transpose()[ignore:],1.0/b.transpose().var[ignore:],pixel_step)
+        # start_ds is [tubeno,stepno], p_s_g is a gain to apply for [tubeno,stepno]
+        model,model_var = overlap.apply_point_gain(p_s_g,p_s_g_vars,start_ds,start_var,pixel_step)
+        # model, model_var are multiplied [tubeno,stepno]
+        # check for debugging
+        print 'Check at tube 62,pstep 22'
+        print 'Shapes: Data %s Reduced %s Model %s Var %s' % (`ds.shape`,`b.shape`,`model.shape`,`model_var.shape`)
+        print '%s(%s) %s(%s) -> %s %s' % (p_s_g[62,0],p_s_g_vars[62,0],start_ds[62][22],start_var[62][22],model[62][22], model_var[62][22])
+        # Back to step-vertical-tubepos shape so we can stitch the new 2D data
+        # We add in the ignored tubes as well
+        #model = model.transpose()
+        output_model = array.zeros_like(b)
+        output_var = array.zeros_like(b)
+        output_model[:,ignore:] = model.transpose()
+        output_var[:,ignore:] = model_var.transpose()
+        output_model[:,:ignore] = b[:,:ignore]
+        output_var[:,:ignore] = b[:,:ignore]
+        output_model = output_model.reshape([output_model.shape[0],1,output_model.shape[1]])
+        output_var = output_var.reshape(output_model.shape)
+        cs = Dataset(output_model)
+        cs.var = output_var
+    else:
+        cs = Dataset(model)
+        cs.var = model_var
     # Now build up the important information
-    cs = Dataset(model)
     cs.title = ds.title
-    cs.var = model_var
     cs.copy_cif_metadata(ds)
     # construct the ideal axes
-    if not point_model:
+    if not point_result:
         axis = arange(len(model))
         cs.axes[0] = axis*bin_size + ds.axes[0][0] + ignore*pixel_step*bin_size
     else:
-        cs.axes = ds.axes
+        cs.set_axes([ds.axes[0],Array([0]),ds.axes[2]],anames=[ds.axes[0].name,ds.axes[1].name,ds.axes[2].name],
+                       aunits=[ds.axes[0].units,ds.axes[1].units,ds.axes[2].units])
     # prepare info for CIF file
     import math
     detno = map(lambda a:"%d" % a,range(len(gain)))
@@ -872,7 +906,7 @@ def sum_datasets(dslist):
     return newds
 
 def convert_to_dspacing(ds):
-    if ds.axes[0].name == 'd-spacing':
+    if ds.axes[0].name == 'd-spacing' or ds.axes[0].name != 'Two theta':
         return
     try:
         wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
@@ -887,7 +921,7 @@ def convert_to_dspacing(ds):
     return 'Changed'
 
 def convert_to_twotheta(ds):
-    if ds.axes[0].name == 'Two theta':
+    if ds.axes[0].name == 'Two theta' or ds.axes[0].name != 'd-spacing':
         return
     try:
         wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])

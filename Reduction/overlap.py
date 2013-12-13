@@ -277,28 +277,35 @@ def get_weighted_gains(gain_array,gain_variance,weight_array,offset):
 
 # This routine calculates the above gain applied to the given dataset as a pointwise scale factor
 # For each distinct angular region covered by a detector we have a different scale factor
-def apply_point_gain(gain_array,gain_variance,dataset,variance,offset):
+def apply_point_gain(gain_array,gain_variance,ds,variance,offset):
    """Gain_array is an nxm array of m angular regions covered by each of n tubes. dataset has a similar structure,
    except that the m angular regions have expanded to cover offset points."""
-   final_array = zeros_like(dataset)
-   final_variance = zeros_like(dataset)
+   final_array = array.zeros_like(ds)
+   final_variance = array.zeros_like(ds)
+   try:
+      dataset = ds.storage
+   except:
+      dataset = ds
    gain_iter = gain_array.__iter__()
    final_iter = final_array.__iter__()
    dataset_iter = dataset.__iter__()
    variance_iter = variance.__iter__()
    gain_variance_iter = gain_variance.__iter__()
    ones_array = ones_like(dataset[0]) # for convenience
-   while gain_iter.has_next():
+   for gain_step in range(len(gain_array)):
       fan = final_iter.next()
       gin = gain_iter.next()
       dan = dataset_iter.next()
       van = variance_iter.next()
       gvn = gain_variance_iter.next()
-      for region in range(len(gin)):
-         fan[region*offset:(region+1)*offset] += gin[region]*dan[region*offset:(region+1)*offset] 
-         van[region*offset:(region+1)*offset] += dan[region*offset:(region+1)*offset]**2 * gvn[region] + \
-             (ones_array *gin[region])**2 * van**2
-      return final_array,final_variance
+      for region in range(len(gain_array[gain_step])):
+         final_array[gain_step][region*offset:(region+1)*offset] = gain_array[gain_step][region]*dataset[gain_step][region*offset:(region+1)*offset] 
+         final_variance[gain_step][region*offset:(region+1)*offset] = dataset[gain_step][region*offset:(region+1)*offset]**2 * gain_variance[gain_step][region]
+         extra_term =(gain_array[gain_step][region]*ones_array[0:offset])**2 * variance[gain_step][region*offset:(region+1)*offset]**2
+         #print 'First_term shape:' + `van[region*offset:(region+1)*offset].shape`
+         #print 'Extra term shape:' + `extra_term.shape`
+         variance[gain_step][region*offset:(region+1)*offset] += extra_term
+   return final_array,final_variance
 
 def shift_mult_fr_add(gain_array,model_array,obs_array,weight_array,offset,pixel_mask):
    """ Perform the summation in eqn 3 of Fox and Rollet """

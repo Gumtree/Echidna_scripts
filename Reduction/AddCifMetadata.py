@@ -10,7 +10,8 @@ fixed_table = {
 	    		"sample illuminated by monochromatic neutrons",
 "_pd_instr_location": "Echidna High Resolution Powder Diffractometer at " +
 	    		" OPAL facility, Bragg Institute, Australia",
-"_pd_instr_soller_eq_spec/detc": "0.0833"
+"_pd_instr_soller_eq_spec/detc": "0.0833",
+"_diffrn_measurement.device":"He3-tubes",
 }
 
 def add_metadata_methods(rawfile):
@@ -108,6 +109,42 @@ def extract_metadata(rawfile):
     rawfile.add_metadata("_pd_instr_dist_mono/spec", "%.1f" % average_metadata(rawfile[ "$entry/sample/mono_sample_mm"]),"CIF")
     rawfile.add_metadata("_pd_instr_dist_spec/detc","%.1f" % average_metadata(rawfile["$entry/instrument/detector/radius"]),"CIF")
     rawfile.add_metadata("_diffrn_source_power", "%.2f" % (average_metadata(rawfile["$entry/instrument/source/power"])*1000),"CIF")
+    # imgCIF information about geometry
+    # axis loop
+    names = (('_axis.id','_axis.type','_axis.equipment','_axis.depends_on'),)
+    values = [['source','gravity','stth','horizontal','vertical'],
+              ['.','.','rotation','rotation','translation'],
+              ['source','gravity','detector','detector','detector'],
+              ['.','.','.','stth','stth']]
+    rawfile.__dict__['ms'].AddCifItem((names,(values,)))
+    radius = rawfile.__dict__['ms']["_pd_instr_dist_spec/detc"]
+    # add the vectors:
+    """
+    source      0 0 1    . . .
+    gravity     -1 0 0   . . .
+    stth        1 0 0    . . .
+    horizontal  1 0 0    . . .
+    vertical    1 0 0    0 0 -728
+    """
+    vector_dict = {"_axis.vector[1]":['0','-1','1','1','1'],
+                   "_axis.vector[2]":['0','0','0','0','0'],
+                   "_axis.vector[3]":['1','0','0','0','0'],
+                   "_axis.offset[1]":['.','.','.','.','.'],
+                   "_axis.offset[2]":['.','.','.','.','.'],
+                   "_axis.offset[3]":['1','0','0','0',"-"+radius]}
+    rawfile.__dict__['ms'].AddToLoop('_axis.id',vector_dict)
+    # Add information about the stth positions for later use
+    rawfile.add_metadata("_diffrn_scan.id","1","CIF")
+    rawfile.add_metadata("_diffrn_scan.frames",rawfile.shape[0],"CIF")
+    frame_ids = map(lambda a:"%d" % a,range(rawfile.shape[0]))
+    stths = rawfile['stth']
+    names = (("_diffrn_scan_frame.frame_id","_diffrn_scan_frame.frame_number"),)
+    values = [frame_ids,range(1,rawfile.shape[0]+1)]  #Spec says start from 1
+    rawfile.__dict__['ms'].AddCifItem((names,(values,)))
+    names = (("_diffrn_scan_frame_axis.frame_id","_diffrn_scan_frame_axis.axis_id",
+              "_diffrn_scan_frame_axis.angle"),)
+    values = [frame_ids,['stth']*rawfile.shape[0],map(float,rawfile['stth'])]
+    rawfile.__dict__['ms'].AddCifItem((names,(values,)))
     return rawfile
 
 def store_reduction_preferences(rawfile,prof_names,prof_values):
