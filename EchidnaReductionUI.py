@@ -619,13 +619,6 @@ def __run_script__(fns):
            # set horizontal axis (ideal values)
                Plot4.set_dataset(Dataset(chisquared))   #chisquared history
                Plot5.set_dataset(fg)   #final gain plot
-               if point_result:
-                   # assemble dataset, then remove dummy dimension
-                   cs = reduction.getStitched(cs)
-                   es = cs.reshape([cs.shape[1]])
-                   es.copy_cif_metadata(cs)
-                   es.set_axes([cs.axes[1]],anames=[cs.axes[1].name],aunits=[cs.axes[1].units])
-        # Continue with vertical integration
         if not vig_apply_rescale.value:
             norm_const = -1.0
         else:
@@ -640,11 +633,8 @@ def __run_script__(fns):
                                                  cluster=cluster,bottom = int(vig_lower_boundary.value),
                                                  top=int(vig_upper_boundary.value))
             print 'Finished vertical integration at %f' % (time.clock()-elapsed)
-        elif regain_apply.value:
-            if point_result:
-                final_result = es
-            else:
-                final_result = cs
+        else:
+            final_result = cs
         # Display reduced dataset
         send_to_plot(final_result,Plot2)
         # Output datasets

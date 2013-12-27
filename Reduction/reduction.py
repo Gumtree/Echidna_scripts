@@ -275,7 +275,6 @@ def getStitched(ds,ignore=None):
         src_array = ds_storage.section(src_org, src_shp).getArray()
         dst_array = rs_storage.section(dst_org, dst_shp).getArray()
         src_array.getArrayUtils().copyTo(dst_array)
-        
         # copy variance
         src_array = ds_var.section(src_org, src_shp).getArray()
         dst_array = rs_var.section(dst_org, dst_shp).getArray()
