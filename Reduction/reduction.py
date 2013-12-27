@@ -731,7 +731,8 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     cs.var = model_var
     # construct the ideal axes
     axis = arange(len(model))
-    cs.axes[0] = axis*bin_size + ds.axes[0][0] + ignore*pixel_step*bin_size
+    new_axis = axis*bin_size + ds.axes[0][0] + ignore*pixel_step*bin_size
+    cs.set_axes([new_axis],anames=['Two theta'],aunits=['Degrees'])
     cs.copy_cif_metadata(ds)
     # prepare info for CIF file
     import math
@@ -861,7 +862,7 @@ def sum_datasets(dslist):
     return newds
 
 def convert_to_dspacing(ds):
-    if ds.axes[0].name == 'd-spacing':
+    if ds.axes[0].name != 'Two theta':
         return
     try:
         wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
@@ -876,7 +877,7 @@ def convert_to_dspacing(ds):
     return 'Changed'
 
 def convert_to_twotheta(ds):
-    if ds.axes[0].name == 'Two theta':
+    if ds.axes[0].name != 'd-spacing':
         return
     try:
         wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
