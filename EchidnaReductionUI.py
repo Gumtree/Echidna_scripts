@@ -477,8 +477,6 @@ def __run_script__(fns):
         print 'no input datasets'
         return
 
-    # set control values not presented in the GUI
-    point_result = True
     # check if input needs to be normalized
     if norm_apply.value:
         # norm_ref is the source of information for normalisation
@@ -608,8 +606,7 @@ def __run_script__(fns):
         if regain_apply.value:
            bottom = int(vig_lower_boundary.value)
            top = int(vig_upper_boundary.value)
-           cs,gain,esds,chisquared = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
-                                                          point_result=point_result)
+           cs,gain,esds,chisquared = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top)
            if cs is not None:
                print 'Have new gains at %f' % (time.clock() - elapsed)
                Plot4 = Plot(title='Chi squared history')

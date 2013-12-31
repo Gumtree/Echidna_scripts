@@ -683,16 +683,14 @@ def getHorizontallyCorrected(ds, offsets_filename):
 
 # Calculate adjusted gain based on matching intensities between overlapping
 # sections of data from different detectors
-def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,bottom=None,point_result=True):
+def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,bottom=None):
     """Calculate rescaling factors for tubes based on overlapping data
     regions. The ignore parameter specifies the number of initial tubes for
     which data are unreliable and should be ignored. Specifying unit weights
     = False will use the variances contained in the input dataset. Note that
     the output dataset has already been vertically integrated as part of the
     algorithm. The vertical integration limits are set by top and bottom, if
-    None all points are included.  If point_result is True, the data are not
-    averaged, but instead scaled on the assumption that the calling routine
-    will average the points."""
+    None all points are included."""
     import time
     from Reduction import overlap
     # Get sensible values
@@ -727,47 +725,20 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     # First get a full model
     start_ds = b.transpose()[ignore:] #array of [tubeno,stepno]
     start_var = start_ds.var
-    model,wd,model_var = overlap.apply_gain(start_ds,start_var,pixel_step,gain,calc_var=True)
+    model,wd,model_var = overlap.apply_gain(start_ds,1.0/start_var,pixel_step,gain,calc_var=True)
     # model and model_var have shape tubeno*pixel_step + no_steps (see shift_tube_add_new)
     esds = overlap.calc_error_new(start_ds,model,gain,pixel_step)
     print 'Have full model and errors at %f' % time.clock()
-    # Now we apply the gain in such a way as to allow the points not to be averaged
-    # at the same time. To do this we obtain the 'point scale gains' and apply them
-    if point_result:
-        p_s_g,p_s_g_vars = overlap.get_weighted_gains(gain,esds**2,weights,1)
-        # start_ds is [tubeno,stepno], p_s_g is a gain to apply for [tubeno,stepno]
-        model,model_var = overlap.apply_point_gain(p_s_g,p_s_g_vars,start_ds,start_var,pixel_step)
-        # model, model_var are multiplied [tubeno,stepno]
-        # check for debugging
-        print 'Check at tube 62,pstep 22'
-        print 'Shapes: Data %s Reduced %s Model %s Var %s' % (`ds.shape`,`b.shape`,`model.shape`,`model_var.shape`)
-        print '%s(%s) %s(%s) -> %s %s' % (p_s_g[62,0],p_s_g_vars[62,0],start_ds[62][22],start_var[62][22],model[62][22], model_var[62][22])
-        # Back to step-vertical-tubepos shape so we can stitch the new 2D data
-        # We add in the ignored tubes as well
-        #model = model.transpose()
-        output_model = array.zeros_like(b)
-        output_var = array.zeros_like(b)
-        output_model[:,ignore:] = model.transpose()
-        output_var[:,ignore:] = model_var.transpose()
-        output_model[:,:ignore] = b[:,:ignore]
-        output_var[:,:ignore] = b[:,:ignore]
-        output_model = output_model.reshape([output_model.shape[0],1,output_model.shape[1]])
-        output_var = output_var.reshape(output_model.shape)
-        cs = Dataset(output_model)
-        cs.var = output_var
-    else:
-        cs = Dataset(model)
-        cs.var = model_var
+    cs = Dataset(model)
+    cs.var = model_var
     # Now build up the important information
     cs.title = ds.title
     cs.copy_cif_metadata(ds)
     # construct the ideal axes
-    if not point_result:
-        axis = arange(len(model))
-        cs.axes[0] = axis*bin_size + ds.axes[0][0] + ignore*pixel_step*bin_size
-    else:
-        cs.set_axes([ds.axes[0],Array([0]),ds.axes[2]],anames=[ds.axes[0].name,ds.axes[1].name,ds.axes[2].name],
-                       aunits=[ds.axes[0].units,ds.axes[1].units,ds.axes[2].units])
+    axis = arange(len(model))
+    new_axis = axis*bin_size + ds.axes[0][0] + ignore*pixel_step*bin_size
+    cs.set_axes([new_axis],anames=[ds.axes[0].name],
+                       aunits=[ds.axes[0].units])
     # prepare info for CIF file
     import math
     detno = map(lambda a:"%d" % a,range(len(gain)))
