@@ -379,7 +379,7 @@ def plh_sum_proc():
                 newds = reduction.debunch(newds,cluster)
         send_to_plot(newds,Plot2,add=False)
         # Write to file
-        if filename != '':
+    if filename != '':
             output.write_cif_data(newds,filename)
             if output_xyd.value:
                 output.write_xyd_data(newds,filename)
@@ -398,6 +398,7 @@ def dspacing_change():
     # irrelevant, e.g. monitor counts
     for ds in target_plot.ds:
         if ds.axes[0].name not in ['Two theta','d-spacing']:
+            print 'Not converting, have axis = %s' % ds.axes[0].name
             return
     change_dss = copy(target_plot.ds)
     # Check to see what change is required

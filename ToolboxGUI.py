@@ -27,10 +27,18 @@ full_info = Par('bool','False')
 info_show = Act('info_show_proc()', 'Show File information')
 Group('Information').add(full_info,info_show)
 # The tuple for each key contains the location, axis label (for the plot), and
-# the value of error for display as a percentage of the measured value
+# the value of error for display as a percentage of the measured value. If a
+# negative error is given, counting statistics are assumed
 plot_choice_table = {'TC1':('/entry1/sample/tc1/sensor/sensorValueA','Temperature',2.0),
-                     'TC2':('/entry1/sample/tc1/sensor/sensorValueB','Temperature',2.0)}
-plot_choice = Par('string','',options=plot_choice_table.keys())
+                     'TC2':('/entry1/sample/tc1/sensor/sensorValueB','Temperature',2.0),
+                     'Magnet Stick 1':('/entry1/sample/tc1/Loop2/sensor','Temperature',2.0),
+                     'Magnet Stick 2':('/entry1/sample/tc1/Loop2/sensor','Temperature',2.0),
+                     'Magnet Heat Exchanger':('/entry1/sample/tc1/Loop1/sensor','Temperature',2.0),
+                     'Total counts':('/entry1/data/total_counts','Counts',-1)}
+neat_keys = plot_choice_table.keys()
+neat_keys.sort()
+plot_choice = Par('string','',options=neat_keys)
+plot_choice.title = 'Item to plot'# The tuple for each key contains the location, axis label (for the plot), and
 plot_info = Act('plot_values_proc()','Plot selected values')
 Group('Plotting').add(plot_choice,plot_info)
 # Re-prepare the GUI with current plot contents
@@ -147,7 +155,10 @@ def plot_values_proc():
         dset = df[str(loc)]
         filename = os.path.basename(str(loc))
         print '\nInformation for filename: %s\n' % filename
-        true_key = plot_choice_table[target][0]
+        try:
+            true_key = plot_choice_table[target][0]
+        except KeyError: # user input directly
+            true_key = target
         try:
             value = getattr(dset,true_key)
         except:
@@ -158,11 +169,23 @@ def plot_values_proc():
         # Print raw values
         print "%s: " % target + `value`
         dset = Dataset(value)
-        dset.var = (dset.storage * plot_choice_table[target][2] / 100.0)**2
+        # figure out variance
+        try:
+            error_calc = plot_choice_table[target][2]
+        except KeyError:
+            error_calc = 2.0
+        if error_calc < 0:
+            dset.var = dset.storage
+        else:   
+            dset.var = (dset.storage * error_calc / 100.0)**2
         dset.title = filename + ":" + target
         Plot2.set_dataset(dset)
         Plot2.x_label = 'Step'
-        Plot2.y_label = plot_choice_table[target][1]
+        Plot2.title = 'Information plot'
+        try:
+            Plot2.y_label = plot_choice_table[target][1]
+        except KeyError:
+            Plot2.y_label = target
 
 def import_proc():
     """Import a three-column ASCII file (TODO: CIF). Any line whose first non-whitespace character

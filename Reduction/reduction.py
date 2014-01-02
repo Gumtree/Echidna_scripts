@@ -737,8 +737,13 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     # construct the ideal axes
     axis = arange(len(model))
     new_axis = axis*bin_size + ds.axes[0][0] + ignore*pixel_step*bin_size
+<<<<<<< HEAD
     cs.set_axes([new_axis],anames=[ds.axes[0].name],
                        aunits=[ds.axes[0].units])
+=======
+    cs.set_axes([new_axis],anames=['Two theta'],aunits=['Degrees'])
+    cs.copy_cif_metadata(ds)
+>>>>>>> beamline-head
     # prepare info for CIF file
     import math
     detno = map(lambda a:"%d" % a,range(len(gain)))
@@ -868,7 +873,11 @@ def sum_datasets(dslist):
     return newds
 
 def convert_to_dspacing(ds):
+<<<<<<< HEAD
     if ds.axes[0].name == 'd-spacing' or ds.axes[0].name != 'Two theta':
+=======
+    if ds.axes[0].name != 'Two theta':
+>>>>>>> beamline-head
         return
     try:
         wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
@@ -883,7 +892,11 @@ def convert_to_dspacing(ds):
     return 'Changed'
 
 def convert_to_twotheta(ds):
+<<<<<<< HEAD
     if ds.axes[0].name == 'Two theta' or ds.axes[0].name != 'd-spacing':
+=======
+    if ds.axes[0].name != 'd-spacing':
+>>>>>>> beamline-head
         return
     try:
         wavelength = float(ds.harvest_metadata("CIF")["_diffrn_radiation_wavelength"])
