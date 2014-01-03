@@ -124,25 +124,27 @@ def write_fxye_data(ds,filename):
  *  (2) Comments must not appear after the 'BANK' line
  *  (3) The file consists of one or more comments lines followed by data block lines
  *  (4) A data block starts with a 'BANK' line
- *  (5) BANK line format is 'BANK' IBANK NCHAN NREC BINTYP TYPE TYPE TYPE TYPE
+ *  (5) BANK line format is 'BANK' IBANK NCHAN NREC BINTYP START STEP 0 0 FXYE
  *  (6) IBANK is a unique ID, NCHAN is number of points, NREC is number of lines, TYPE is
  *  'FXYE' in this case
  *  (7) Data are then presented as one point per line: two theta in centidegrees, 
  *  intensities, errors: 3(F8.0,F7.4,F5.4) in Fortran notation
  *  (8) BINTYPE needs to be CONS even though it is not relevant for FXYE
+ *  (9) Old GSAS requires START and STEP in centidegrees. New GSAS ignores these
  *  @author jrh"""
 
     from datetime import datetime
     current_time =  datetime.now().isoformat()
     angles = map(lambda a:("%8.2f" % a),ds.axes[0]*100.0)
     thlen = len(angles)
+    avstep = (ds.axes[0][-1]-ds.axes[0][0])/(thlen - 1)
     ints = map(lambda a:"%7.4f" % a,ds)
     esds = map(lambda a:"%5.4f" % math.sqrt(a),ds.var)
     if not filename[-3:]=='xye':
         filename = filename+'.xye'
     fh = open(filename,"w")
-    fh.write("%-80s\n" % "# Data from file %s, written %s. GSAS FXYE format" % (ds.title[0:17],str(current_time)))
-    fh.write("BANK 01 %5d %5d CONS FXYE FXYE FXYE FXYE\n" % (thlen,thlen))
+    fh.write("%-80s\n" % "# Data from file %s, written %s. GSAS FXYE format" % (ds.title[0:17],str(current_time)[0:22]))
+    fh.write("BANK 01 %5d %5d CONS %s %8.2f 0 0 FXYE\n" % (thlen,thlen,angles[0],avstep*100))
     for ang,intensity,esd in zip(angles,ints,esds):
         fh.write("%s %s %s\n" % (ang,intensity,esd))
     fh.close()
