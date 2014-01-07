@@ -23,6 +23,8 @@ __script__.title     = 'ECH Reduction'
 __script__.version   = '1.0'
 # For direct access to the selected filenames
 __datasource__ = __register__.getDataSourceViewer()
+# Git will embed the blob here
+__reduction_gitversion = "$Id$"
 
 ''' User Interface '''
 # Plot Helper: always Plot2 to Plot 3
@@ -562,7 +564,7 @@ def __run_script__(fns):
         # load dataset
         ds = df[fn]
         # extract basic metadata
-        ds = AddCifMetadata.extract_metadata(ds)
+        ds = AddCifMetadata.extract_metadata(ds,codeversion=__reduction_gitversion)
         AddCifMetadata.store_reduction_preferences(ds,prof_names,prof_values)
         # remove redundant dimensions
         rs = ds.get_reduced()
@@ -639,9 +641,9 @@ def __run_script__(fns):
         filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + str(output_stem.value))
         output.write_cif_data(final_result,filename_base)
         if output_xyd.value:
-            output.write_xyd_data(final_result,filename_base)
+            output.write_xyd_data(final_result,filename_base,codeversion=__reduction_gitversion)
         if output_fxye.value:
-            output.write_fxye_data(final_result,filename_base)
+            output.write_fxye_data(final_result,filename_base,codeversion=__reduction_gitversion)
         # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
         print 'Finished writing data at %f' % (time.clock()-elapsed)
         

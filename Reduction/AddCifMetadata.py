@@ -45,7 +45,7 @@ def add_standard_metadata(dataset):
     dataset.add_metadata("_computing_data_reduction", "Gumtree Echidna/Python routines","CIF")
     dataset.add_metadata("_diffrn_radiation_probe", "neutron","CIF")
 
-def extract_metadata(rawfile):
+def extract_metadata(rawfile,codeversion="Unknown"):
     """This transfers NeXuS metadata to CIF metadata"""
     import datetime
     add_standard_metadata(rawfile)
@@ -91,7 +91,7 @@ def extract_metadata(rawfile):
     # These values were in the CIF writing area of the Java routines, best put here
     rawfile.add_metadata("_computing_data_collection",str(rawfile["$entry/program_name"]) + " " + \
                          str(rawfile["$entry/sics_release"]),"CIF")
-    rawfile.add_metadata("_computing_data_reduction", "Gumtree Echidna/Python routines","CIF")
+    rawfile.add_metadata("_computing_data_reduction", "Gumtree Echidna/Python routines, Git version %s" % codeversion,"CIF")
     rawfile.add_metadata("_pd_spec_special_details",sanitize(str(rawfile["$entry/sample/name"])),"CIF")
     rawfile.add_metadata("_[local]_data_collection_description",str(rawfile["$entry/sample/description"]),"CIF")
     start_time = str(rawfile["$entry/start_time"]).replace(" ","T")
