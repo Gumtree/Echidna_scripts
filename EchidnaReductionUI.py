@@ -24,7 +24,7 @@ __script__.version   = '1.0'
 # For direct access to the selected filenames
 __datasource__ = __register__.getDataSourceViewer()
 # Git will embed the blob here
-__reduction_gitversion = "$Id$"
+__UI_gitversion = "$Id$"
 
 ''' User Interface '''
 # Plot Helper: always Plot2 to Plot 3
@@ -475,6 +475,9 @@ def __run_script__(fns):
     # save user preferences
     prof_names,prof_values = save_user_prefs()
 
+    # store current Git versions for data output
+    code_versions = {"GUI":__UI_gitversion[4:-1],
+                     "Reduction library":reduction.gitversion[4:-1]}
     # check input
     if (fns is None or len(fns) == 0) :
         print 'no input datasets'
@@ -564,7 +567,7 @@ def __run_script__(fns):
         # load dataset
         ds = df[fn]
         # extract basic metadata
-        ds = AddCifMetadata.extract_metadata(ds,codeversion=__reduction_gitversion)
+        ds = AddCifMetadata.extract_metadata(ds,codeversions=code_versions)
         AddCifMetadata.store_reduction_preferences(ds,prof_names,prof_values)
         # remove redundant dimensions
         rs = ds.get_reduced()
@@ -641,9 +644,9 @@ def __run_script__(fns):
         filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + str(output_stem.value))
         output.write_cif_data(final_result,filename_base)
         if output_xyd.value:
-            output.write_xyd_data(final_result,filename_base,codeversion=__reduction_gitversion)
+            output.write_xyd_data(final_result,filename_base,codeversions=code_versions)
         if output_fxye.value:
-            output.write_fxye_data(final_result,filename_base,codeversion=__reduction_gitversion)
+            output.write_fxye_data(final_result,filename_base,codeversions=code_versions)
         # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
         print 'Finished writing data at %f' % (time.clock()-elapsed)
         

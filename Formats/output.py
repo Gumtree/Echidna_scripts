@@ -93,7 +93,7 @@ def format_esd(number,var):
 ###################################################
 # Output xyd data (three column ASCII)
 ###################################################
-def write_xyd_data(ds,filename,codeversion=""):
+def write_xyd_data(ds,filename,codeversions={}):
     from datetime import datetime
     current_time =  datetime.now().isoformat()
     angles = map(lambda a:("%.5f" % a),ds.axes[0])
@@ -102,7 +102,10 @@ def write_xyd_data(ds,filename,codeversion=""):
     if not filename[-3:]=='xyd':
         filename = filename+'.xyd'
     fh = open(filename,"w")
-    fh.write("# Data from file %s, written %s\n, reduction version %s\n" % (ds.title[0:17],str(current_time),codeversion))
+    fh.write("# Data from file %s, written %s\n" % (ds.title[0:17],str(current_time)))
+    fh.write("# Code versions:\n")
+    for key in codeversions.keys():
+        fh.write("# %s: %s\n" % (key,codeversions[key]))
     fh.write("# %10s %10s %10s\n" % ("Angle","Intensity","Error"))
     for point in zip(angles,ints,esds):
         fh.write("  %10s %10s %10s\n" % (point[0],point[1],point[2]))
@@ -111,7 +114,7 @@ def write_xyd_data(ds,filename,codeversion=""):
 ###################################################
 #  FXYE format (New GSAS)                         #
 ###################################################
-def write_fxye_data(ds,filename,codeversion="Unknown"):
+def write_fxye_data(ds,filename,codeversions={}):
     """
  *  This class implements a GSAS FXYE format exporter for powder data.  The specifications were
  *  obtained from Brian Toby.  Only one histogram is supported, although the format allows
@@ -144,7 +147,9 @@ def write_fxye_data(ds,filename,codeversion="Unknown"):
         filename = filename+'.xye'
     fh = open(filename,"w")
     fh.write("%-80s\n" % "# Data from file %s, written %s. GSAS FXYE format" % (ds.title[0:17],str(current_time)[0:22]))
-    fh.write("%-80s\n" % "# Reduction code git version %s" % codeversion)
+    fh.write("%-80s\n" % "# Reduction code versions:" )
+    for key in codeversions.keys():
+        fh.write("%-80s\n" % "# %s : %s" % (key,codeversions[key]))
     fh.write("BANK 01 %5d %5d CONS %s %8.2f 0 0 FXYE\n" % (thlen,thlen,angles[0],avstep*100))
     for ang,intensity,esd in zip(angles,ints,esds):
         fh.write("%s %s %s\n" % (ang,intensity,esd))

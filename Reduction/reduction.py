@@ -17,6 +17,9 @@ from math import *
 import os.path as path
 import AddCifMetadata
 
+# Following is updated by git checkout
+gitversion = "$Id$"
+
 def copy_metadata_deep(ds, dfrom):
     ds.__copy_metadata__(dfrom, deep=True)
 def copy_metadata_shallow(ds, dfrom):
