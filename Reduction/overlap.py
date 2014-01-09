@@ -153,16 +153,16 @@ def shift_tube_add_new(inarray,tube_offset,pixel_mask,average=False):
        scan steps relative to the previous tube.  All steps with contributions from
        more than one detector are included. A positive tube_offset means that 
        step i in the n+1th slice is added to pixel (i-tube_offset) in the nth slice.
-       This corresponds to the detector scanning in positive 2th direction. The result
-       array is expanded by offset*notubes.Note that this means only positive offsets make sense.
+       This corresponds to the detector scanning in positive 2th direction.Note that this means only positive offsets make sense.
        If pixel_mask is set, it will have a 1 for pixel positions that are valid, and 0 otherwise.
        This new version avoids using Jython slice notation due to the slowdown caused by the
        gumpy __getitem__ and __setitem__ methods."""
 
     # We imagine that we have no_tubes slices of data which we want to overlap, shifting each time
-    # by steps_per_tube.  The total length will be no more than (no_tubes + 1) * no_steps
+    # by steps_per_tube.  The total length will be no_tubes* no_steps + offset
     no_steps = len(inarray[0])    #store for efficiency
-    newshape = [len(inarray)*tube_offset + no_steps]
+    # The final tube covers an extra (no_steps - tube_offset) points compared to non-overlapping scans
+    newshape = [len(inarray)*tube_offset + no_steps - tube_offset]
     oldshape = inarray.shape
     try:
        working_data = inarray.storage   #for speed

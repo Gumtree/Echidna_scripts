@@ -612,7 +612,8 @@ def __run_script__(fns):
         if regain_apply.value:
            bottom = int(vig_lower_boundary.value)
            top = int(vig_upper_boundary.value)
-           cs,gain,esds,chisquared = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top)
+           cs,gain,esds,chisquared = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
+                                                          exact_angles=htc)
            if cs is not None:
                print 'Have new gains at %f' % (time.clock() - elapsed)
                Plot4 = Plot(title='Chi squared history')

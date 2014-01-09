@@ -684,28 +684,57 @@ def getHorizontallyCorrected(ds, offsets_filename):
         if f != None:
             f.close()
 
+def read_horizontal_corrections(filename):
+    """Read a file containing a simple list of offset values, 1 per line"""
+    axisX = []
+    f = open(filename,'r')
+    for line in f:
+            if type(line) is str:
+                line = line.strip()
+                if (len(line) > 0) and not line.startswith('#'):
+                    axisX.append(float(line))
+    return axisX
+
+def calculate_average_angles(tube_steps,angular_file,pixel_step,tube_sep):
+    """Calculate the average angle of measurement for overlapping tubes, given the
+    correction values for individual tubes in the file."""
+    no_of_overlaps = int(round(len(tube_steps)/pixel_step))-1
+    correction_array = Array(read_horizontal_corrections(angular_file))
+    no_of_tubes = len(correction_array)
+    counter = array.zeros(no_of_tubes+no_of_overlaps,int)
+    final_values = array.zeros(no_of_tubes+no_of_overlaps,float)
+    for stepno in range(no_of_overlaps+1):
+        counter[stepno:stepno+no_of_tubes]+=array.ones(no_of_tubes,int)
+        final_values[stepno:stepno+no_of_tubes]+=correction_array
+    ave_angles = final_values/counter
+    print 'Check: average angles ' + `ave_angles`
+    print 'Check: counter' + `counter`
+    print 'Check: no of overlaps, tubes: %d %d ' % (no_of_overlaps,no_of_tubes)
+    # Now apply these average corrections to the actual angles
+    final_values = array.zeros((no_of_tubes+no_of_overlaps)*pixel_step)
+    print 'Final values has len %d' % len(final_values)
+    for stepno in range(no_of_tubes+no_of_overlaps):
+        final_values[stepno*pixel_step:(stepno+1)*pixel_step] = tube_steps + tube_sep*stepno + ave_angles[stepno]
+    return final_values
+
 # Calculate adjusted gain based on matching intensities between overlapping
 # sections of data from different detectors
-def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,bottom=None):
+def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,bottom=None,
+               exact_angles=None):
     """Calculate rescaling factors for tubes based on overlapping data
     regions. The ignore parameter specifies the number of initial tubes for
     which data are unreliable and should be ignored. Specifying unit weights
     = False will use the variances contained in the input dataset. Note that
     the output dataset has already been vertically integrated as part of the
     algorithm. The vertical integration limits are set by top and bottom, if
-    None all points are included."""
+    None all points are included. Exact_angles either contains the name of a
+    file with per-detector angular corrections, or None."""
     import time
     from Reduction import overlap
     # Get sensible values
     if top is None: top = ds.shape[1]-1
     if bottom is None: bottom = 0
     b = ds[:,bottom:top,:].intg(axis=1).get_reduced()
-    print 'Check: input dataset [62,22]:'
-    print `ds[22,:,62+ignore].storage`
-    print `ds[22,:,62+ignore].var`
-    print 'Summed dataset'
-    print `b[22,62+ignore]`
-    print `b.var[22,62+ignore]`
     # Determine pixels per tube interval
     tube_pos = ds.axes[-1]
     tubesep = abs(tube_pos[0]-tube_pos[-1])/(len(tube_pos)-1)
@@ -737,10 +766,23 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     # Now build up the important information
     cs.title = ds.title
     cs.copy_cif_metadata(ds)
-    # construct the ideal axes
-    axis = arange(len(model))
-    new_axis = axis*bin_size + ds.axes[0][0] + ignore*pixel_step*bin_size
+    # construct the axes
+    if exact_angles is None:
+        axis = arange(len(model))
+        new_axis = axis*bin_size + ds.axes[0][0] + ignore*pixel_step*bin_size
+        axis_string = """Following this gain refinement, two theta values were recalculated assuming a step size of %8.3f 
+and a tube separation of %8.3f starting at %f.""" % (bin_size,tubesep,ds.axes[0][0]+ignore*pixel_step*bin_size)
+    else:
+        new_axis = calculate_average_angles(tube_steps,exact_angles,pixel_step,tubesep)
+        # Remove ignored tubes
+        new_axis = new_axis[ignore*pixel_step:]
+        
+        axis_string = """Following this gain refinement, two theta values were recalculated using a tube separation of 
+                         %8.3f and the recorded positions of the lowest angle tube, and then adding an average of the 
+                         angular corrections for the tubes contributing to each two theta position.""" % (tubesep)
     cs.set_axes([new_axis],anames=['Two theta'],aunits=['Degrees'])
+    print 'New axis goes from %f to %f in %d steps' % (new_axis[0],new_axis[-1],len(new_axis))
+    print 'Total %d points in output data' % len(cs)
     # prepare info for CIF file
     import math
     detno = map(lambda a:"%d" % a,range(len(gain)))
@@ -752,7 +794,7 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
         )
     info_string = "After vertical integration between pixels %d and %d," % (bottom,top) + \
         " individual tube gains were iteratively refined using the Ford/Rollett algorithm. Final gains " + \
-        "are stored in the _[local]_refined_gain loop."
+        "are stored in the _[local]_refined_gain loop." + axis_string
     cs.add_metadata("_pd_proc_info_data_reduction",info_string,append=True)
     return cs,gain,esds,chisquared
 
