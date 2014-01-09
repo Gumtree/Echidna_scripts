@@ -465,6 +465,7 @@ def __run_script__(fns):
     from Reduction import reduction,AddCifMetadata
     from os.path import basename
     from os.path import join
+    import os
     import time           #how fast are we going?
     from Formats import output
     
@@ -483,6 +484,12 @@ def __run_script__(fns):
         print 'no input datasets'
         return
 
+    # pre-check that we can write the result
+    output_destination = out_folder.value
+    if output_xyd.value or output_fxye.value:
+        if not os.access(output_destination,os.W_OK):
+            open_error("Unable to write to folder %s" % output_destination)
+            return
     # check if input needs to be normalized
     if norm_apply.value:
         # norm_ref is the source of information for normalisation
@@ -532,7 +539,11 @@ def __run_script__(fns):
             if eff_map_canonical[0:5] != 'file:':
                 eff_map_canonical = 'file:' + eff_map_canonical
             if not eff_map_canonical in eff_map_cache:
-                eff_map_cache[eff_map_canonical] = reduction.read_efficiency_cif(eff_map_canonical)
+                try:
+                    eff_map_cache[eff_map_canonical] = reduction.read_efficiency_cif(eff_map_canonical)
+                except:
+                    open_error("Failed to read efficiency file %s" % eff_map_canonical)
+                    return
             else:
                 print 'Found in cache ' + `eff_map_canonical`
         eff = eff_map_cache[eff_map_canonical]
