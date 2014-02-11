@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+  <style type="text/css">
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+  </style>
+  <link rel="stylesheet" href="markdown4.css">
+</head>
+<body>
+<h1 id="gumtree-workshop-module-2-scripting">Gumtree Workshop Module 2: Scripting</h1>
+<h2 id="introduction">Introduction</h2>
+<p>'Scripting' is essentially putting commands that we might type in one by one into a file that is then read in and executed. In addition to sequences of simple manipulations, it is now convenient to include 'control flow' type commands, (such as if...then...else statements), and define functions that are executed later.</p>
+<h2 id="scripting-environment">Scripting environment</h2>
+<p>The scripting environment in Gumtree includes the Array and Dataset objects and plotting windows that we have just learnt about. It also includes functions to create GUI elements, and access to everything in the Java Virtual Machine.</p>
+<h3 id="libraries">Libraries</h3>
+<p>As soon as we start writing multiple scripts, we will build up a library of functions or routines that do generic tasks, for example, a routine to calculate wavelength from our instrument settings. We would typically put these routines into a separate file and use the Python <code>import</code> command to read them in. Here is a simple routine which just returns the formatted date:</p>
+<pre class="sourceCode python"><code class="sourceCode python"><span class="ch">from</span> datetime <span class="ch">import</span> datetime
+
+<span class="kw">def</span> format_time():
+    <span class="kw">return</span> datetime.isoformat(datetime.utcnow())</code></pre>
+<p>I have saved this in a random directory. The Python interpreter will not know where to look for this file, so I should add the path to this file to the Python search path, following which I can import the script and execute it:</p>
+<pre><code>&gt;&gt; sys.path = [&#39;/home/jrh/Talks/Gumtree_Workshop/Workshop_scripts&#39;] + sys.path
+&gt;&gt; sys.path[0]
+&#39;/home/jrh/Talks/Gumtree_Workshop/Workshop_scripts&#39;
+&gt;&gt; import demo_script
+&gt;&gt; print demo_script.show_time()
+2014-02-11T01:54:47.640000</code></pre>
+<h3 id="graphical-user-interface">Graphical User Interface</h3>
+<h4 id="building-the-gui">Building the GUI</h4>
+<p>Building GUIs can be very tedious. Gumpy provides some nice Python commands that allow us to build a GUI. The following commands describe a GUI that takes advantage of our time printing routine:</p>
+<pre class="sourceCode python"><code class="sourceCode python">st = Par(<span class="st">&#39;bool&#39;</span>,<span class="st">&#39;False&#39;</span>)      <span class="co">#Create a tick box</span>
+st.title = <span class="st">&#39;Show the time&#39;</span>    <span class="co">#A nice label</span>
+addon = Par(<span class="st">&#39;string&#39;</span>,<span class="st">&#39;Stardate &#39;</span>) <span class="co">#Additional text</span>
+addon.title = <span class="st">&#39;Prepend this:&#39;</span> <span class="co">#Explain to the user</span>
+Group(<span class="st">&#39;Time&#39;</span>).add(st,addon)   <span class="co">#All inside a box labelled &#39;Time&#39;</span>
+                              <span class="co">#A blank line to make it look nice</span>
+<span class="kw">def</span> __run_script__(fns):      <span class="co">#Predefined function name</span>
+    <span class="ch">import</span> demo_script        <span class="co">#Get access to our time printing function</span>
+    <span class="kw">if</span> st.value is <span class="ot">True</span>:      <span class="co">#The user wants to know the time</span>
+        <span class="dt">print</span> addon.value + demo_script.format_time()  <span class="co">#Print the time</span>
+    <span class="kw">else</span>:                     <span class="co">#The user doesn&#39;t want the time</span>
+        <span class="dt">print</span> <span class="st">&#39;Madness takes control&#39;</span>   <span class="co">#Print something else</span></code></pre>
+<p>The process of building a Gumtree GUI is essentially to group together a bunch of GUI parameters into a 'Group'. The parameters are created by calling <code>Par(&lt;type&gt;,&lt;default&gt;,options=&lt;option list&gt;)</code>. Possible types include:</p>
+<dl>
+<dt>'bool'</dt>
+<dd>a checkbox which is True if ticked
+</dd>
+<dt>'string'</dt>
+<dd>a string
+</dd>
+<dt>'file'</dt>
+<dd>a file from the filesystem
+</dd>
+<dt>'int'</dt>
+<dd>an integer
+</dd>
+<dt>'float'</dt>
+<dd>a floating-point number
+</dd>
+</dl>
+<p>Then, call <code>Group</code> with a string label and 'add' to add the elements in the order that you wish them to appear.</p>
+<h4 id="accessing-the-gui-values">Accessing the GUI values</h4>
+<p>In order to act on the user's choices in the GUI, you will need to find out what values they have input or chosen. That is why you needed to assign each call of 'Par' to a variable. The current value of a GUI item is available in the 'value' attribute of that variable.</p>
+<h4 id="special-function-names">Special function names</h4>
+<p>When the user presses the 'Run' button, what happens? Very simply, the function called <code>__run_script__</code> is called with the list of selected files given as an argument. A further special function, <code>__dataset_added__</code>, is also recognised in case you wish to take action whenever a dataset is added to the file list at the top left.</p>
+<h4 id="reload">Reload</h4>
+<p>When your script is reloaded, conceptually it is being read line-by-line as if you were typing it into the same console that we have been using for interactive work. This means that the console has access to the variables that you defined in your script (as long as they are outside the function definitions, of course) including the GUI variables. As variables from the previous script are not deleted (except for the GUI display variables), if you have forgotten to redefine <code>__run_script__</code> the old version will be run when the 'Run' button is pressed.</p>
+<h4 id="full-example-display-monitor-counts">Full example: display monitor counts</h4>
+<pre class="sourceCode python"><code class="sourceCode python">__script__.title     = <span class="st">&#39;Plot monitor&#39;</span>
+__script__.version   = <span class="st">&#39;1.0&#39;</span>
+<span class="co">#</span>
+<span class="co">#  Create the GUI</span>
+<span class="co">#</span>
+monitors = {<span class="st">&#39;Pre-mono&#39;</span>:<span class="st">&#39;/entry1/monitor/bm1_counts&#39;</span>,
+            <span class="co">&#39;Post-mono&#39;</span>:<span class="st">&#39;/entry1/monitor/bm2_counts&#39;</span>,
+            <span class="co">&#39;Post-sample&#39;</span>:<span class="st">&#39;/entry1/monitor/bm3_counts&#39;</span>}
+mon_choice = Par(<span class="st">&#39;string&#39;</span>,<span class="st">&#39;Pre-mono&#39;</span>,options=monitors.keys())
+mon_choice.title = <span class="st">&#39;Location&#39;</span>
+mon_norm = Par(<span class="st">&#39;bool&#39;</span>,<span class="st">&#39;False&#39;</span>)
+mon_norm.title = <span class="st">&#39;Normalise&#39;</span>
+Group(<span class="st">&#39;Monitor Plot&#39;</span>).add(mon_choice,mon_norm)
+
+<span class="kw">def</span> __run_script__(fns):
+    <span class="co"># check input</span>
+    <span class="kw">if</span> (fns is <span class="ot">None</span> or <span class="dt">len</span>(fns) == <span class="dv">0</span>) :  <span class="co">#user forgot to select</span>
+        <span class="dt">print</span> <span class="st">&#39;no input datasets&#39;</span>
+        open_error(<span class="st">&#39;No input datasets&#39;</span>)  <span class="co">#throw up an error box</span>
+        <span class="kw">return</span>                           <span class="co">#and we&#39;re done</span>
+
+    df.datasets.clear()                  <span class="co">#Erase previous fiddling</span>
+    clear_plot(Plot1)                    <span class="co">#Remove old plots</span>
+    mon_path = monitors[mon_choice.value]<span class="co">#Get the NeXuS path</span>
+    Plot1.set_x_label(<span class="st">&#39;Step&#39;</span>)            <span class="co">#Configure the plot</span>
+    Plot1.set_title(<span class="st">&#39;Monitor counts&#39;</span>)    <span class="co">#configure the plot</span>
+    <span class="kw">for</span> fn in fns:                       <span class="co">#Loop over all selected datasets</span>
+        ds = df[fn]                      <span class="co">#Create dataset from filename</span>
+        mon_counts = Dataset(ds[mon_path]) <span class="co">#Extract monitor counts</span>
+        <span class="kw">if</span> mon_norm.value is <span class="ot">True</span>:       <span class="co">#Are we normalising?</span>
+            real_mon_counts = mon_counts/mon_counts.<span class="dt">max</span>() <span class="co">#Normalise</span>
+            y_label = <span class="st">&#39;Normalised counts&#39;</span>
+        <span class="kw">else</span>:                            <span class="co">#No normalisation</span>
+            real_mon_counts = mon_counts
+            y_label = <span class="st">&#39;Counts&#39;</span>
+        <span class="co">#Create informative legend</span>
+        real_mon_counts.title = ds[<span class="st">&#39;/entry1/sample/name&#39;</span>] + <span class="st">&#39;:&#39;</span> + mon_choice.value
+        Plot1.add_dataset(real_mon_counts)
+        Plot1.set_y_label(y_label)       <span class="co">#Set custom y label</span>
+             
+<span class="kw">def</span> clear_plot(plotname):
+    all_datasets = copy(plotname.ds)
+    <span class="kw">if</span> plotname.ds is <span class="ot">None</span>:
+        <span class="kw">return</span>
+    <span class="kw">for</span> ds in all_datasets:
+        plotname.remove_dataset(ds)</code></pre>
+<h2 id="appendix-setting-up-gumtree-for-python-editing">Appendix: setting up Gumtree for Python editing</h2>
+<p>You do not have to use Gumtree to edit your scripts - any text editor is acceptable. If you wish to use Gumtree to edit, the following setup steps are necessary.</p>
+<ol>
+<li>Create a new PyDev project (File -&gt; New -&gt; Other -&gt; PyDev Project)</li>
+<li>Click 'Next' and choose a name. The directory for project contents can be anything you wish, I tend to find the default choice annoying to navigate to. The type of the project is 'Jython'. The other options can be left at the defaults.</li>
+<li>Click 'Next' and 'Finish'</li>
+<li>Ignore the request to configure the Python interpreter, and do not open the Pydev perspective either</li>
+</ol>
+<p>Now you can create a Python file within this project:</p>
+<ol>
+<li>Choose File -&gt; New -&gt; Other -&gt; PyDev Module</li>
+<li>Choose a source folder (only choice is the project defined above)</li>
+<li>Name the file as you wish, and leave the package and template as is (empty). Click 'Finish'</li>
+<li>The file will appear in an edit window appropriately highlighted.</li>
+</ol>
+</body>
+</html>

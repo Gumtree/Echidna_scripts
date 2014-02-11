@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+  <link rel="stylesheet" href="markdown4.css">
+</head>
+<body>
+<h1 id="gumtree-workshop-module-1-gumpy-arrays-and-datasets">Gumtree Workshop Module 1: Gumpy, Arrays and Datasets</h1>
+<h2 id="background">Background</h2>
+<h3 id="gumtreepython">Gumtree/Python</h3>
+<p>Gumtree is written in Java. Java is a complex and tedious language to write scientific code in. Python is a very pleasant language to write scientific code in, particularly with scientific extensions like Numpy (see below). Python is a scripting language that was originally written in C, which would preclude its use in Gumtree. Fortunately, a version of Python written in Java exists, called Jython. Gumtree can therefore run Python and the Python in Gumtree has full access to everything that Gumtree can do.</p>
+<h3 id="arrays">Arrays</h3>
+<p>Many scientific datasets can be represented as homogeneous &quot;arrays&quot; of elements. An <em>array</em> is a table of elements with an arbitrary number of dimensions - but on our instruments we would usually produce 2,3 or 4-dimensional data.</p>
+<p>Many (all?) high-level scientific computing packages provide an &quot;array&quot; object together with many operations that can be performed on arrays. The array support in Gumtree/Python is modelled as closely as possible on 'Numpy'. <a href="http://wiki.scipy.org/Tentative_NumPy_Tutorial">The Numpy tutorial</a> is a useful learning resource for Gumpy arrays, and <a href="http://docs.scipy.org/doc/numpy/reference">the Numpy reference</a> is a useful reference for many Gumpy array operations.</p>
+<h3 id="what-is-gumpy">What is Gumpy?</h3>
+<p>Gumpy (Gumtree/Python) adds Numpy-like support for array objects. It builds on these basic array types to provide richer objects (&quot;Datasets&quot;) that allow automatic error propagation, axis manipulation, and easy interfacing to our data files.</p>
+<h2 id="arrays-1">Arrays</h2>
+<p>The array routines are contained in the module 'array'. As many of the array routines have the same name as dataset routines (see later), we prefix them with 'array' to disambiguate.</p>
+<h3 id="creating-arrays">Creating arrays</h3>
+<ol type="1">
+<li>arange – to create an array with a given shape and type.</li>
+</ol>
+<pre><code>    &gt;&gt; array.arange(12,[3,4])
+    Array([[ 0,  1,  2,  3],
+           [ 4,  5,  6,  7],
+           [ 8,  9, 10, 11]])</code></pre>
+<ol start="2" type="1">
+<li>From a list</li>
+</ol>
+<pre><code>    &gt;&gt; array.Array([1,2,3,4])
+    Array([1, 2, 3, 4])</code></pre>
+<ol start="3" type="1">
+<li>As all zeros or ones:</li>
+</ol>
+<pre><code>&gt;&gt; array.ones([3,2])
+Array([[1.000000, 1.000000],
+       [1.000000, 1.000000],
+       [1.000000, 1.000000]])</code></pre>
+<ol start="4" type="1">
+<li>The same shape as another array (<code>ones_like</code>, <code>zeros_like</code>):</li>
+</ol>
+<pre><code>&gt;&gt; p = array.arange(6,[3,2])
+&gt;&gt; p
+Array([[0, 1],
+       [2, 3],
+       [4, 5]])
+&gt;&gt; array.ones_like(p)
+Array([[1, 1],
+       [1, 1],
+       [1, 1]])</code></pre>
+<ol start="5" type="1">
+<li>Also: <code>rand</code>,<code>instance</code></li>
+</ol>
+<h3 id="interrogating-arrays">Interrogating arrays</h3>
+<p><code>shape</code>, <code>ndim</code>, <code>size</code>, <code>dtype</code>, <code>tolist</code></p>
+<pre><code>&gt;&gt; p = array.rand([3,2])
+&gt;&gt; p.dtype
+&lt;type &#39;float&#39;&gt;
+&gt;&gt; p.shape
+[3, 2]</code></pre>
+<h3 id="manipulating-arrays">Manipulating arrays</h3>
+<p>The first element in an array is always numbered zero.</p>
+<ol type="1">
+<li>Slicing and indexing: <code>[start:finish:step,&lt;next dimension&gt;,...]</code></li>
+</ol>
+<pre><code>&gt;&gt; c=array.arange(12,[6,2])
+&gt;&gt; c
+Array([[ 0,  1],
+       [ 2,  3],
+       [ 4,  5],
+       [ 6,  7],
+       [ 8,  9],
+       [10, 11]])
+&gt;&gt; c[1:6:2]
+Array([[ 2,  3],
+       [ 6,  7],
+       [10, 11]])
+
+&gt;&gt; c[1:6:2,1]
+Array([[ 3],
+       [ 7],
+       [11]])</code></pre>
+<ol start="2" type="1">
+<li>Setting values: as above, with equals:</li>
+</ol>
+<pre><code>&gt;&gt; c[1:6:2,1] = 101
+&gt;&gt; c
+Array([[  0,   1],
+       [  2, 101],
+       [  4,   5],
+       [  6, 101],
+       [  8,   9],
+       [ 10, 101]])</code></pre>
+<ol start="2" type="1">
+<li>Unary mathematical functions: sin, cos, tan, arcsin, arccos, arctan, sqrt, exp,ln, log10...</li>
+</ol>
+<pre><code>&gt;&gt; c.sqrt()
+Array([[0.000000, 1.000000],
+       [1.414214, 1.732051],
+       [2.000000, 2.236068],
+       [2.449490, 2.645751],
+       [2.828427, 3.000000],
+       [3.162278, 3.316625]])</code></pre>
+<ol start="3" type="1">
+<li>Binary mathematical functions: +, - , * , /</li>
+</ol>
+<pre><code>&gt;&gt; c=array.arange(12,[6,2])
+&gt;&gt; d = c + 1
+&gt;&gt; d
+Array([[1.000000, 2.000000],
+       [3.000000, 4.000000],
+       [5.000000, 6.000000],
+       [7.000000, 8.000000],
+       [9.000000, 10.000000],
+       [11.000000, 12.000000]])
+
+&gt;&gt; c = array.arange(12,[3,4])
+&gt;&gt; d = array.ones_like(c)*2
+&gt;&gt; c+d
+Array([[ 2,  3,  4,  5],
+       [ 6,  7,  8,  9],
+       [10, 11, 12, 13]])</code></pre>
+<ol start="4" type="1">
+<li>Masking: use of comparison, e.g. &lt; , &gt;=, == etc.</li>
+</ol>
+<pre><code>&gt;&gt; p = array.arange(12)
+&gt;&gt; p
+Array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11])
+&gt;&gt; p &gt; 5
+Array([False, False, False, False, False, False, True, True, True, True, True, True])
+&gt;&gt; q = array.rand(12)
+&gt;&gt; q[p&gt;5] = -0.5
+&gt;&gt; q
+Array([0.004117, 0.298131, 0.256593, 0.800404, 0.245852, 0.606921, -0.500000, -0.500000, -0.500000, -0.500000, -0.500000, -0.500000])</code></pre>
+<ol start="5" type="1">
+<li>Reshaping: <code>transpose</code>,<code>reshape</code>,<code>get_reduced</code></li>
+</ol>
+<pre><code>&gt;&gt; a = array.arange(12,[3,4])
+&gt;&gt; a
+Array([[ 0,  1,  2,  3],
+       [ 4,  5,  6,  7],
+       [ 8,  9, 10, 11]])
+&gt;&gt; a.reshape([4,3])
+Array([[ 0,  1,  2],
+       [ 3,  4,  5],
+       [ 6,  7,  8],
+       [ 9, 10, 11]])
+&gt;&gt; a.transpose()
+Array([[ 0,  4,  8],
+       [ 1,  5,  9],
+       [ 2,  6, 10],
+       [ 3,  7, 11]])</code></pre>
+<h3 id="aggregate-functions-sum-max-min-any-all-intg">Aggregate functions: sum(), max(), min(), any(), all(), intg()</h3>
+<p>Note that sum can take an axis specifier, in which case it will sum along the given axis, always producing a one-dimensional array. To sum <em>only</em> along one dimension, use <code>intg</code>.</p>
+<pre><code>&gt;&gt; c = array.arange(5,[5,1])
+&gt;&gt; c.sum()
+10.0
+&gt;&gt; c.sum(0)
+Array([1.000000, 5.000000, 9.000000, 13.000000, 17.000000, 21.000000])
+&gt;&gt; c.sum(1)
+Array([30.000000, 36.000000])
+&gt;&gt; c.max()
+4.0</code></pre>
+<h2 id="dataset---multi-dimensional-data-container">Dataset - Multi-Dimensional Data Container</h2>
+<h3 id="what-is-a-dataset">What is a Dataset?</h3>
+<p>A Dataset enhances Arrays by adding axes for each dimension, variance and metadata. Look at <code>arange</code> for Datasets:</p>
+<pre><code>&gt;&gt; d = arange(12,[3,4])
+&gt;&gt; print str(d)
+title: 17
+storage: [[ 0  1  2  3]
+          [ 4  5  6  7]
+          [ 8  9 10 11]]
+error: [[0.000000, 1.000000, 1.414214, 1.732051]
+        [2.000000, 2.236068, 2.449490, 2.645751]
+        [2.828427, 3.000000, 3.162278, 3.316625]]
+axes:
+  0. title: dim_0
+     storage: [0.000000, 1.000000, 2.000000]
+  1. title: dim_1
+     storage: [0.000000, 1.000000, 2.000000, 3.000000]</code></pre>
+<h3 id="dataset-manipulation">Dataset manipulation</h3>
+<p>All of the above array manipulation routines are applicable to Datasets, and will propagate errors as well.</p>
+<h3 id="creating-datasets">Creating datasets</h3>
+<p>Datasets can be created from Arrays, lists and NeXuS files:</p>
+<pre><code>&gt;&gt; p = Dataset(&#39;/home/jrh/programs/echidna/Echidna-Gumtree-Scripts/Data/ECH0010123.nx.hdf&#39;)
+&gt;&gt; p.shape
+[50, 1, 128, 128]
+&gt;&gt; p[&#39;/entry1/sample/name&#39;]
+&#39;Ni404-cubane&#39;
+&gt;&gt; p[&#39;/entry1/experiment/title&#39;]
+&#39;P2708&#39;</code></pre>
+<p>Additional attributes (i.e. found using <code>.</code>) include: <code>axes</code> (a list of axes), <code>storage</code> (the array holding the data) and <code>var</code> (the variance array). Datasets originating from files have the <code>location</code> attribute as well.</p>
+<pre><code>&gt;&gt; p.location
+u&#39;/home/jrh/programs/echidna/Echidna-Gumtree-Scripts/Data/ECH0010123.nx.hdf&#39;
+&gt;&gt; d.axes[0]
+SimpleData(Array([0.000000, 1.000000, 2.000000]), 
+           title=&#39;dim_0&#39;,
+           units=&#39;&#39;)
+&gt;&gt; len(d.axes)
+2
+&gt;&gt; d.storage
+Array([[ 0,  1,  2,  3],
+       [ 4,  5,  6,  7],
+       [ 8,  9, 10, 11]])
+&gt;&gt; d.var
+SimpleData(Array([[0.000000, 1.000000, 2.000000, 3.000000],
+                  [4.000000, 5.000000, 6.000000, 7.000000],
+                  [8.000000, 9.000000, 10.000000, 11.000000]]), 
+           title=&#39;variance&#39;,
+           units=&#39;&#39;)</code></pre>
+<h3 id="plotting-datasets">Plotting datasets</h3>
+<p>Your Gumtree interface has 3 pre-defined plotting areas known as Plot1, Plot2 and Plot3. To plot a dataset, simply call the <code>set_dataset</code> method of these objects:</p>
+<pre><code>&gt;&gt; Plot1.set_dataset(p[0][0])
+org.gumtree.vis.nexus.dataset.Hist2DNXDataset@a65f55
+
+&gt;&gt; Plot2.set_dataset(Dataset(p.axes[0]))
+org.gumtree.vis.dataset.XYErrorDataset@18697cd</code></pre>
+<p>Other useful methods and attributes: <code>ds</code> - return the first dataset in the Plot <code>add_dataset(ds)</code> - add a further dataset <code>datasets</code> - a list of datasets in the plot <code>remove_dataset(ds)</code> - remove the specified dataset <code>set_title(string)</code> - add a title to the plot</p>
+</body>
+</html>
