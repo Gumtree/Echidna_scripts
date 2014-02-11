@@ -1,0 +1,13 @@
+Gumtree Workshop Materials
+==========================
+
+#. [Arrays and Datasets][mod1]
+#. [Scripting][mod2]
+( with [example script][ex1])
+#. Scripting for experiments
+#. Tips and tricks
+#. Using version control
+
+[mod1]: Array_Dataset.html
+[mod2]: Scripting.html
+[ex1]: monitor_example.py
