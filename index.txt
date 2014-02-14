@@ -1,13 +1,23 @@
-Gumtree Workshop Materials
-==========================
+Using the Gumtree Scripting Environment
+=======================================
+
+Introductory materials
+----------------------
+
+The following tutorials are based on Gumtree version 1.9.3 and form 
+the basis of a workshop conducted at ANSTO in February 2014.
 
 #. [Arrays and Datasets][mod1]
 #. [Scripting][mod2]
 ( with [example script][ex1])
-#. Scripting for experiments
-#. Tips and tricks
-#. Using version control
+#. [Scripting for experiments][scripting]
+#. [Tips and tricks][advanced]
+(with [example script][ex2])
+#. [Using version control][version control]
 
 [mod1]: Array_Dataset.html
 [mod2]: Scripting.html
 [ex1]: monitor_example.py
+[ex2]: monitor_button.py
+[scripting]: Scripting.html
+[version control]: Version_Control.html
