@@ -523,7 +523,7 @@ def getEfficiencyCorrected(ds, (eff,eff_metadata)):
     elif ds.ndim == 3:
         # check arguments
         if ds.axes[0].title != 'azimuthal_angle':
-            raise AttributeError('ds.axes[0].title != azimuthal_angle')
+            raise AttributeError('ds.axes[0].title != azimuthal_angle (%s)' % ds.axes[0].title)
         if ds.shape[1:] != eff.shape:
             raise AttributeError('ds.shape[1:] != eff.shape')
 

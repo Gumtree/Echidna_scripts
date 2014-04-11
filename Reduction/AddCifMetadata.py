@@ -89,8 +89,12 @@ def extract_metadata(rawfile,codeversions={}):
         coll_string += " and no secondary collimator."
         rawfile.add_metadata("_diffrn_radiation_collimation",coll_string,tag="CIF")
     # These values were in the CIF writing area of the Java routines, best put here
+    try:
+        program_release = str(rawfile["$entry/program_revision"])
+    except AttributeError:
+        program_release = str(rawfile["$entry/sics_release"])
     rawfile.add_metadata("_computing_data_collection",str(rawfile["$entry/program_name"]) + " " + \
-                         str(rawfile["$entry/sics_release"]),"CIF")
+                         program_release,"CIF")
     # List the code versions used for data reduction
     codelist = ""
     for key in codeversions.keys():

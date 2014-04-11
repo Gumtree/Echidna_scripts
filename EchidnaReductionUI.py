@@ -48,7 +48,8 @@ Group('Output Filename: ECH00NNNNN_+...').add(output_stem)
 # Normalization
 # We link the normalisation sources to actual dataset locations right here, right now
 norm_table = {'Monitor 1':'bm1_counts','Monitor 2':'bm2_counts',
-              'Monitor 3':'bm3_counts','Detector time':'detector_time'}
+              'Monitor 3':'bm3_counts','Total counts':'total_counts',
+              'Detector time':'detector_time'}
 norm_apply     = Par('bool', 'True')
 norm_apply.title = 'Apply'
 norm_reference = Par('string', 'Monitor 3', options = norm_table.keys())
