@@ -29,7 +29,7 @@ __UI_gitversion = "$Id$"
 ''' User Interface '''
 # Plot Helper: always Plot2 to Plot 3
 # At the top for convenience
-plh_copy = Act('plh_copy_proc()', 'Copy Plot2 to Plot 3')
+plh_copy = Act('plh_copy_proc()', 'Press to Copy Plot 2 to Plot 3')
 copy_acc = Par('bool','False')
 copy_acc.title = 'Auto copy to Plot 3'
 Group('Copy Datasets').add(plh_copy,copy_acc)
@@ -658,7 +658,18 @@ def __run_script__(fns):
         if copy_acc.value:   #user wants us to accumulate it
             plh_copy_proc()
         # Output datasets
-        filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + str(output_stem.value))
+        # Calculate inserted string: %s for sample name, %t for temperature
+        stem = str(output_stem.value)
+        stem = re.sub(r'[^\w+=()*^@~:{}\[\].%-]','_',stem)
+        if '%s' in stem:
+             samplename = final_result.harvest_metadata("CIF")['_pd_spec_special_details']
+             name_front = samplename.split()[0]
+             stem = stem.replace('%s',name_front)
+        if '%t' in stem:
+             temperature = 'Unknown_temperature'
+             stem = stem.replace('%t',temperature)
+        print 'Filename stem is now ' + stem
+        filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + stem)
         if output_xyd.value or output_fxye.value:  #write CIF if other files written
             output.write_cif_data(final_result,filename_base)
         if output_xyd.value:
