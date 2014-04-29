@@ -29,8 +29,10 @@ __UI_gitversion = "$Id$"
 ''' User Interface '''
 # Plot Helper: always Plot2 to Plot 3
 # At the top for convenience
-plh_copy = Act('plh_copy_proc()', 'Copy plot')
-Group('Copy 1D Datasets to Plot 3').add(plh_copy)
+plh_copy = Act('plh_copy_proc()', 'Copy Plot2 to Plot 3')
+copy_acc = Par('bool','False')
+copy_acc.title = 'Auto copy to Plot 3'
+Group('Copy Datasets').add(plh_copy,copy_acc)
 
 # Output Folder
 out_folder = Par('file')
@@ -653,9 +655,12 @@ def __run_script__(fns):
             final_result = cs
         # Display reduced dataset
         send_to_plot(final_result,Plot2)
+        if copy_acc.value:   #user wants us to accumulate it
+            plh_copy_proc()
         # Output datasets
         filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + str(output_stem.value))
-        output.write_cif_data(final_result,filename_base)
+        if output_xyd.value or output_fxye.value:  #write CIF if other files written
+            output.write_cif_data(final_result,filename_base)
         if output_xyd.value:
             output.write_xyd_data(final_result,filename_base,codeversions=code_versions)
         if output_fxye.value:
