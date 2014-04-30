@@ -144,6 +144,14 @@ Group('Plot settings').add(ps_plotname,ps_dspacing)
 if not 'eff_map_cache' in globals():
     eff_map_cache = {}
     
+''' New global plots'''
+if 'Plot4' not in globals() or 'Disposed' in str(Plot4.pv):
+    Plot4 = Plot(title='Chi-squared behaviour')
+    Plot4.close = noclose
+if 'Plot5' not in globals() or 'Disposed' in str(Plot5.pv):
+    Plot5 = Plot(title='Final gain values')
+    Plot5.close = noclose
+
 ''' Button Actions '''
 
 def show_helper(filename, plot, pre_title = ''):
@@ -431,7 +439,10 @@ def load_user_prefs(prefix = ''):
     to load an alternative set of preferences"""
     # Run through our parameters, looking for the corresponding
     # preferences
-    p = globals().scope_keys()
+    try:
+        p = globals().keys()
+    except AttributeError:
+        p = globals().scope_keys()
     for name in p:
         if eval('isinstance('+ name + ',Par)'):
             execstring = name + '.value = "' + get_prof_value(prefix+name) + '"'
@@ -450,7 +461,10 @@ def save_user_prefs(prefix=''):
     prof_names = []
     prof_vals = []
     # sneaky way to get all the preferences
-    p = globals().scope_keys()
+    try: 
+        p = globals().keys()
+    except AttributeError:
+        p = globals().scope_keys()
     for name in p:
         if eval('isinstance('+ name + ',Par)'):
             prof_val = str(eval(name + '.value'))
@@ -468,7 +482,7 @@ def __run_script__(fns):
     from Reduction import reduction,AddCifMetadata
     from os.path import basename
     from os.path import join
-    import os
+    import os,re
     import time           #how fast are we going?
     from Formats import output
     
@@ -571,8 +585,6 @@ def __run_script__(fns):
             htc = str(htc_file.value)
     else:
         htc = None
-        
-    # Store the reduction settings as metadata for reference
     
     # iterate through input datasets
     # note that the normalisation target (an arbitrary number) is set by
@@ -630,8 +642,6 @@ def __run_script__(fns):
                                                           exact_angles=htc)
            if cs is not None:
                print 'Have new gains at %f' % (time.clock() - elapsed)
-               Plot4 = Plot(title='Chi squared history')
-               Plot5 = Plot(title='Final Gain')
                fg = Dataset(gain)
                fg.var = esds
            # set horizontal axis (ideal values)
