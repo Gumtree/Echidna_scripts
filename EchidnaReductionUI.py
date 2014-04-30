@@ -514,6 +514,9 @@ def __run_script__(fns):
         # by multiplication.  If 'auto', the maximum value of norm_ref
         # for the first dataset is used, otherwise any number may be entered.
         norm_ref = str(norm_reference.value)
+        if norm_ref.strip() == '':
+            open_error("You have asked to apply normalisation but not specified any normalisation reference")
+            return
         norm_tar = str(norm_target).lower()
 
         # check if normalization target needs to be determined
