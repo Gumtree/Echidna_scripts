@@ -642,7 +642,7 @@ def __run_script__(fns):
            bottom = int(vig_lower_boundary.value)
            top = int(vig_upper_boundary.value)
            cs,gain,esds,chisquared = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
-                                                          exact_angles=htc)
+                                                          exact_angles=htc,drop_frames=str(asm_drop_frames.value))
            if cs is not None:
                print 'Have new gains at %f' % (time.clock() - elapsed)
                fg = Dataset(gain)

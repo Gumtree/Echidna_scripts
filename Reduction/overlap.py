@@ -55,11 +55,12 @@ def timeit(relativeto,message):
    import time
    print message + `time.clock()-relativeto`
 
-def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_mask=None):
+def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_mask=None,bad_steps=[]):
    """ This utility routine applies the result of the find_gain routine to the full data,
    to obtain the best estimate of the actual intensities. If calc_var is true, the
    variance of the estimate is calculated as well. Currently this is simply the variance
-   obtained by ignoring the error in the gain estimates."""
+   obtained by ignoring the error in the gain estimates. Bad steps are assumed to have
+   been zeroed previously."""
    import time
    elapsed = time.clock()
    if pixel_mask is None:
@@ -72,7 +73,7 @@ def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_ma
    except AttributeError:
       pass
    if calc_var is True:  #we assume variance is 1/weights for esd calcs
-      my_variance = 1.0/my_weights
+      my_variance = 1.0/my_weights  #we are assuming that 1.0/0 = 0 for excluded bits
    #weighted_data = divide(full_data,my_variance)  #wd = (F_hl^2/sigma_hl^2)
    weighted_data = full_data*my_weights  #wd = (F_hl^2/sigma_hl^2) 
    trans_gain = gain_array.reshape([len(gain_array),1])

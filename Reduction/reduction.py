@@ -720,7 +720,7 @@ def calculate_average_angles(tube_steps,angular_file,pixel_step,tube_sep):
 # Calculate adjusted gain based on matching intensities between overlapping
 # sections of data from different detectors
 def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,bottom=None,
-               exact_angles=None):
+               exact_angles=None,drop_frames=''):
     """Calculate rescaling factors for tubes based on overlapping data
     regions. The ignore parameter specifies the number of initial tubes for
     which data are unreliable and should be ignored. Specifying unit weights
@@ -728,7 +728,8 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     the output dataset has already been vertically integrated as part of the
     algorithm. The vertical integration limits are set by top and bottom, if
     None all points are included. Exact_angles either contains the name of a
-    file with per-detector angular corrections, or None."""
+    file with per-detector angular corrections, or None.  Drop_frames is a
+    specially-formatted string giving a list of frames to be ignored."""
     import time
     from Reduction import overlap
     # Get sensible values
@@ -743,21 +744,39 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     pixel_step = int(round(tubesep/bin_size))
     bin_size = tubesep/pixel_step
     print '%f tube separation, %d steps before overlap, ideal binsize %f' % (tubesep,pixel_step,bin_size)
-    # Reshape with individual sections summed
-    c = b.reshape([b.shape[0]/pixel_step,pixel_step,b.shape[-1]])
+    # Zero out dropped frames
+    dropped_frames = parse_ignore_spec(drop_frames)
+    print 'Dropped frames: ' + `dropped_frames`
+    b_zeroed = copy(b)
+    # Make a simple array to work out which sectors are missing frames
+    frame_check = array.ones(b.shape[0])
+    for frame_no in dropped_frames:
+        b_zeroed[frame_no] = 0
+        frame_check[frame_no] = 0
+        b_zeroed.var[frame_no] = 0
+    c = b_zeroed.reshape([b.shape[0]/pixel_step,pixel_step,b.shape[-1]])
+    frame_check = frame_check.reshape([b.shape[0]/pixel_step,pixel_step])
+    frame_sum = frame_check.intg(axis=1)
     print `b.shape` + "->" + `c.shape`
+    print 'Relative no of frames: ' + `frame_sum`
     if c.shape[0] == 1:   #can't be done, there is no overlap
         return None,None,None,None
     # sum the individual unoverlapped sections
     d = c.intg(axis=1) #array of [rangeno,stepno,tubeno]
+    # normalise by the number of frames in each section
+    print "Data shape: " + `d.shape`
+    print "Check shape: " + `frame_sum.shape`
+    for factor in range(len(frame_sum)):
+        d[factor] *= float(pixel_step)/frame_sum[factor]
     e = d.transpose()  #array of [rangestep,tubeno]
     gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
         iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
     # calculate errors based on full dataset
     # First get a full model
-    start_ds = b.transpose()[ignore:] #array of [tubeno,stepno]
+    start_ds = b_zeroed.transpose()[ignore:] #array of [tubeno,stepno]
     start_var = start_ds.var
-    model,wd,model_var = overlap.apply_gain(start_ds,1.0/start_var,pixel_step,gain,calc_var=True)
+    model,wd,model_var = overlap.apply_gain(start_ds,1.0/start_var,pixel_step,gain,
+                                            calc_var=True,bad_steps=dropped_frames)
     # model and model_var have shape tubeno*pixel_step + no_steps (see shift_tube_add_new)
     esds = overlap.calc_error_new(start_ds,model,gain,pixel_step)
     print 'Have full model and errors at %f' % time.clock()
