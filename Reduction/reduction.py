@@ -333,7 +333,7 @@ def read_efficiency_cif(filename):
 # The following routine can be called with unstitched data, in
 # which case we will return the data with the 'axis' dimension
 # summed. The default is for axis=1
-def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0,top=None,bottom=None):
+def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=(0.0,'None'),top=None,bottom=None):
     print 'vertical integration of', ds.title
     start_dim = ds.ndim
 
@@ -374,12 +374,8 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0,
     # finalize result
     totals.title = ds.title
     totals.copy_cif_metadata(ds)
-    info_string = "Data were vertically integrated from pixels %d to %d (maximum number of contributors %d)." % (bottom,top,max_contribs)
+    info_string = "Data were vertically integrated from pixels %d to %d (maximum number of contributors %d).\n" % (bottom,top,max_contribs)
     
-    # normalize result if required
-    if normalization > 0:
-        totals *= (float(normalization) / totals.max())
-        info_string += "The maximum intensity was then multiplied by %f." % (float(normalization)/ totals.max())
     # check if any axis needs to be converted from boundaries to centers
     new_axes = []
     for i in range(totals.ndim):
@@ -396,15 +392,25 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=0.0,
     
     # Finally, cluster points together if they are close enough
 
-    if cluster > 0:
-        totals = debunch(totals,cluster)
-        info_string += "Points within %f of one another were averaged (weighted)." % cluster
-    totals.add_metadata("_pd_proc_info_data_reduction",info_string,append=True)
+    if cluster[0] > 0:
+        totals,extra_info_string = debunch(totals,cluster)
+        info_string += extra_info_string
+    
     axislist = map(lambda a:a.title,totals.axes)
     print 'Axes: ' + `axislist`
+
+    # normalize result if required
+    if normalization > 0:
+        norm_constant = float(normalization)/totals.max()
+        totals *= norm_constant
+        info_string += "Intensities were then multiplied by %f to give a maximum intensity of %f." % (norm_constant,float(normalization))
+
+    totals.add_metadata("_pd_proc_info_data_reduction",info_string,append=True)
     return totals
 
-def debunch(totals,cluster_size):
+def debunch(totals,cluster):
+    """Combine points within cluster_size of one another, optionally
+    multiplying by the most common cluster size to simulate summation"""
     new_totals = zeros_like(totals)
     nt_iter = new_totals.item_iter()
     ntv_iter = new_totals.var.item_iter()
@@ -418,6 +424,7 @@ def debunch(totals,cluster_size):
     bunch_points = 0
     in_points = 0
     new_axis = []
+    (cluster_size,cluster_mode) = cluster
     while True:
         distance = new_angle - cluster_begin
         if distance < cluster_size:
@@ -462,12 +469,21 @@ def debunch(totals,cluster_size):
     # Trim output arrays
     newlen = len(new_axis)
     print 'Clustered axis has length %d, running from %f to %f' % (newlen,new_axis[0],new_axis[-1])
-    print 'Cluster factor %d/%d =  %f' % (len(totals),newlen,1.0*len(totals)/newlen)
+    cluster_factor = 1.0*len(totals)/newlen
+    print 'Cluster factor %d/%d =  %f' % (len(totals),newlen,cluster_factor)
     new_totals = new_totals[:newlen]
     new_totals.copy_cif_metadata(totals)
     new_totals.set_axes([new_axis],anames=[totals.axes[0].name],aunits = [totals.axes[0].units])
     new_totals.title = totals.title
-    return new_totals
+    info_string = "Points within %f of one another were averaged (weighted)" % cluster_size
+    # Apply 'summation' - not real as those points with only one contributor are multiplied as well
+    # The alternative would give very dodgy looking patterns!
+    if cluster_mode == 'Sum':
+        new_totals *= round(cluster_factor)
+        info_string += ' and then multiplied by %d to simulate addition.' % round(cluster_factor)
+    else:
+        info_string += '.'  #finish string nicely
+    return new_totals,info_string
 
 def getBackgroundCorrected(ds, bkg, norm_ref=None, norm_target=-1):
     """Subtract the background from the supplied dataset, after normalising the
@@ -760,7 +776,7 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     print `b.shape` + "->" + `c.shape`
     print 'Relative no of frames: ' + `frame_sum`
     if c.shape[0] == 1:   #can't be done, there is no overlap
-        return None,None,None,None
+        return None,None,None,None,None
     # sum the individual unoverlapped sections
     d = c.intg(axis=1) #array of [rangeno,stepno,tubeno]
     # normalise by the number of frames in each section
@@ -796,9 +812,10 @@ and a tube separation of %8.3f starting at %f.""" % (bin_size,tubesep,ds.axes[0]
         # Remove ignored tubes
         new_axis = new_axis[ignore*pixel_step:]
         
-        axis_string = """Following this gain refinement, two theta values were recalculated using a tube separation of 
-                         %8.3f and the recorded positions of the lowest angle tube, and then adding an average of the 
-                         angular corrections for the tubes contributing to each two theta position.""" % (tubesep)
+        axis_string = \
+    """Following this gain refinement, two theta values were recalculated using a tube separation of 
+%8.3f and the recorded positions of the lowest angle tube, and then adding an average of the 
+angular corrections for the tubes contributing to each two theta position.""" % (tubesep)
     cs.set_axes([new_axis],anames=['Two theta'],aunits=['Degrees'])
     print 'New axis goes from %f to %f in %d steps' % (new_axis[0],new_axis[-1],len(new_axis))
     print 'Total %d points in output data' % len(cs)
@@ -815,7 +832,7 @@ and a tube separation of %8.3f starting at %f.""" % (bin_size,tubesep,ds.axes[0]
         " individual tube gains were iteratively refined using the Ford/Rollett algorithm. Final gains " + \
         "are stored in the _[local]_refined_gain loop." + axis_string
     cs.add_metadata("_pd_proc_info_data_reduction",info_string,append=True)
-    return cs,gain,esds,chisquared
+    return cs,gain,esds,chisquared,c.shape[0]
 
 # Do an iterative refinement of the gain values. We calculate errors only when chisquared shift is
 # small, and aim for a shift/esd of <0.1

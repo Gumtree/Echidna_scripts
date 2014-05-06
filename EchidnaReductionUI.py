@@ -111,8 +111,8 @@ vig_apply_rescale  = Par('bool', 'False')
 vig_apply_rescale.title = 'Rescale'
 vig_rescale_target = Par('float', '10000.0')
 vig_rescale_target.title = 'Rescale target:'
-vig_cluster = Par('bool',True)
-vig_cluster.title = 'Merge close points'
+vig_cluster = Par('string','Sum',options=['Sum','Merge','None'])
+vig_cluster.title = 'Treatment of close points:'
 Group('Vertical Integration').add(vig_lower_boundary, vig_upper_boundary, vig_cluster, vig_apply_rescale, vig_rescale_target)
 
 # Recalculate gain
@@ -641,7 +641,7 @@ def __run_script__(fns):
         if regain_apply.value:
            bottom = int(vig_lower_boundary.value)
            top = int(vig_upper_boundary.value)
-           cs,gain,esds,chisquared = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
+           cs,gain,esds,chisquared,no_overlaps = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
                                                           exact_angles=htc,drop_frames=str(asm_drop_frames.value))
            if cs is not None:
                print 'Have new gains at %f' % (time.clock() - elapsed)
@@ -650,21 +650,28 @@ def __run_script__(fns):
            # set horizontal axis (ideal values)
                Plot4.set_dataset(Dataset(chisquared))   #chisquared history
                Plot5.set_dataset(fg)   #final gain plot
+           else:
+               open_error("Cannot do gain recalculation as the scan ranges do not overlap.")
+               return
         if not vig_apply_rescale.value:
             norm_const = -1.0
         else:
             norm_const = float(vig_rescale_target.value)
         # set the cluster value
-        if vig_cluster.value is True:
-            cluster = stepsize * 0.6  #60 percent of ideal
+        if str(vig_cluster.value) in ['Merge','Sum']:
+            cluster = (stepsize * 0.6,str(vig_cluster.value))  #60 percent of ideal
         else:
-            cluster = 0.0
+            cluster = (0.0,'None')
         if not regain_apply.value:  #already done
             final_result = reduction.getVerticalIntegrated(stitched, axis=0, normalization=norm_const,
                                                  cluster=cluster,bottom = int(vig_lower_boundary.value),
                                                  top=int(vig_upper_boundary.value))
             print 'Finished vertical integration at %f' % (time.clock()-elapsed)
         else:
+            if str(vig_cluster.value) == 'Sum':  #simulate a sum for the gain recalculated value
+                cs *= no_overlaps
+                info_string = "\nFinal values were multiplied by %d to simulate summation of individual points." % no_overlaps
+                cs.add_metadata("_pd_proc_info_data_reduction",info_string,append=True)
             final_result = cs
         # Display reduced dataset
         send_to_plot(final_result,Plot2)
