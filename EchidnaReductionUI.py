@@ -598,8 +598,8 @@ def __run_script__(fns):
         # extract basic metadata
         ds = AddCifMetadata.extract_metadata(ds,codeversions=code_versions)
         AddCifMetadata.store_reduction_preferences(ds,prof_names,prof_values)
-        # remove redundant dimensions
-        rs = ds.get_reduced()
+        # remove redundant dimensions and convert to floating point
+        rs = ds.get_reduced()*1.0
         rs.copy_cif_metadata(ds)
         # check if normalized is required 
         if norm_ref:
