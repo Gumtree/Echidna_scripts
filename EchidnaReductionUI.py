@@ -27,6 +27,8 @@ __datasource__ = __register__.getDataSourceViewer()
 __UI_gitversion = "$Id$"
 
 ''' User Interface '''
+# Progress bar, shared with single or multi file reduction
+prog_bar = Par('progress', 0) 
 # Plot Helper: always Plot2 to Plot 3
 # At the top for convenience
 plh_copy = Act('plh_copy_proc()', 'Press to Copy Plot 2 to Plot 3')
@@ -389,7 +391,7 @@ def plh_sum_proc():
         if approach == 'Cluster':
             cluster = float(plh_cluster.value)
             if cluster > 0:
-                newds = reduction.debunch(newds,cluster)
+                newds,info_string = reduction.debunch(newds,(cluster,''))
         send_to_plot(newds,Plot2,add=False)
         # Write to file
     if filename != '':
@@ -476,6 +478,9 @@ def save_user_prefs(prefix=''):
 
 ''' Script Actions '''
 
+def __dataset_added__(fns = None):
+    __run_script__(fns)
+    
 # This function is called when pushing the Run button in the control UI.
 def __run_script__(fns):
     
@@ -486,6 +491,10 @@ def __run_script__(fns):
     import time           #how fast are we going?
     from Formats import output
     
+    num_step = 9
+    prog_bar.max = len(fns) * num_step
+    prog_bar.selection = 1
+
     elapsed = time.clock()
     print 'Started working at %f' % (time.clock()-elapsed)
     df.datasets.clear()
@@ -592,112 +601,128 @@ def __run_script__(fns):
     # iterate through input datasets
     # note that the normalisation target (an arbitrary number) is set by
     # the first dataset unless it has already been specified.
+    prog_bar.selection = 2
+    fn_idx = 0
     for fn in fns:
         # load dataset
         ds = df[fn]
-        # extract basic metadata
-        ds = AddCifMetadata.extract_metadata(ds,codeversions=code_versions)
-        AddCifMetadata.store_reduction_preferences(ds,prof_names,prof_values)
-        # remove redundant dimensions and convert to floating point
-        rs = ds.get_reduced()*1.0
-        rs.copy_cif_metadata(ds)
-        # check if normalized is required 
-        if norm_ref:
-            ds,norm_tar = reduction.applyNormalization(rs, reference=norm_table[norm_ref], target=norm_tar)
-        else:
-            ds = rs
-        if bkg:
-            ds = reduction.getBackgroundCorrected(ds, bkg, norm_table[norm_ref], norm_tar)
-        
-        print 'Finished normalisation, background subtraction at %f' % (time.clock()-elapsed)
-        # check if vertical tube correction is required
-        if vtc:
-            ds = reduction.getVerticallyCorrected(ds, vtc)
-        print 'Finished vertical offset correction at %f' % (time.clock()-elapsed)
-        # check if efficiency correction is required
-        if eff:
-            ds = reduction.getEfficiencyCorrected(ds, eff)
-        
-        print 'Finished efficiency correction at %f' % (time.clock()-elapsed)
-        # Before fiddling with axes, get the ideal stepsize
-        stepsize = reduction.get_stepsize(ds)
-        print 'Ideal stepsize determined to be %f' % stepsize
-        # check if horizontal tube correction is required
-        if htc:
-            ds = reduction.getHorizontallyCorrected(ds, htc)
-
-        print 'Finished horizontal correction at %f' % (time.clock()-elapsed)
-        # Stitching. If we are recalculating gain, this is purely for
-        # informational purposes. We don't want to take the 100x time penalty of
-        # multiplying a 2D array by the gain factor for each tube, so we
-        # stitch on a 1D array after doing the gain re-refinement.
-        if ds.ndim > 2:
-            stitched = reduction.getStitched(ds,ignore=str(asm_drop_frames.value))
-        # Display dataset
-        print 'Finished stitching at %f' % (time.clock()-elapsed)
-        Plot1.set_dataset(stitched)
-        Plot1.title = stitched.title
-        # check if we are recalculating gain 
-        if regain_apply.value:
-           bottom = int(vig_lower_boundary.value)
-           top = int(vig_upper_boundary.value)
-           cs,gain,esds,chisquared,no_overlaps = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
-                                                          exact_angles=htc,drop_frames=str(asm_drop_frames.value))
-           if cs is not None:
-               print 'Have new gains at %f' % (time.clock() - elapsed)
-               fg = Dataset(gain)
-               fg.var = esds
-           # set horizontal axis (ideal values)
-               Plot4.set_dataset(Dataset(chisquared))   #chisquared history
-               Plot5.set_dataset(fg)   #final gain plot
-           else:
-               open_error("Cannot do gain recalculation as the scan ranges do not overlap.")
-               return
-        if not vig_apply_rescale.value:
-            norm_const = -1.0
-        else:
-            norm_const = float(vig_rescale_target.value)
-        # set the cluster value
-        if str(vig_cluster.value) in ['Merge','Sum']:
-            cluster = (stepsize * 0.6,str(vig_cluster.value))  #60 percent of ideal
-        else:
-            cluster = (0.0,'None')
-        if not regain_apply.value:  #already done
-            final_result = reduction.getVerticalIntegrated(stitched, axis=0, normalization=norm_const,
-                                                 cluster=cluster,bottom = int(vig_lower_boundary.value),
-                                                 top=int(vig_upper_boundary.value))
-            print 'Finished vertical integration at %f' % (time.clock()-elapsed)
-        else:
-            if str(vig_cluster.value) == 'Sum':  #simulate a sum for the gain recalculated value
-                cs *= no_overlaps
-                info_string = "\nFinal values were multiplied by %d to simulate summation of individual points." % no_overlaps
-                cs.add_metadata("_pd_proc_info_data_reduction",info_string,append=True)
-            final_result = cs
-        # Display reduced dataset
-        send_to_plot(final_result,Plot2)
-        if copy_acc.value:   #user wants us to accumulate it
-            plh_copy_proc()
-        # Output datasets
-        # Calculate inserted string: %s for sample name, %t for temperature
-        stem = str(output_stem.value)
-        stem = re.sub(r'[^\w+=()*^@~:{}\[\].%-]','_',stem)
-        if '%s' in stem:
-             samplename = final_result.harvest_metadata("CIF")['_pd_spec_special_details']
-             name_front = samplename.split()[0]
-             stem = stem.replace('%s',name_front)
-        if '%t' in stem:
-             temperature = 'Unknown_temperature'
-             stem = stem.replace('%t',temperature)
-        print 'Filename stem is now ' + stem
-        filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + stem)
-        if output_xyd.value or output_fxye.value:  #write CIF if other files written
-            output.write_cif_data(final_result,filename_base)
-        if output_xyd.value:
-            output.write_xyd_data(final_result,filename_base,codeversions=code_versions)
-        if output_fxye.value:
-            output.write_fxye_data(final_result,filename_base,codeversions=code_versions)
-        # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
-        print 'Finished writing data at %f' % (time.clock()-elapsed)
+        try:
+            prog_bar.selection = fn_idx * num_step
+            # extract basic metadata
+            ds = AddCifMetadata.extract_metadata(ds,codeversions=code_versions)
+            AddCifMetadata.store_reduction_preferences(ds,prof_names,prof_values)
+            # remove redundant dimensions and convert to floating point
+            rs = ds.get_reduced()*1.0
+            rs.copy_cif_metadata(ds)
+            # check if normalized is required 
+            if norm_ref:
+                ds,norm_tar = reduction.applyNormalization(rs, reference=norm_table[norm_ref], target=norm_tar)
+            else:
+                ds = rs
+            if bkg:
+                ds = reduction.getBackgroundCorrected(ds, bkg, norm_table[norm_ref], norm_tar)
+            
+            print 'Finished normalisation, background subtraction at %f' % (time.clock()-elapsed)
+            prog_bar.selection = fn_idx * num_step + 1
+            # check if vertical tube correction is required
+            if vtc:
+                ds = reduction.getVerticallyCorrected(ds, vtc)
+            print 'Finished vertical offset correction at %f' % (time.clock()-elapsed)
+            prog_bar.selection = fn_idx * num_step + 2
+            # check if efficiency correction is required
+            if eff:
+                ds = reduction.getEfficiencyCorrected(ds, eff)
+            
+            print 'Finished efficiency correction at %f' % (time.clock()-elapsed)
+            prog_bar.selection = fn_idx * num_step + 3
+            # Before fiddling with axes, get the ideal stepsize
+            stepsize = reduction.get_stepsize(ds)
+            print 'Ideal stepsize determined to be %f' % stepsize
+            prog_bar.selection = fn_idx * num_step + 4
+            # check if horizontal tube correction is required
+            if htc:
+                ds = reduction.getHorizontallyCorrected(ds, htc)
+    
+            print 'Finished horizontal correction at %f' % (time.clock()-elapsed)
+            prog_bar.selection = fn_idx * num_step + 5
+            # Stitching. If we are recalculating gain, this is purely for
+            # informational purposes. We don't want to take the 100x time penalty of
+            # multiplying a 2D array by the gain factor for each tube, so we
+            # stitch on a 1D array after doing the gain re-refinement.
+            if ds.ndim > 2:
+                stitched = reduction.getStitched(ds,ignore=str(asm_drop_frames.value))
+            # Display dataset
+            print 'Finished stitching at %f' % (time.clock()-elapsed)
+            prog_bar.selection = fn_idx * num_step + 6
+            Plot1.set_dataset(stitched)
+            Plot1.title = stitched.title
+            # check if we are recalculating gain 
+            if regain_apply.value:
+               bottom = int(vig_lower_boundary.value)
+               top = int(vig_upper_boundary.value)
+               cs,gain,esds,chisquared,no_overlaps = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
+                                                              exact_angles=htc,drop_frames=str(asm_drop_frames.value))
+               if cs is not None:
+                   print 'Have new gains at %f' % (time.clock() - elapsed)
+                   fg = Dataset(gain)
+                   fg.var = esds
+               # set horizontal axis (ideal values)
+                   Plot4.set_dataset(Dataset(chisquared))   #chisquared history
+                   Plot5.set_dataset(fg)   #final gain plot
+               else:
+                   open_error("Cannot do gain recalculation as the scan ranges do not overlap.")
+                   return
+            if not vig_apply_rescale.value:
+                norm_const = -1.0
+            else:
+                norm_const = float(vig_rescale_target.value)
+            # set the cluster value
+            if str(vig_cluster.value) in ['Merge','Sum']:
+                cluster = (stepsize * 0.6,str(vig_cluster.value))  #60 percent of ideal
+            else:
+                cluster = (0.0,'None')
+            if not regain_apply.value:  #already done
+                final_result = reduction.getVerticalIntegrated(stitched, axis=0, normalization=norm_const,
+                                                     cluster=cluster,bottom = int(vig_lower_boundary.value),
+                                                     top=int(vig_upper_boundary.value))
+                print 'Finished vertical integration at %f' % (time.clock()-elapsed)
+            else:
+                if str(vig_cluster.value) == 'Sum':  #simulate a sum for the gain recalculated value
+                    cs *= no_overlaps
+                    info_string = "\nFinal values were multiplied by %d to simulate summation of individual points." % no_overlaps
+                    cs.add_metadata("_pd_proc_info_data_reduction",info_string,append=True)
+                final_result = cs
+            prog_bar.selection = fn_idx * num_step + 7
+            # Display reduced dataset
+            send_to_plot(final_result,Plot2)
+            if copy_acc.value:   #user wants us to accumulate it
+                plh_copy_proc()
+            # Output datasets
+            # Calculate inserted string: %s for sample name, %t for temperature
+            stem = str(output_stem.value)
+            stem = re.sub(r'[^\w+=()*^@~:{}\[\].%-]','_',stem)
+            if '%s' in stem:
+                 samplename = final_result.harvest_metadata("CIF")['_pd_spec_special_details']
+                 name_front = samplename.split()[0]
+                 stem = stem.replace('%s',name_front)
+            if '%t' in stem:
+                 temperature = 'Unknown_temperature'
+                 stem = stem.replace('%t',temperature)
+            print 'Filename stem is now ' + stem
+            filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + stem)
+            if output_xyd.value or output_fxye.value:  #write CIF if other files written
+                output.write_cif_data(final_result,filename_base)
+            if output_xyd.value:
+                output.write_xyd_data(final_result,filename_base,codeversions=code_versions)
+            if output_fxye.value:
+                output.write_fxye_data(final_result,filename_base,codeversions=code_versions)
+            # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
+            print 'Finished writing data at %f' % (time.clock()-elapsed)
+            prog_bar.selection = fn_idx * num_step + 8
+            fn_idx += 1
+        finally:
+            df[fn].close()
+            prog_bar.selection = 0
         
 ''' Utility functions for plots '''
 def send_to_plot(dataset,plot,add=False,change_title=True,add_timestamp=True):

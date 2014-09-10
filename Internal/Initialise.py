@@ -1,58 +1,6 @@
 # Check which mode we are in
 from java.lang import System
-<<<<<<< HEAD
-from java.io import File
-from os import listdir
-from os.path import isfile, join
-from time import strftime, localtime
-import traceback
 
-sics.ready = False
-__script__.title = 'Initialised'
-__script__.version = ''
-__data_folder__ = 'W:'
-__export_folder__ = 'W:/reports'
-__buffer_log_file__ = __export_folder__
-Dataset.__dicpath__ = get_absolute_path('/Internal/path_table')
-System.setProperty('sics.data.path', __data_folder__)
-
-try:
-    __dispose_all__(None)
-except:
-    pass
-
-fi = File(__buffer_log_file__)
-if not fi.exists():
-    if not fi.mkdirs():
-        print 'Error: failed to make directory: ' + __buffer_log_file__
-__history_log_file__ = __buffer_log_file__ + '/History.txt'
-__buffer_log_file__ += '/LogFile.txt'
-__buffer_logger__ = open(__buffer_log_file__, 'a')
-__history_logger__ = open(__history_log_file__, 'a')
-
-for file in listdir(__data_folder__):
-    if isfile(join(__data_folder__,file)) and file.endswith(".hdf"):
-        __DATASOURCE__.addDataset(join(__data_folder__,file), False)
-        
-
-
-print 'Waiting for SICS connection'
-while sics.getSicsController() == None:
-    time.sleep(1)
-
-time.sleep(3)
-
-__scan_status_node__ = sics.getSicsController().findComponentController('/commands/scan/runscan/feedback/status')
-__scan_variable_node__ = sics.getSicsController().findComponentController('/commands/scan/runscan/scan_variable')
-__save_count_node__ = sics.getSicsController().findComponentController('/experiment/save_count')
-__file_name_node__ = sics.getSicsController().findComponentController('/experiment/file_name')
-__file_status_node__ = sics.getSicsController().findComponentController('/experiment/file_status')
-#saveCount = int(saveCountNode.getValue().getIntData())
-__cur_status__ = str(__scan_status_node__.getValue().getStringData())
-__file_name__ = str(__file_name_node__.getValue().getStringData())
-
-class __Display_Runnable__(Runnable):
-=======
 if System.getProperty('gumtree.runtime.configEnv.mode') == 'analysis':
     print 'Loading analysis-only initialisation'
 #    import Analysis_init
@@ -77,13 +25,13 @@ else:
     from os.path import isfile, join
     from time import strftime, localtime
     import traceback
->>>>>>> beamline-head
+
     
     sics.ready = False
     __script__.title = 'Initialised'
     __script__.version = ''
-    __data_folder__ = 'W:'
-    __export_folder__ = 'W:/reports'
+    __data_folder__ = 'Z:/data/current'
+    __export_folder__ = 'Z:/data/current/reports'
     __buffer_log_file__ = __export_folder__
     Dataset.__dicpath__ = get_absolute_path('/Internal/path_table')
     System.setProperty('sics.data.path', __data_folder__)
@@ -108,7 +56,7 @@ else:
         __list_folder__ = __data_folder__ + '/'
     for file in listdir(__list_folder__):
         if isfile(join(__list_folder__,file)) and file.endswith(".hdf"):
-            __DATASOURCE__.addDataset(join(__list_folder__,file), False)
+            __DATASOURCE__.addDataset(join(__list_folder__,file), True)
             
     
     
@@ -147,6 +95,8 @@ else:
             return
         global __DATASOURCE__
         try:
+            __DATASOURCE__.removeDataset(join(__file_to_add__))
+            time.sleep(2)
             __DATASOURCE__.addDataset(__file_to_add__, True)
         except:
             print 'error in adding dataset: ' + __file_to_add__
@@ -171,7 +121,7 @@ else:
                     checkFile = File(__data_folder__ + "/" + checkFile.getName());
                     __file_to_add__ = checkFile.getAbsolutePath();
                     if not checkFile.exists():
-                        print "The target file :" + __file_to_add__ + " can not be found";
+                        print "The target file " + __file_to_add__ + " can not be found";
                         return
                     runnable = __Display_Runnable__()
                     runnable.run = add_dataset
