@@ -610,6 +610,7 @@ def __run_script__(fns):
         try:
             prog_bar.selection = fn_idx * num_step
             # extract basic metadata
+            print 'Code versions:' + `code_versions`
             ds = AddCifMetadata.extract_metadata(ds,codeversions=code_versions)
             AddCifMetadata.store_reduction_preferences(ds,prof_names,prof_values)
             # remove redundant dimensions and convert to floating point
