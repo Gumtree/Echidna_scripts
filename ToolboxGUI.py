@@ -90,7 +90,7 @@ def sub_plot_proc():
     bottom_ds,b = find_ds_by_title(bot_name)
     neg_ds = bottom_ds * (-1.0)
     final_ds = reduction.merge_datasets([top_ds,neg_ds])
-    final_ds = reduction.debunch(final_ds,0.03)  #for testing, for now
+    final_ds,info_string = reduction.debunch(final_ds,(0.03,'None'))  #for testing, for now
     final_ds.title = 'Subtracted datasets'
     Plot2.set_dataset(final_ds)
 

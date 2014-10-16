@@ -56,7 +56,7 @@ else:
         __list_folder__ = __data_folder__ + '/'
     for file in listdir(__list_folder__):
         if isfile(join(__list_folder__,file)) and file.endswith(".hdf"):
-            __DATASOURCE__.addDataset(join(__list_folder__,file), True)
+            __DATASOURCE__.addDataset(join(__list_folder__,file), False)
             
     
     

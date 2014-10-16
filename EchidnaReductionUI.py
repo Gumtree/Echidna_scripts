@@ -606,6 +606,7 @@ def __run_script__(fns):
     for fn in fns:
         # load dataset
         ds = df[fn]
+        norm_tar = -1   #reinitialise
         try:
             prog_bar.selection = fn_idx * num_step
             # extract basic metadata
