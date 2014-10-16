@@ -692,6 +692,8 @@ def __run_script__(fns):
                     cs *= no_overlaps
                     info_string = "\nFinal values were multiplied by %d to simulate summation of individual points." % no_overlaps
                     cs.add_metadata("_pd_proc_info_data_reduction",info_string,append=True)
+                if norm_const > 0:  #rescale requested but not performed
+                    reduction.rescale(cs,norm_const)
                 final_result = cs
             prog_bar.selection = fn_idx * num_step + 7
             # Display reduced dataset

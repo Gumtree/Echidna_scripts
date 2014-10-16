@@ -399,15 +399,20 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=(0.0
     axislist = map(lambda a:a.title,totals.axes)
     print 'Axes: ' + `axislist`
 
+    totals.add_metadata("_pd_proc_info_data_reduction",info_string,append=True)
+
     # normalize result if required
     if normalization > 0:
-        norm_constant = float(normalization)/totals.max()
-        totals *= norm_constant
-        info_string += "Intensities were then multiplied by %f to give a maximum intensity of %f." % (norm_constant,float(normalization))
-
-    totals.add_metadata("_pd_proc_info_data_reduction",info_string,append=True)
+        rescale(totals,normalization)
     return totals
 
+def rescale(ds,normalization):
+    """ Scale the values in totals so that the maximum equals normalisation"""
+    norm_constant = float(normalization)/ds.max()
+    ds *= norm_constant
+    info_string = "Intensities were then multiplied by %f to give a maximum intensity of %f." % (norm_constant,float(normalization))
+    ds.add_metadata("_pd_proc_info_data_reduction",info_string,append=True)
+    
 def debunch(totals,cluster):
     """Combine points within cluster_size of one another, optionally
     multiplying by the most common cluster size to simulate summation"""
