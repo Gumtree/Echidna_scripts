@@ -93,7 +93,7 @@ def format_esd(number,var):
 ###################################################
 # Output xyd data (three column ASCII)
 ###################################################
-def write_xyd_data(ds,filename,codeversions={}):
+def write_xyd_data(ds,filename,codeversions={},naked=False):
     from datetime import datetime
     current_time =  datetime.now().isoformat()
     angles = map(lambda a:("%.5f" % a),ds.axes[0])
@@ -102,11 +102,12 @@ def write_xyd_data(ds,filename,codeversions={}):
     if not filename[-3:]=='xyd':
         filename = filename+'.xyd'
     fh = open(filename,"w")
-    fh.write("# Data from file %s, written %s\n" % (ds.title[0:17],str(current_time)))
-    fh.write("# Code versions:\n")
-    for key in codeversions.keys():
-        fh.write("# %s: %s\n" % (key,codeversions[key]))
-    fh.write("# %10s %10s %10s\n" % ("Angle","Intensity","Error"))
+    if not naked:
+        fh.write("#Data from file %s, written %s\n" % (ds.title[0:17],str(current_time)))
+        fh.write("# Code versions:\n")
+        for key in codeversions.keys():
+            fh.write("# %s: %s\n" % (key,codeversions[key]))
+        fh.write("# %10s %10s %10s\n" % ("Angle","Intensity","Error"))
     for point in zip(angles,ints,esds):
         fh.write("  %10s %10s %10s\n" % (point[0],point[1],point[2]))
     fh.close()

@@ -41,13 +41,15 @@ out_folder = Par('file')
 out_folder.dtype = 'folder'
 output_xyd = Par('bool','False')
 output_xyd.title = "XYD"
+output_naked = Par('bool','False')
+output_naked.title = "No XYD header"
 #output_cif = Par('bool','True')   #always True
 #output_cif.title = "CIF"
 output_fxye = Par('bool','True')
 output_fxye.title = "GSAS FXYE"
 output_stem = Par('string','reduced')
 output_stem.title = "Include in filename:"
-Group('Output Format').add(output_xyd,output_fxye,out_folder)
+Group('Output Format').add(output_xyd,output_naked,output_fxye,out_folder)
 Group('Output Filename: ECH00NNNNN_+...').add(output_stem)
 # Normalization
 # We link the normalisation sources to actual dataset locations right here, right now
@@ -717,7 +719,8 @@ def __run_script__(fns):
             if output_xyd.value or output_fxye.value:  #write CIF if other files written
                 output.write_cif_data(final_result,filename_base)
             if output_xyd.value:
-                output.write_xyd_data(final_result,filename_base,codeversions=code_versions)
+                add_header = output_naked.value
+                output.write_xyd_data(final_result,filename_base,codeversions=code_versions,naked=add_header)
             if output_fxye.value:
                 output.write_fxye_data(final_result,filename_base,codeversions=code_versions)
             # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
