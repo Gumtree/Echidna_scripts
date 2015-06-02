@@ -54,7 +54,9 @@ else:
         __list_folder__ = __data_folder__
     else:
         __list_folder__ = __data_folder__ + '/'
-    for file in listdir(__list_folder__):
+    all_files = listdir(__list_folder__)
+    all_files.sort()
+    for file in all_files[-50:]:
         if isfile(join(__list_folder__,file)) and file.endswith(".hdf"):
             __DATASOURCE__.addDataset(join(__list_folder__,file), False)
             
@@ -86,7 +88,7 @@ else:
             __UI__.addDisposeListener(__dispose_listener__)
     
     __file_to_add__ = None
-    __newfile_enabled__ = True
+    __newfile_enabled__ = False
     def add_dataset():
         global __newfile_enabled__
         if not __newfile_enabled__ :
