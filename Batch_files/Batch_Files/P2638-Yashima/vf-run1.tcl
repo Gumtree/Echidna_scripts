@@ -1,4 +1,4 @@
-# Following lines needed because of temperature controller craziness
+sy# Following lines needed because of temperature controller craziness
 emon unregister tc1
 broadcast emon behaves!
 #
