@@ -145,13 +145,13 @@ def extract_metadata(rawfile,codeversions={}):
     rawfile.add_metadata("_diffrn_scan.id","1","CIF")
     rawfile.add_metadata("_diffrn_scan.frames",rawfile.shape[0],"CIF")
     frame_ids = map(lambda a:"%d" % a,range(rawfile.shape[0]))
-    stths = rawfile['stth']
+    stths = rawfile.stth[:]
     names = (("_diffrn_scan_frame.frame_id","_diffrn_scan_frame.frame_number"),)
     values = [frame_ids,range(1,rawfile.shape[0]+1)]  #Spec says start from 1
     rawfile.__dict__['ms'].AddCifItem((names,(values,)))
     names = (("_diffrn_scan_frame_axis.frame_id","_diffrn_scan_frame_axis.axis_id",
               "_diffrn_scan_frame_axis.angle"),)
-    values = [frame_ids,['stth']*rawfile.shape[0],map(float,rawfile['stth'])]
+    values = [frame_ids,['stth']*rawfile.shape[0],map(float,stths)]
     rawfile.__dict__['ms'].AddCifItem((names,(values,)))
     return rawfile
 
