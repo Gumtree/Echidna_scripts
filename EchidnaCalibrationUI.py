@@ -7,7 +7,7 @@ import sys
 ''' User Interface '''
 
 from datetime import date
-today = date.today()
+nowtime = date.today()
 
 # Input
 in_van_run  = Par('file', '')
@@ -34,14 +34,14 @@ Group('Normalization').add(norm_apply, norm_reference)
 
 # Vertical Tube Correction List
 vtc_make      = Par('bool'  , 'True')
-vtc_name      = Par('string', today.strftime("vertical_offsets_%Y_%m_%d.txt"))
+vtc_name      = Par('string', "vertical_offsets_"+str(nowtime)+".txt")
 vtc_algorithm = Par('string', 'Edges', 
                     options = ['Edges','Vertically Centered Average'])
 Group('Vertical Tube Correction List').add(vtc_make, vtc_algorithm, vtc_name)
 
 # Efficiency Correction Map
 eff_make = Par('bool'  , 'True')
-eff_name = Par('string', today.strftime("eff_%Y_%m_%d.hdf"))
+eff_name = Par('string', "eff_"+str(nowtime)+".cif")
 eff_transpose = Par('bool', 'False')
 eff_std_range      = Par('float' , '1.8' )
 Group('Efficiency Correction Map').add(eff_make, eff_name, eff_std_range,eff_transpose)
