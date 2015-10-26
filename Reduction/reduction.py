@@ -498,6 +498,7 @@ def getBackgroundCorrected(ds, bkg, norm_ref=None, norm_target=-1):
     print 'background correction of', ds.title
 
     # normalise
+    print 'Bkg before: %f' % bkg[2,25,2]
     if norm_ref:
         bkg,target = applyNormalization(bkg,norm_ref,norm_target)
 
@@ -505,6 +506,9 @@ def getBackgroundCorrected(ds, bkg, norm_ref=None, norm_target=-1):
     # result
     rs = ds - bkg
     rs.copy_cif_metadata(ds)
+    # print some check information
+    print 'Background check: [2,25,2]'
+    print '%f - %f -> %f' % (ds[2,25,2],bkg[2,25,2],rs[2,25,2])
     
         # ensure that result doesn't contain negative pixels
     
@@ -771,11 +775,19 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     b_zeroed = copy(b)
     # Make a simple array to work out which sectors are missing frames
     frame_check = array.ones(b.shape[0])
+    # Additionally zero out all matching steps
+    all_zeroed = copy(b)
+    region_starts = [a*pixel_step for a in range(b.shape[0]/pixel_step)]
     for frame_no in dropped_frames:
         b_zeroed[frame_no] = 0
-        frame_check[frame_no] = 0
         b_zeroed.var[frame_no] = 0
-    c = b_zeroed.reshape([b.shape[0]/pixel_step,pixel_step,b.shape[-1]])
+        dropped_step = frame_no%pixel_step
+        ref_drop_steps = [r+dropped_step for r in region_starts]
+        for drop_step in ref_drop_steps:
+            frame_check[drop_step] = 0
+            all_zeroed[drop_step] = 0
+            all_zeroed.var[drop_step] = 0
+    c = all_zeroed.reshape([b.shape[0]/pixel_step,pixel_step,b.shape[-1]])
     frame_check = frame_check.reshape([b.shape[0]/pixel_step,pixel_step])
     frame_sum = frame_check.intg(axis=1)
     print `b.shape` + "->" + `c.shape`
@@ -787,8 +799,6 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     # normalise by the number of frames in each section
     print "Data shape: " + `d.shape`
     print "Check shape: " + `frame_sum.shape`
-    for factor in range(len(frame_sum)):
-        d[factor] *= float(pixel_step)/frame_sum[factor]
     e = d.transpose()  #array of [rangestep,tubeno]
     gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
         iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
