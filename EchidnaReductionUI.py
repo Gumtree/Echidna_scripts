@@ -556,7 +556,7 @@ def __run_script__(fns):
             bkg = None
             print 'WARNING: no bkg-map was specified'
         else:
-            bkg = Dataset(str(bkg_map.value))
+            bkg = Dataset(str(bkg_map.value)).get_reduced()
     else:
         bkg = None
     
@@ -624,8 +624,8 @@ def __run_script__(fns):
             else:
                 ds = rs
             if bkg:
+                AddCifMetadata.add_metadata_methods(bkg)
                 ds = reduction.getBackgroundCorrected(ds, bkg, norm_table[norm_ref], norm_tar)
-            
             print 'Finished normalisation, background subtraction at %f' % (time.clock()-elapsed)
             prog_bar.selection = fn_idx * num_step + 1
             # check if vertical tube correction is required
