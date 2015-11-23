@@ -65,8 +65,8 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     common scale. Top and bottom are the upper and lower limits for a sensible signal."""
 
     import stat,datetime
-    omega = vanad.omega[0]  # for reference
-    takeoff = vanad.takeoff_angle[0]
+    omega = vanad.mom[0]  # for reference
+    takeoff = vanad.mtth[0]
     crystal = AddCifMetadata.pick_hkl(omega-takeoff/2.0,"335")  #post April 2009 used 335 only
     #
     # Get important information from the basic files
