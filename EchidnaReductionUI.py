@@ -47,9 +47,11 @@ output_naked.title = "No XYD header"
 #output_cif.title = "CIF"
 output_fxye = Par('bool','True')
 output_fxye.title = "GSAS FXYE"
+output_topas = Par('bool','False')
+output_topas.title = "Topas"
 output_stem = Par('string','reduced')
 output_stem.title = "Include in filename:"
-Group('Output Format').add(output_xyd,output_naked,output_fxye,out_folder)
+Group('Output Format').add(output_xyd,output_naked,output_fxye,output_topas,out_folder)
 Group('Output Filename: ECH00NNNNN_+...').add(output_stem)
 # Normalization
 # We link the normalisation sources to actual dataset locations right here, right now
@@ -716,13 +718,15 @@ def __run_script__(fns):
                  stem = stem.replace('%t',temperature)
             print 'Filename stem is now ' + stem
             filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + stem)
-            if output_xyd.value or output_fxye.value:  #write CIF if other files written
+            if output_xyd.value or output_fxye.value or output_topas.value:  #write CIF if other files written
                 output.write_cif_data(final_result,filename_base)
             if output_xyd.value:
                 add_header = output_naked.value
                 output.write_xyd_data(final_result,filename_base,codeversions=code_versions,naked=add_header)
             if output_fxye.value:
                 output.write_fxye_data(final_result,filename_base,codeversions=code_versions)
+            if output_topas.value:
+                output.write_xyd_data(final_result,filename_base,codeversions=code_versions,comment_char="!")
             # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
             print 'Finished writing data at %f' % (time.clock()-elapsed)
             prog_bar.selection = fn_idx * num_step + 8
