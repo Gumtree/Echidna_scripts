@@ -60,12 +60,14 @@ norm_table = {'Monitor 1':'bm1_counts','Monitor 2':'bm2_counts',
               'Detector time':'detector_time'}
 norm_apply     = Par('bool', 'True')
 norm_apply.title = 'Apply'
+norm_uniform = Par('bool','False')
+norm_uniform.title = 'Common to all datasets'
 norm_reference = Par('string', 'Monitor 3', options = norm_table.keys())
 norm_reference.title = 'Source'
 norm_target    = 'auto'
 norm_plot = Act('plot_norm_proc()','Plot')
 norm_plot_all = Act('plot_all_norm_proc()','Plot all')
-Group('Normalization').add(norm_apply, norm_reference,norm_plot_all,norm_plot)
+Group('Normalization').add(norm_apply, norm_uniform, norm_reference,norm_plot_all,norm_plot)
 
 # Background Correction
 bkg_apply = Par('bool', 'False')
@@ -612,7 +614,8 @@ def __run_script__(fns):
     for fn in fns:
         # load dataset
         ds = df[fn]
-        norm_tar = -1   #reinitialise
+        if not norm_uniform.value:
+            norm_tar = -1   #reinitialise
         try:
             prog_bar.selection = fn_idx * num_step
             # extract basic metadata
