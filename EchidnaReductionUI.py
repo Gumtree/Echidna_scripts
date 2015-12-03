@@ -404,6 +404,8 @@ def plh_sum_proc():
                 output.write_xyd_data(newds,filename)
             if output_fxye.value:
                 output.write_fxye_data(newds,filename)
+            if output_topas.value:
+                output.write_xyd_data(newds,filename,comment_char="!")
 
 def dspacing_change():
     """Toggle the display of d spacing on the horizontal axis"""
