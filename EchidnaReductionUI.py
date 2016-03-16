@@ -126,7 +126,16 @@ regain_apply = Par('bool','False')
 regain_apply.title = 'Apply'
 regain_iterno = Par('int','5')
 regain_iterno.title = 'Iterations'
-Group('Recalculate Gain').add(regain_apply,regain_iterno)
+regain_store = Par('bool','False')
+regain_store.title = 'Store gain result'
+regain_store_filename = Par('file')
+regain_store_filename.title = 'Store in file:'
+regain_load = Par('bool','False')
+regain_load.title = 'Load gain from file'
+regain_load_filename = Par('file')
+regain_load_filename.title = 'Gain file'
+Group('Recalculate Gain').add(regain_apply,regain_iterno,regain_store,regain_store_filename,
+                              regain_load,regain_load_filename)
 
 
 # Allow summation of plots
@@ -601,7 +610,15 @@ def __run_script__(fns):
             htc = str(htc_file.value)
     else:
         htc = None
-    
+
+    # check if gain correction needs to be loaded
+    regain_data = []
+    if regain_load.value:
+        if not regain_load_filename.value:
+            open_error("You have requested loading of gain correction from a file but no file has been specified")
+            return
+        rlf = str(regain_load_filename.value)
+        regain_data = reduction.load_regain_values(rlf)
     # iterate through input datasets
     # note that the normalisation target (an arbitrary number) is set by
     # the first dataset unless it has already been specified.
@@ -667,14 +684,18 @@ def __run_script__(fns):
                bottom = int(vig_lower_boundary.value)
                top = int(vig_upper_boundary.value)
                cs,gain,esds,chisquared,no_overlaps = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
-                                                              exact_angles=htc,drop_frames=str(asm_drop_frames.value))
+                                                                          exact_angles=htc,drop_frames=str(asm_drop_frames.value),use_gains=regain_data)
                if cs is not None:
                    print 'Have new gains at %f' % (time.clock() - elapsed)
                    fg = Dataset(gain)
                    fg.var = esds
-               # set horizontal axis (ideal values)
+                   # set horizontal axis (ideal values)
                    Plot4.set_dataset(Dataset(chisquared))   #chisquared history
                    Plot5.set_dataset(fg)   #final gain plot
+                   # now save the file if requested
+                   if regain_store.value and not regain_load.value:
+                       gain_comment = "Gains refined from file %s" % fn
+                       reduction.store_regain_values(str(regain_store_filename.value),gain,gain_comment)
                else:
                    open_error("Cannot do gain recalculation as the scan ranges do not overlap.")
                    return
