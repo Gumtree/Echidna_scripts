@@ -329,7 +329,7 @@ def read_efficiency_cif(filename):
     final_data.var = (Array(eff_var).reshape([128,128]))
     print 'Finished reading at %s' % time.asctime()
     return final_data,eff_cif
-    
+
 # The following routine can be called with unstitched data, in
 # which case we will return the data with the 'axis' dimension
 # summed. The default is for axis=1
@@ -745,7 +745,7 @@ def calculate_average_angles(tube_steps,angular_file,pixel_step,tube_sep):
 # Calculate adjusted gain based on matching intensities between overlapping
 # sections of data from different detectors
 def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,bottom=None,
-               exact_angles=None,drop_frames=''):
+               exact_angles=None,drop_frames='',use_gains = []):
     """Calculate rescaling factors for tubes based on overlapping data
     regions. The ignore parameter specifies the number of initial tubes for
     which data are unreliable and should be ignored. Specifying unit weights
@@ -754,7 +754,9 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     algorithm. The vertical integration limits are set by top and bottom, if
     None all points are included. Exact_angles either contains the name of a
     file with per-detector angular corrections, or None.  Drop_frames is a
-    specially-formatted string giving a list of frames to be ignored."""
+    specially-formatted string giving a list of frames to be ignored. If 
+    use_gains is not empty, these [val,esd] values will be used instead of those
+    obtained from the iteration routine. """
     import time
     from Reduction import overlap
     # Get sensible values
@@ -800,8 +802,12 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     print "Data shape: " + `d.shape`
     print "Check shape: " + `frame_sum.shape`
     e = d.transpose()  #array of [rangestep,tubeno]
-    gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
-        iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
+    if len(use_gains)==0:
+        gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
+            iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
+    else:
+        gain = use_gains
+        chisquared=0.0
     # calculate errors based on full dataset
     # First get a full model
     start_ds = b_zeroed.transpose()[ignore:] #array of [tubeno,stepno]
@@ -820,7 +826,7 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     if exact_angles is None:
         axis = arange(len(model))
         new_axis = axis*bin_size + ds.axes[0][0] + ignore*pixel_step*bin_size
-        axis_string = """Following this gain refinement, two theta values were recalculated assuming a step size of %8.3f 
+        axis_string = """Following application of gain correction, two theta values were recalculated assuming a step size of %8.3f 
 and a tube separation of %8.3f starting at %f.""" % (bin_size,tubesep,ds.axes[0][0]+ignore*pixel_step*bin_size)
     else:
         new_axis = calculate_average_angles(tube_steps,exact_angles,pixel_step,tubesep)
@@ -828,7 +834,7 @@ and a tube separation of %8.3f starting at %f.""" % (bin_size,tubesep,ds.axes[0]
         new_axis = new_axis[ignore*pixel_step:]
         
         axis_string = \
-    """Following this gain refinement, two theta values were recalculated using a tube separation of 
+    """Following application of gain correction, two theta values were recalculated using a tube separation of 
 %8.3f and the recorded positions of the lowest angle tube, and then adding an average of the 
 angular corrections for the tubes contributing to each two theta position.""" % (tubesep)
     cs.set_axes([new_axis],anames=['Two theta'],aunits=['Degrees'])
@@ -843,8 +849,13 @@ angular corrections for the tubes contributing to each two theta position.""" % 
         (("_[local]_detector_number","_[local]_refined_gain","_[local]_refined_gain_esd"),),
         ((detno,gain_as_strings,gain_esd),))
         )
-    info_string = "After vertical integration between pixels %d and %d," % (bottom,top) + \
+    if len(use_gains)==0:
+        info_string = "After vertical integration between pixels %d and %d," % (bottom,top) + \
         " individual tube gains were iteratively refined using the Ford/Rollett algorithm. Final gains " + \
+        "are stored in the _[local]_refined_gain loop." + axis_string
+    else:
+        info_string =  "After vertical integration between pixels %d and %d," % (bottom,top) + \
+        " individual tube gains were corrected based on a previous iterative refinement using the Ford/Rollett algorithm. The gains used" + \
         "are stored in the _[local]_refined_gain loop." + axis_string
     cs.add_metadata("_pd_proc_info_data_reduction",info_string,append=True)
     return cs,gain,esds,chisquared,c.shape[0]
@@ -894,6 +905,22 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True
     print 'Total cycles: %d' % cycle_no
     print 'Maximum shift/error: %f' % max(ar/esds)
     return gain,dataset,interim_result,residual_map,chisq_history,esds,first_ave,weights
+
+def load_regain_values(filename):
+    """Load a list of gain values derived from a previous call to do_overlap"""
+    gain_lines = open(filename,"r").readlines()
+    gain_lines = [l.split() for l in gain_lines if len(l)>0 and l[0]!='#'] #remove comments and blanks
+    tubes,gain_vals = zip(*[(int(l[0]),float(l[1])) for l in gain_lines])
+    return Array(gain_vals)
+
+def store_regain_values(filename,gain_vals,gain_comment=""):
+    """Store values calculated from the do_overlap routine"""
+    f = open(filename,"w")
+    f.write("#Gain values calculated by Echidna reduction routine\n")
+    f.write("#"+gain_comment+"\n")
+    for pos,gain in zip(range(len(gain_vals)),gain_vals):
+        f.write("%d   %8.3f\n" % (pos,gain))
+    f.close()
 
 def get_stepsize(ds):
     """A utility function to determine the step size of the given dataset. This
