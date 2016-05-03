@@ -647,6 +647,14 @@ def __run_script__(fns):
                 ds = reduction.getBackgroundCorrected(ds, bkg, norm_table[norm_ref], norm_tar)
             print 'Finished normalisation, background subtraction at %f' % (time.clock()-elapsed)
             prog_bar.selection = fn_idx * num_step + 1
+            # check that we have the necessary dimensions
+            dims = ds.shape
+            if dims[1] != 128:
+                rebin_factor = int(dims[1]/128)
+                print 'Need to rebin from %d to 128, factor of %d; stand by...' % (dims[1],rebin_factor)
+                ds = reduction.rebin(ds,axis=1,factor=rebin_factor)
+            else:
+                print 'No need to rebin, dataset shape is ' + repr(dims)
             # check if vertical tube correction is required
             if vtc:
                 ds = reduction.getVerticallyCorrected(ds, vtc)
