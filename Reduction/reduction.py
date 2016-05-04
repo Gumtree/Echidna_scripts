@@ -60,10 +60,8 @@ def getCenters(boundaries):
 
         return rs
 
-def rebin(ds,axis=0,factor=1,invert=False):
-    """Rebin axis to reduce its size by factor. If invert is
-    True, every second tube is reversed in the vertical direction to undo
-    the effect of the histogram memory server failing to "fold". """
+def rebin(ds,axis=0,factor=1):
+    """Rebin axis to reduce its size by factor. """
     old_shape = ds.shape[:]
     new_shape = old_shape[:]
     new_shape[axis] = new_shape[axis]/factor
@@ -88,21 +86,9 @@ def rebin(ds,axis=0,factor=1,invert=False):
         new_var_section += mod_var_section.intg(axis=axis,keepdims=True)
     info_string = """Data along axis %d were initially in %d bins, they were rebinned by summation
 to produce 128 bins.""" % (axis,old_shape[axis])
-    if invert:
-        even_newer = zeros(new_shape)
-        copy_metadata_deep(even_newer,rs)
-        even_newer.copy_cif_metadata(rs)
-        mod_section = rs.storage.get_section([0,0,1],[new_shape[0],new_shape[1],1],
-                                                 [1,-1,2])
-        en_section = even_newer.storage.get_section([0,0,1],[new_shape[0],new_shape[1],1],
-                                                    [1,1,2])
-        en_section += mod_section
-        rs = even_newer
     rs.add_metadata('_pd_proc_info_data_reduction',info_string, append=True)
-    #rs.axes[0].title = ds.axes[0].title
-    #rs.axes[1].title = ds.axes[1].title
-    #rs.axes[2].title = ds.axes[2].title
-    #rs.title = ds.title
+    rs.axes = ds.axes
+    rs.title = ds.title
     return rs
 
 def applyNormalization(ds, reference, target=-1):
@@ -992,6 +978,7 @@ def get_stepsize(ds):
     bin_size = abs(tube_steps[0]-tube_steps[-1])/(len(tube_steps)-1)
     pixel_step = int(round(tubesep/bin_size))
     bin_size = tubesep/pixel_step
+    #print 'Determined tube separation to be %f, corresponding to %d steps' % (tubesep,pixel_step)
     return bin_size
 
 def merge_datasets(dslist):
