@@ -59,7 +59,38 @@ def getCenters(boundaries):
         rs   *= 0.5
 
         return rs
-    
+
+def rebin(ds,axis=0,factor=1):
+    """Rebin axis to reduce its size by factor. """
+    old_shape = ds.shape[:]
+    new_shape = old_shape[:]
+    new_shape[axis] = new_shape[axis]/factor
+    rs = zeros(new_shape)
+    copy_metadata_deep(rs,ds)  #NeXuS metadata
+    rs.copy_cif_metadata(ds)   #CIF metadata
+    # Now loop over the relevant slices, summing to obtain the new slice
+    old_slice_size = old_shape[:]
+    new_slice_size = new_shape[:]
+    old_slice_size[axis] = factor
+    new_slice_size[axis] = 1
+    for one_slice in range(new_shape[axis]):
+        old_start_point = [0,0,0]
+        new_start_point = [0,0,0]
+        old_start_point[axis] = one_slice*factor
+        new_start_point[axis] = one_slice
+        mod_section = ds.storage.get_section(old_start_point,old_slice_size)
+        mod_var_section = ds.var.get_section(old_start_point,old_slice_size)
+        new_section = rs.storage.get_section(new_start_point,new_slice_size)
+        new_section += mod_section.intg(axis=axis,keepdims=True)
+        new_var_section = rs.var.get_section(new_start_point,new_slice_size)
+        new_var_section += mod_var_section.intg(axis=axis,keepdims=True)
+    info_string = """Data along axis %d were initially in %d bins, they were rebinned by summation
+to produce 128 bins.""" % (axis,old_shape[axis])
+    rs.add_metadata('_pd_proc_info_data_reduction',info_string, append=True)
+    rs.axes = ds.axes
+    rs.title = ds.title
+    return rs
+
 def applyNormalization(ds, reference, target=-1):
     """Normalise datasets ds by multiplying by target/reference.  Beam monitor counts, count time and total counts are
        all adjusted by this amount.  Reference is a string referring to a particular location in the dataset, and
@@ -720,10 +751,12 @@ def read_horizontal_corrections(filename):
                     axisX.append(float(line))
     return axisX
 
-def calculate_average_angles(tube_steps,angular_file,pixel_step,tube_sep):
+def calculate_average_angles(tube_steps,angular_file,pixel_step,tube_sep,extra_dummy=[]):
     """Calculate the average angle of measurement for overlapping tubes, given the
-    correction values for individual tubes in the file."""
-    no_of_overlaps = int(round(len(tube_steps)/pixel_step))-1
+    correction values for individual tubes in the file.  If dummy steps have been
+    added, they are provided in extra_dummy.  These are assumed to be at the end of
+    the overall angle array."""
+    no_of_overlaps = int(round((len(tube_steps)+len(extra_dummy))/pixel_step))-1
     correction_array = Array(read_horizontal_corrections(angular_file))
     no_of_tubes = len(correction_array)
     counter = array.zeros(no_of_tubes+no_of_overlaps,int)
@@ -771,8 +804,21 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     pixel_step = int(round(tubesep/bin_size))
     bin_size = tubesep/pixel_step
     print '%f tube separation, %d steps before overlap, ideal binsize %f' % (tubesep,pixel_step,bin_size)
-    # Zero out dropped frames
     dropped_frames = parse_ignore_spec(drop_frames)
+    # Do we need to add dummy missing frames?
+    extra_steps = b.shape[0]%pixel_step
+    if extra_steps > 0:
+        start_drop = b.shape[0]
+        # gumpy has no resize
+        new_b = zeros([((b.shape[0]/pixel_step)+1)*pixel_step,b.shape[1]])
+        new_b[:b.shape[0]] = b
+        b = new_b
+        extra_dropped_frames = range(start_drop,b.shape[0])
+        print "Filled out array from %d to %d with dummy frames" % (start_drop,b.shape[0])
+        dropped_frames |= set(extra_dropped_frames)
+    else:
+        extra_dropped_frames = []
+    # Zero out dropped frames
     print 'Dropped frames: ' + `dropped_frames`
     b_zeroed = copy(b)
     # Make a simple array to work out which sectors are missing frames
@@ -829,7 +875,8 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
         axis_string = """Following application of gain correction, two theta values were recalculated assuming a step size of %8.3f 
 and a tube separation of %8.3f starting at %f.""" % (bin_size,tubesep,ds.axes[0][0]+ignore*pixel_step*bin_size)
     else:
-        new_axis = calculate_average_angles(tube_steps,exact_angles,pixel_step,tubesep)
+        new_axis = calculate_average_angles(tube_steps,exact_angles,pixel_step,tubesep,
+                                            extra_dummy=extra_dropped_frames)
         # Remove ignored tubes
         new_axis = new_axis[ignore*pixel_step:]
         
@@ -931,6 +978,7 @@ def get_stepsize(ds):
     bin_size = abs(tube_steps[0]-tube_steps[-1])/(len(tube_steps)-1)
     pixel_step = int(round(tubesep/bin_size))
     bin_size = tubesep/pixel_step
+    #print 'Determined tube separation to be %f, corresponding to %d steps' % (tubesep,pixel_step)
     return bin_size
 
 def merge_datasets(dslist):
