@@ -80,12 +80,15 @@ def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_ma
    #scaled_data = multiply(trans_gain,weighted_data)  #G_l(rho-1)*wd ; should broadcast to all scans
    # gumpy doesn't have broadcasting, so...
    scaled_data = zeros_like(weighted_data)
+   weighted_scales = zeros_like(weighted_data)
    for section in range(weighted_data.shape[-1]):
        scaled_data[:,section] = trans_gain*weighted_data[:,section]  #G_l(rho-1)*wd
+       if calc_var is True:
+          weighted_scales[:,section] = trans_gain*my_weights[:,section] #(G_l * weights)
    summed_data = shift_tube_add_new(scaled_data,steps_per_tube,pixel_mask) # Sum_l[previous line]
    if calc_var is True:
       # Calculate variance as well
-      summed_vars = shift_tube_add_new(my_variance,steps_per_tube,pixel_mask) #Sum of variances
+      summed_vars = shift_tube_add_new(weighted_scales**2 * my_variance,steps_per_tube,pixel_mask) #Sum of variances
    # if True in isnan(summed_data): raise ValueError,"NaN found!"
    scaled_weights = zeros_like(my_weights)
    for section in range(my_weights.shape[-1]):
@@ -99,10 +102,12 @@ def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_ma
           summed_denominator[summed_denominator<1e-10] = 1e-10
           #clip(summed_denominator,1e-10,summed_denominator.max(),summed_denominator) 
    outdata = summed_data/summed_denominator #F_h^2 in original paper
-   # Get a proper error for observations using gain esd
+   # Get a proper error for observations assuming insignificant contribution from
+   # gain error (checked on real data, seems reasonable)
    if calc_var is True:
-      variance_denom = shift_tube_add_new(ones_like(my_variance),steps_per_tube,pixel_mask)
-      final_variances = summed_vars/variance_denom
+      #variance_denom = shift_tube_add_new(ones_like(my_variance),steps_per_tube,pixel_mask)
+      #final_variances = summed_vars/variance_denom
+      final_variances = summed_vars/summed_denominator**2
    else:
       final_variances = zeros_like(outdata)
    return outdata,weighted_data,final_variances
