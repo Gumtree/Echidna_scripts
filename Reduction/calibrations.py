@@ -46,7 +46,7 @@ def scrub_vanad_pos(vanad,takeoff,crystal,nosteps=25):
     else:
        raise ValueError,"No V peak data found for %s at %s" % (crystal,takeoff)
 
-def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",bottom = 22, top = 106, 
+def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",bottom = 24, top = 104, 
     detail=None,splice=None):
     """Calculate efficiencies given vanadium and background hdf files.  If detail is
     some integer, detailed calculations for that tube will be displayed. Edge is a
@@ -80,11 +80,13 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     btime = os.stat(backgr.location)[stat.ST_CTIME]
     btime = datetime.datetime.fromtimestamp(btime)
     btime = btime.strftime("%Y-%m-%dT%H:%M:%S%z")
+    v_loc = str(vanad.location)
+    b_loc = str(backgr.location)
     # This step required to insert our metadata hooks into the dataset object
     AddCifMetadata.add_metadata_methods(vanad)
     AddCifMetadata.add_metadata_methods(backgr)
     # Fail early
-    print 'Using %s and %s' % (str(vanad.location),str(backgr.location))
+    print 'Using %s and %s' % (v_loc,b_loc)
     # Subtract the background
     vanad,norm_target = reduction.applyNormalization(vanad,norm_ref,-1)
     # store for checking later
@@ -218,12 +220,12 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     return {"_[local]_efficiency_data":eff_array.transpose(),
             "_[local]_efficiency_variance":eff_error.transpose(),
             "contributors":pix_ok_map,
-            "_[local]_efficiency_raw_data":os.path.basename(str(vanad.location)),
+            "_[local]_efficiency_raw_datafile":os.path.basename(v_loc),
             "_[local]_efficiency_raw_timestamp":vtime,
-            "_[local]_efficiency_background_data":os.path.basename(str(backgr.location)),
+            "_[local]_efficiency_background_datafile":os.path.basename(b_loc),
             "_[local]_efficiency_background_timestamp":btime,
             "_[local]_efficiency_determination_material":"Vanadium",
-            "_[local]_efficiency_determination_method":"From flood field produced by 9mm V rod",
+            "_[local]_efficiency_determination_method":"From flood field produced by 6mm V rod",
             "_[local]_efficiency_pd_instr_2theta_monochr_pre":takeoff,
             "_[local]_efficiency_determination_wavelength":wl,
             "_[local]_efficiency_monochr_omega":omega,

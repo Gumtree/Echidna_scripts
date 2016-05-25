@@ -58,8 +58,7 @@ def timeit(relativeto,message):
 def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_mask=None,bad_steps=[]):
    """ This utility routine applies the result of the find_gain routine to the full data,
    to obtain the best estimate of the actual intensities. If calc_var is true, the
-   variance of the estimate is calculated as well. Currently this is simply the variance
-   obtained by ignoring the error in the gain estimates. Bad steps are assumed to have
+   variance of the estimate is calculated as well. Bad steps are assumed to have
    been zeroed previously."""
    import time
    elapsed = time.clock()
@@ -80,16 +79,9 @@ def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_ma
    #scaled_data = multiply(trans_gain,weighted_data)  #G_l(rho-1)*wd ; should broadcast to all scans
    # gumpy doesn't have broadcasting, so...
    scaled_data = zeros_like(weighted_data)
-   weighted_scales = zeros_like(weighted_data)
    for section in range(weighted_data.shape[-1]):
        scaled_data[:,section] = trans_gain*weighted_data[:,section]  #G_l(rho-1)*wd
-       if calc_var is True:
-          weighted_scales[:,section] = trans_gain*my_weights[:,section] #(G_l * weights)
    summed_data = shift_tube_add_new(scaled_data,steps_per_tube,pixel_mask) # Sum_l[previous line]
-   if calc_var is True:
-      # Calculate variance as well
-      summed_vars = shift_tube_add_new(weighted_scales**2 * my_variance,steps_per_tube,pixel_mask) #Sum of variances
-   # if True in isnan(summed_data): raise ValueError,"NaN found!"
    scaled_weights = zeros_like(my_weights)
    for section in range(my_weights.shape[-1]):
       scaled_weights[:,section] = trans_gain**2*my_weights[:,section]
@@ -102,15 +94,36 @@ def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_ma
           summed_denominator[summed_denominator<1e-10] = 1e-10
           #clip(summed_denominator,1e-10,summed_denominator.max(),summed_denominator) 
    outdata = summed_data/summed_denominator #F_h^2 in original paper
-   # Get a proper error for observations assuming insignificant contribution from
-   # gain error (checked on real data, seems reasonable)
+   # Get a proper error for observations
    if calc_var is True:
-      #variance_denom = shift_tube_add_new(ones_like(my_variance),steps_per_tube,pixel_mask)
-      #final_variances = summed_vars/variance_denom
-      final_variances = summed_vars/summed_denominator**2
+      esds = calc_error_new(full_ds,outdata,gain_array,steps_per_tube)
+      weighted_scales = zeros_like(weighted_data)
+      for section in range(weighted_data.shape[-1]):
+         weighted_scales[:,section] = trans_gain*my_weights[:,section] #(G_l * weights)
+      summed_vars = shift_tube_add_new(weighted_scales**2 * my_variance,steps_per_tube,pixel_mask) #Sum of variances
+      final_variances_fh = summed_vars/summed_denominator**2   #contribution for sig(F_h)
+      # now calculate the derivative with respect to G_p
+      # create an array like the input array with the observed intensities replaced by
+      # the expected intensites
+      outdata_by_tube = zeros_like(weighted_data)
+      for section in range(weighted_data.shape[-1]):
+         outdata_by_tube[section] = outdata[section*steps_per_tube:(section+1)*steps_per_tube]
+      fv_gp = (weighted_data - 2.0 * weighted_scales * outdata_by_tube)
+      # multiply through the gains and add
+      acc_gp = zeros_like(my_weights)
+      for section in range(my_weights.shape[-1]):
+         acc_gp[:,section] = (fv_gp[:,section] * esds[section])**2
+      #print 'Check df_H/dg_p for p=5:7, gain esd is '+ str(esds[5:7])
+      #print str(acc_gp.storage[5:7])
+      # now add up the contributions
+      final_variances_gp = shift_tube_add_new(acc_gp,steps_per_tube,pixel_mask)/summed_denominator**2
+      print 'Errors in F_h due to errors in F_hp:' + str(final_variances_fh[100:150])
+      print 'Errors in F_h due to errors in G_p: ' + str(final_variances_gp[100:150])
+      final_variances = final_variances_fh  # + final_variances_gp
    else:
       final_variances = zeros_like(outdata)
-   return outdata,weighted_data,final_variances
+      esds = zeros_like(gain_array)
+   return outdata,weighted_data,final_variances,esds
 
 def shift_add(inarray,offset,pixel_mask,average=False):
     """Return the sum of the 2D slices in inarray, with each slice shifted by offset pixels
@@ -456,7 +469,7 @@ def find_gain_fr(data, data_weights, steps_per_tube, gain_array,arminus1=None,pi
    if pixel_mask is None:
        pixel_mask = array.ones_like(data[0])
    elapsed = time.clock()
-   outdata,weighted_data,outdata_vars = apply_gain(data,data_weights,steps_per_tube,gain_array,pixel_mask)
+   outdata,weighted_data,outdata_vars,dummy = apply_gain(data,data_weights,steps_per_tube,gain_array,pixel_mask)
    # Now calculate A_p (Equation 3 of FR)
    # Refresher: 
    # index 'h' in FR refers to a particular angle for us

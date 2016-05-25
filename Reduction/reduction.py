@@ -848,12 +848,12 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     # normalise by the number of frames in each section
     print "Data shape: " + `d.shape`
     print "Check shape: " + `frame_sum.shape`
-    if dumpfile is not None:
-        dump_gain_file(dumpfile,d)
     e = d.transpose()  #array of [rangestep,tubeno]
     if len(use_gains)==0:
         gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
             iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
+        if dumpfile is not None:
+            dump_gain_file(dumpfile,raw=d[:,ignore:],gain=gain,model=interim_result,stepsize=1)
     else:
         gain = use_gains
         chisquared=0.0
@@ -861,11 +861,12 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     # First get a full model
     start_ds = b_zeroed.transpose()[ignore:] #array of [tubeno,stepno]
     start_var = start_ds.var
-    model,wd,model_var = overlap.apply_gain(start_ds,1.0/start_var,pixel_step,gain,
+    model,wd,model_var,esds = overlap.apply_gain(start_ds,1.0/start_var,pixel_step,gain,
                                             calc_var=True,bad_steps=dropped_frames)
     # model and model_var have shape tubeno*pixel_step + no_steps (see shift_tube_add_new)
-    esds = overlap.calc_error_new(start_ds,model,gain,pixel_step)
     print 'Have full model and errors at %f' % time.clock()
+    if dumpfile is not None:
+            dump_gain_file(dumpfile,raw=b_zeroed[:,ignore:],gain=gain,model=model,name_prefix="full",stepsize=pixel_step)
     cs = Dataset(model)
     cs.var = model_var
     # Now build up the important information
@@ -972,18 +973,27 @@ def store_regain_values(filename,gain_vals,gain_comment=""):
         f.write("%d   %8.3f\n" % (pos,gain))
     f.close()
 
-def dump_gain_file(filename,prepped_data):
+def dump_gain_file(filename,raw=None,gain=None,model=None,name_prefix="",stepsize=1):
     """Dump data for external gain refinement. We are provided a [rangestep,tubeno]
     array, where for each scan range we have a single number in rangestep."""
-    out_file = open(filename,"w")
-    d = prepped_data
+    import os
+    dirname,basename = os.path.split(filename)
+    full_filename = os.path.join(dirname,name_prefix+basename)
+    outfile = open(full_filename,"w")
+    d = raw
     # Header
-    out_file.write("%d %d %d\n" % (d.shape[-1],d.shape[0],1))
+    outfile.write("%d %d %d\n" % (d.shape[-1],d.shape[0],stepsize))
     # raw data
     for tube_no in range(d.shape[1]):
         for range_no in range(d.shape[0]):
-            out_file.write("%8.2f %7.3f\n" % (d.storage[range_no,tube_no],d.var[range_no,tube_no]))
-    out_file.close()
+            outfile.write("%8.2f %7.3f\n" % (d.storage[range_no,tube_no],d.var[range_no,tube_no]))
+    outfile.write("#intensities\n")
+    for intensity in model:
+        outfile.write("%8.2f\n" % intensity)
+    outfile.write("#gains\n")
+    for g in gain:
+        outfile.write("%8.3f\n" % g)
+    outfile.close()
 
 def get_stepsize(ds):
     """A utility function to determine the step size of the given dataset. This
