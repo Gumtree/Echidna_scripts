@@ -778,7 +778,7 @@ def calculate_average_angles(tube_steps,angular_file,pixel_step,tube_sep,extra_d
 # Calculate adjusted gain based on matching intensities between overlapping
 # sections of data from different detectors
 def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,bottom=None,
-               exact_angles=None,drop_frames='',use_gains = []):
+               exact_angles=None,drop_frames='',use_gains = [],dumpfile=None):
     """Calculate rescaling factors for tubes based on overlapping data
     regions. The ignore parameter specifies the number of initial tubes for
     which data are unreliable and should be ignored. Specifying unit weights
@@ -789,7 +789,8 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     file with per-detector angular corrections, or None.  Drop_frames is a
     specially-formatted string giving a list of frames to be ignored. If 
     use_gains is not empty, these [val,esd] values will be used instead of those
-    obtained from the iteration routine. """
+    obtained from the iteration routine. Dumpfile, if set, will output
+    starting values for use by other routines."""
     import time
     from Reduction import overlap
     # Get sensible values
@@ -851,6 +852,8 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     if len(use_gains)==0:
         gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
             iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
+        if dumpfile is not None:
+            dump_gain_file(dumpfile,raw=d[:,ignore:],gain=gain,model=interim_result,stepsize=1)
     else:
         gain = use_gains
         chisquared=0.0
@@ -858,11 +861,12 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     # First get a full model
     start_ds = b_zeroed.transpose()[ignore:] #array of [tubeno,stepno]
     start_var = start_ds.var
-    model,wd,model_var = overlap.apply_gain(start_ds,1.0/start_var,pixel_step,gain,
+    model,wd,model_var,esds = overlap.apply_gain(start_ds,1.0/start_var,pixel_step,gain,
                                             calc_var=True,bad_steps=dropped_frames)
     # model and model_var have shape tubeno*pixel_step + no_steps (see shift_tube_add_new)
-    esds = overlap.calc_error_new(start_ds,model,gain,pixel_step)
     print 'Have full model and errors at %f' % time.clock()
+    if dumpfile is not None:
+            dump_gain_file(dumpfile,raw=b_zeroed[:,ignore:],gain=gain,model=model,name_prefix="full",stepsize=pixel_step)
     cs = Dataset(model)
     cs.var = model_var
     # Now build up the important information
@@ -891,7 +895,7 @@ angular corrections for the tubes contributing to each two theta position.""" % 
     import math
     detno = map(lambda a:"%d" % a,range(len(gain)))
     gain_as_strings = map(lambda a:"%.4f" % a,gain)
-    gain_esd = map(lambda a:"%.4f" % math.sqrt(a),esds)
+    gain_esd = ["%.4f" % a for a in esds]
     cs.harvest_metadata("CIF").AddCifItem((
         (("_[local]_detector_number","_[local]_refined_gain","_[local]_refined_gain_esd"),),
         ((detno,gain_as_strings,gain_esd),))
@@ -968,6 +972,28 @@ def store_regain_values(filename,gain_vals,gain_comment=""):
     for pos,gain in zip(range(len(gain_vals)),gain_vals):
         f.write("%d   %8.3f\n" % (pos,gain))
     f.close()
+
+def dump_gain_file(filename,raw=None,gain=None,model=None,name_prefix="",stepsize=1):
+    """Dump data for external gain refinement. We are provided a [rangestep,tubeno]
+    array, where for each scan range we have a single number in rangestep."""
+    import os
+    dirname,basename = os.path.split(filename)
+    full_filename = os.path.join(dirname,name_prefix+basename)
+    outfile = open(full_filename,"w")
+    d = raw
+    # Header
+    outfile.write("%d %d %d\n" % (d.shape[-1],d.shape[0],stepsize))
+    # raw data
+    for tube_no in range(d.shape[1]):
+        for range_no in range(d.shape[0]):
+            outfile.write("%8.2f %7.3f\n" % (d.storage[range_no,tube_no],d.var[range_no,tube_no]))
+    outfile.write("#intensities\n")
+    for intensity in model:
+        outfile.write("%8.2f\n" % intensity)
+    outfile.write("#gains\n")
+    for g in gain:
+        outfile.write("%8.3f\n" % g)
+    outfile.close()
 
 def get_stepsize(ds):
     """A utility function to determine the step size of the given dataset. This
@@ -1064,3 +1090,33 @@ def convert_to_twotheta(ds):
     new_axis = arcsin(wavelength/(2.0*ds.axes[0]))*360/3.14159
     ds.set_axes([new_axis],anames=['Two theta'],aunits=['Degrees'])
     return 'Changed'
+
+# Utility and messing around routines
+def estimate_variance(ds,vert_step,horiz_step):
+    """Calculate the variance in values in the dataset ds with a provided step size. The 
+    return map is the ratio of the observed variance to the stored variance for each
+    area."""
+    obs_map = zeros([ds.shape[0]/vert_step,ds.shape[1]/horiz_step])
+    print 'observed map has shape ' + str(obs_map.shape)
+    for row in range(obs_map.shape[0]):
+        for col in range(obs_map.shape[1]):
+            #print 'calculating for %d %d (%d:%d,%d:%d)' % (row,col,row*vert_step,(row+1)*vert_step,
+            #                                               col*horiz_step,(col+1)*horiz_step)
+            obs_var,rep_var = calc_variances(ds[row*vert_step:(row+1)*vert_step,
+                                                 col*horiz_step:(col+1)*horiz_step])
+            obs_map[row,col] = sqrt(obs_var/rep_var)
+    # Annotate appropriately
+    obs_map.axes[0] = Array(range(obs_map.shape[0]))*vert_step
+    obs_map.axes[1] = Array(range(obs_map.shape[1]))*horiz_step
+    return obs_map
+
+def calc_variances(ds):
+    """Calculate the variances for the provided dataset"""
+    if ds.size <= 1:
+        print 'Fail: not enough items for calculation %d' % ds.size
+        return 0,1
+    obs_var = ((ds.storage - ds.storage.sum()/ds.size)**2).sum()/(ds.size-1)
+    rep_var = ds.var.sum()/ds.size
+    return obs_var,rep_var
+    
+    

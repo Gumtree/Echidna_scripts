@@ -701,7 +701,7 @@ def __run_script__(fns):
                if cs is not None:
                    print 'Have new gains at %f' % (time.clock() - elapsed)
                    fg = Dataset(gain)
-                   fg.var = esds
+                   fg.var = esds**2
                    # set horizontal axis (ideal values)
                    Plot4.set_dataset(Dataset(chisquared))   #chisquared history
                    Plot5.set_dataset(fg)   #final gain plot
