@@ -18,6 +18,7 @@ NeXuS standard, should be chosen from the following predefined set:
 These names are used by the d-spacing conversion to check which representation
 the dataset is currently in.
 """
+from gumpy.commons.logger import n_logger
 # Script control setup area
 __script__.title     = 'ECH Reduction'
 __script__.version   = '1.0'
@@ -216,6 +217,7 @@ def plot_norm_master(all_mons = False):
                     plot_data = plot_data/ave_val
                 plot_data.title = os.path.basename(str(loc))+':' + str(monitor_loc) + '_'
                 send_to_plot(plot_data,Plot2,add=True)
+        n_logger.log_plot(Plot2, footer = Plot2.title)
         
 # show Background Correction Map
 def bkg_show_proc():
@@ -265,6 +267,7 @@ def vtc_show_proc():
             
             # show plot
             Plot3.set_dataset(ds)
+            n_logger.log_plot(Plot3, footer = Plot3.title)
 
         finally:
             if f != None:
@@ -296,6 +299,7 @@ def htc_show_proc():
             
             # show plot
             Plot3.set_dataset(ds)
+            n_logger.log_plot(Plot3, footer = Plot3.title)
 
         finally:
             if f != None:
@@ -328,6 +332,7 @@ def plh_copy_proc():
     for ds in src_ds:
         if id(ds) not in dst_ds_ids:
             send_to_plot(ds,dst_plot,add=True,add_timestamp=False)
+    n_logger.log_plot(Plot3, footer = Plot3.title)
 
 def plh_plot_changed():
     
@@ -406,6 +411,7 @@ def plh_sum_proc():
             if cluster > 0:
                 newds,info_string = reduction.debunch(newds,(cluster,''))
         send_to_plot(newds,Plot2,add=False)
+    n_logger.log_plot(Plot2, footer = Plot2.title)
         # Write to file
     if filename != '':
             output.write_cif_data(newds,filename)
@@ -687,6 +693,7 @@ def __run_script__(fns):
             prog_bar.selection = fn_idx * num_step + 6
             Plot1.set_dataset(stitched)
             Plot1.title = stitched.title
+            n_logger.log_plot(Plot1, footer = Plot1.title)
             # check if we are recalculating gain 
             if regain_apply.value:
                bottom = int(vig_lower_boundary.value)
@@ -732,6 +739,7 @@ def __run_script__(fns):
             prog_bar.selection = fn_idx * num_step + 7
             # Display reduced dataset
             send_to_plot(final_result,Plot2)
+            n_logger.log_plot(Plot2, footer = Plot2.title)
             if copy_acc.value:   #user wants us to accumulate it
                 plh_copy_proc()
             # Output datasets
