@@ -768,7 +768,7 @@ def __run_script__(fns):
             if output_fxye.value:
                 output.write_fxye_data(final_result,filename_base,codeversions=code_versions)
             if output_topas.value:
-                output.write_xyd_data(final_result,filename_base,codeversions=code_versions,comment_char="!")
+                output.write_xyd_data(final_result,filename_base,codeversions=code_versions,comment_char="!",extension='topas')
             # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
             print 'Finished writing data at %f' % (time.clock()-elapsed)
             prog_bar.selection = fn_idx * num_step + 8
