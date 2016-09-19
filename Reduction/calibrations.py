@@ -46,6 +46,15 @@ def scrub_vanad_pos(vanad,takeoff,crystal,nosteps=25):
     else:
        raise ValueError,"No V peak data found for %s at %s" % (crystal,takeoff)
 
+def determine_missed_steps(one_dataset,mon="bm3_counts",tolerance=0.5):
+    """Return a list of steps for which no data were recorded. Less than a factor
+    of tolerance of the maximum is considered missing"""
+    mon_counts = getattr(one_dataset,mon)
+    bad_ones = [a for (a,b) in enumerate(mon_counts) if b < max(mon_counts)*tolerance]
+    print 'Following steps had low counts:' + `bad_ones`
+    return bad_ones
+    
+    
 def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",bottom = 24, top = 104, 
     detail=None,splice=None):
     """Calculate efficiencies given vanadium and background hdf files.  If detail is
@@ -82,6 +91,10 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     btime = btime.strftime("%Y-%m-%dT%H:%M:%S%z")
     v_loc = str(vanad.location)
     b_loc = str(backgr.location)
+    # Check for missed steps
+    b_missing = determine_missed_steps(backgr,tolerance=0.5)
+    v_missing = determine_missed_steps(vanad,tolerance=0.85)
+    all_missing = set(b_missing) | set(v_missing)
     # This step required to insert our metadata hooks into the dataset object
     AddCifMetadata.add_metadata_methods(vanad)
     AddCifMetadata.add_metadata_methods(backgr)
@@ -127,6 +140,23 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     for bt,bstart,bfinish in sv_boundaries:
         pure_vanad[bstart:bfinish,:,bt] = 0
         tube_count[bstart:bfinish] = tube_count[bstart:bfinish] - 1
+    # Now remove any steps (for all tubes) where there was no signal
+    # Gumpy doesn't provide delete method, so we create a new array
+    new_shape = pure_vanad.shape
+    new_shape[0] = new_shape[0]-len(all_missing)
+    new_vanad = zeros(new_shape)
+    new_tubecount = array.zeros(new_shape[0])
+    keepers = list(set(range(nosteps))-all_missing)
+    keepers.sort()   #to put things in the right order
+    new_stepno = 0
+    for keeper in keepers:
+        new_vanad[new_stepno,:,:] = pure_vanad[keeper,:,:]
+        new_tubecount[new_stepno] = tube_count[keeper]
+        new_stepno += 1
+    # And move everything back to the original names...
+    pure_vanad = new_vanad
+    tube_count = new_tubecount
+    print 'Removed %d steps due to low monitor counts: %s' % (len(all_missing),`all_missing`)
     # Now zero out excluded regions
     pure_vanad = pure_vanad[:,bottom:top,:]
     print "Tube count by step: " + `tube_count.tolist()`
@@ -159,6 +189,7 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     final_gain = total_gain.reshape([step_gain.shape[1],step_gain.shape[2]])
     print 'We have total gain: ' + `final_gain`
     print 'Shape ' + `final_gain.shape`
+    print 'Min observations per point: %f' % nz_sum.min()
     import time
     elapsed = time.clock()
     # efficiency speedup; we would like to write
