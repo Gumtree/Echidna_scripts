@@ -93,14 +93,14 @@ def format_esd(number,var):
 ###################################################
 # Output xyd data (three column ASCII)
 ###################################################
-def write_xyd_data(ds,filename,codeversions={},naked=False,comment_char='#'):
+def write_xyd_data(ds,filename,codeversions={},naked=False,comment_char='#',extension='xyd'):
     from datetime import datetime
     current_time =  datetime.now().isoformat()
     angles = map(lambda a:("%.5f" % a),ds.axes[0])
     ints = map(lambda a:"%.2f" % a,ds)
     esds = map(lambda a:"%.5f" % math.sqrt(a),ds.var)
     if not filename[-3:]=='xyd':
-        filename = filename+'.xyd'
+        filename = filename+'.'+extension
     fh = open(filename,"w")
     if not naked:
         fh.write(comment_char + "Data from file %s, written %s\n" % (ds.title[0:17],str(current_time)))

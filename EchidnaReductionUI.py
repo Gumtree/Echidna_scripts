@@ -18,6 +18,7 @@ NeXuS standard, should be chosen from the following predefined set:
 These names are used by the d-spacing conversion to check which representation
 the dataset is currently in.
 """
+from gumpy.commons.logger import n_logger
 # Script control setup area
 __script__.title     = 'ECH Reduction'
 __script__.version   = '1.0'
@@ -60,12 +61,14 @@ norm_table = {'Monitor 1':'bm1_counts','Monitor 2':'bm2_counts',
               'Detector time':'detector_time'}
 norm_apply     = Par('bool', 'True')
 norm_apply.title = 'Apply'
+norm_uniform = Par('bool','False')
+norm_uniform.title = 'Common to all datasets'
 norm_reference = Par('string', 'Monitor 3', options = norm_table.keys())
 norm_reference.title = 'Source'
 norm_target    = 'auto'
 norm_plot = Act('plot_norm_proc()','Plot')
 norm_plot_all = Act('plot_all_norm_proc()','Plot all')
-Group('Normalization').add(norm_apply, norm_reference,norm_plot_all,norm_plot)
+Group('Normalization').add(norm_apply, norm_uniform, norm_reference,norm_plot_all,norm_plot)
 
 # Background Correction
 bkg_apply = Par('bool', 'False')
@@ -216,6 +219,7 @@ def plot_norm_master(all_mons = False):
                     plot_data = plot_data/ave_val
                 plot_data.title = os.path.basename(str(loc))+':' + str(monitor_loc) + '_'
                 send_to_plot(plot_data,Plot2,add=True)
+        n_logger.log_plot(Plot2, footer = Plot2.title)
         
 # show Background Correction Map
 def bkg_show_proc():
@@ -265,6 +269,7 @@ def vtc_show_proc():
             
             # show plot
             Plot3.set_dataset(ds)
+            n_logger.log_plot(Plot3, footer = Plot3.title)
 
         finally:
             if f != None:
@@ -296,6 +301,7 @@ def htc_show_proc():
             
             # show plot
             Plot3.set_dataset(ds)
+            n_logger.log_plot(Plot3, footer = Plot3.title)
 
         finally:
             if f != None:
@@ -328,6 +334,7 @@ def plh_copy_proc():
     for ds in src_ds:
         if id(ds) not in dst_ds_ids:
             send_to_plot(ds,dst_plot,add=True,add_timestamp=False)
+    n_logger.log_plot(Plot3, footer = Plot3.title)
 
 def plh_plot_changed():
     
@@ -406,6 +413,7 @@ def plh_sum_proc():
             if cluster > 0:
                 newds,info_string = reduction.debunch(newds,(cluster,''))
         send_to_plot(newds,Plot2,add=False)
+    n_logger.log_plot(Plot2, footer = Plot2.title)
         # Write to file
     if filename != '':
             output.write_cif_data(newds,filename)
@@ -413,6 +421,8 @@ def plh_sum_proc():
                 output.write_xyd_data(newds,filename)
             if output_fxye.value:
                 output.write_fxye_data(newds,filename)
+            if output_topas.value:
+                output.write_xyd_data(newds,filename,comment_char="!")
 
 def dspacing_change():
     """Toggle the display of d spacing on the horizontal axis"""
@@ -627,7 +637,8 @@ def __run_script__(fns):
     for fn in fns:
         # load dataset
         ds = df[fn]
-        norm_tar = -1   #reinitialise
+        if not norm_uniform.value:
+            norm_tar = -1   #reinitialise
         try:
             prog_bar.selection = fn_idx * num_step
             # extract basic metadata
@@ -687,6 +698,7 @@ def __run_script__(fns):
             prog_bar.selection = fn_idx * num_step + 6
             Plot1.set_dataset(stitched)
             Plot1.title = stitched.title
+            n_logger.log_plot(Plot1, footer = Plot1.title)
             # check if we are recalculating gain 
             if regain_apply.value:
                bottom = int(vig_lower_boundary.value)
@@ -732,6 +744,7 @@ def __run_script__(fns):
             prog_bar.selection = fn_idx * num_step + 7
             # Display reduced dataset
             send_to_plot(final_result,Plot2)
+            n_logger.log_plot(Plot2, footer = Plot2.title)
             if copy_acc.value:   #user wants us to accumulate it
                 plh_copy_proc()
             # Output datasets
@@ -755,7 +768,7 @@ def __run_script__(fns):
             if output_fxye.value:
                 output.write_fxye_data(final_result,filename_base,codeversions=code_versions)
             if output_topas.value:
-                output.write_xyd_data(final_result,filename_base,codeversions=code_versions,comment_char="!")
+                output.write_xyd_data(final_result,filename_base,codeversions=code_versions,comment_char="!",extension='topas')
             # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
             print 'Finished writing data at %f' % (time.clock()-elapsed)
             prog_bar.selection = fn_idx * num_step + 8

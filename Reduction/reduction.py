@@ -151,8 +151,13 @@ def applyNormalization(ds, reference, target=-1):
         if target <= 0:
             target = reference.max()
         for i in xrange(rs.shape[0]):
-            f = float(target)/reference[i]
-            v = f*target/(reference[i]*reference[i])
+            # handle unexpected zero values
+            one_reference = reference[i]
+            if one_reference == 0:
+                one_reference = 0.1   #so small it is like zero
+                print "Warning: zero monitor counts found at step %d" % i
+            f = float(target)/one_reference
+            v = f*target/(one_reference*one_reference)
             # Funny syntax below to make sure we write into the original area,
             # not assign a new value
             tar_shape = [1,rs.shape[1],rs.shape[2]]
