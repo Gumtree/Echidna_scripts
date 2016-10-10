@@ -846,19 +846,20 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     frame_sum = frame_check.intg(axis=1)
     print `b.shape` + "->" + `c.shape`
     print 'Relative no of frames: ' + `frame_sum`
-    if c.shape[0] == 1:   #can't be done, there is no overlap
+    if c.shape[0] == 1 and len(use_gains)==0:   #can't be done, there is no overlap
         return None,None,None,None,None
-    # sum the individual unoverlapped sections
-    d = c.intg(axis=1) #array of [rangeno,stepno,tubeno]
-    # normalise by the number of frames in each section
-    print "Data shape: " + `d.shape`
-    print "Check shape: " + `frame_sum.shape`
-    e = d.transpose()  #array of [rangestep,tubeno]
-    if len(use_gains)==0:
-        gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
-            iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
-        if dumpfile is not None:
-            dump_gain_file(dumpfile,raw=d[:,ignore:],gain=gain,model=interim_result,stepsize=1)
+    elif c.shape[0] > 1:
+        # sum the individual unoverlapped sections
+        d = c.intg(axis=1) #array of [rangeno,stepno,tubeno]
+        # normalise by the number of frames in each section
+        print "Data shape: " + `d.shape`
+        print "Check shape: " + `frame_sum.shape`
+        e = d.transpose()  #array of [rangestep,tubeno]
+        if len(use_gains)==0:
+            gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
+                iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
+            if dumpfile is not None:
+                dump_gain_file(dumpfile,raw=d[:,ignore:],gain=gain,model=interim_result,stepsize=1)
     else:
         gain = use_gains
         chisquared=0.0
