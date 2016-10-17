@@ -1,0 +1,1850 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
+<title>Echidna User Manual</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+pre {
+  white-space: pre-wrap;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; vertical-align: text-bottom; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+
+
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install();
+/*]]>*/
+</script>
+</head>
+<body class="article">
+<div id="header">
+<h1>Echidna User Manual</h1>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="_starting_up">Starting up</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Refer to the starting up checklist in the Appendix. Usually this will be performed
+by the instrument scientist.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_placing_the_sample_on_the_instrument">Placing the sample on the instrument</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>(See also checklist in Appendix)</p></div>
+<div class="paragraph"><p>Sample height may be checked using the neutron camera stored at the
+base of the goniometer stage.  The photograph (not yet supplied) shows
+how it looks when installed. Note that the power and camera cables can
+easily slip out, so check that they are fully inserted after
+positioning the camera.  Verify that the green light on the control
+box is flashing (with an interval of several seconds, be patient).</p></div>
+<div class="paragraph"><p>The camera viewer program is executed using the <em>D</em> icon in the Windows
+taskbar of the computer. No other action should be necessary.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_driving_echidna">Driving Echidna</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The Echidna instrument is driven by a server program known as
+<em>SICS</em>. <em>SICS</em> is responsible for all aspects of instrument operation,
+including positioning components, starting and stopping the count,
+reading off measurements, and writing everything into the raw data
+file.  Users can send commands to SICS, and a sequence of SICS
+commands can be stored in a <em>batch file</em> to automate a series of
+operations.</p></div>
+<div class="paragraph"><p>Data are collected by running SICS scan commands.  Every time a SICS
+scan is run, a raw datafile is generated named <code>ECHnnnnnnnn.nx.hdf</code>,
+where <code>nnnnnnnnn</code> is an 8 digit number that increments after every
+scan.</p></div>
+<div class="paragraph"><p>Echidna uses the <em>Gumtree</em> interface to talk to SICS. Gumtree running
+on Echidna is split over two large windows: <em>Experiment</em> and
+<em>Analysis</em>.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_running_an_experiment">Running an experiment</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The various areas of the Experiment window referred to below are shown
+in Figure 1.</p></div>
+<div class="imageblock">
+<div class="content">
+<img src="gumtree_overview.png" alt=""Figure 1"" />
+</div>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">Room temperature experiments replace the file editing area with
+a GUI for setting up multiple sample runs - see below.</td>
+</tr></table>
+</div>
+<div class="sect2">
+<h3 id="_initial_configuration_and_sample_investigation">Initial configuration and sample investigation</h3>
+<div class="paragraph"><p>Initial scans are run to check that no stray pieces of sample
+environment are contributing to the diffraction signal (not necessary
+for RT) and assess the required counting time and sample quality.</p></div>
+<div class="paragraph"><p>At this stage individual SICS commands are entered at the <em>SICS input
+line</em>. A selection of useful commands is given below.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>samplename my great sample name</code>
+</dt>
+<dd>
+<p>
+Set the name of your sample (in
+this case, "my great sample name"). This will be stored in the output
+file and displayed in the analysis file selection window. Spaces
+within the sample name are acceptable.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>user username</code>
+</dt>
+<dd>
+<p>
+Set the name of the user. This is stored in the file.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>runscan stth start stop npoints time nnn</code>
+</dt>
+<dd>
+<p>
+Collect <code>npoints</code>
+datapoints by stepping the detector from <code>start</code> to <code>stop</code> inclusive, measuring for <code>nnn</code> seconds at each point.
+For a quick scan, a good choice is <code>start</code> = 4.0, <code>stop</code> = 5.125, <code>npoints</code> = 10. For a proper data collection,
+a good choice is <code>start</code> = 2.75, <code>stop</code> = 5.2, <code>npoints</code> = 50. Counting time depends on your sample, and may be
+anything from 60 to 1200 or more. The total counting time for a scan is <code>(nnn+13)*npoints</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>hlist -val /sample/tc1/sensor/</code>
+</dt>
+<dd>
+<p>
+List useful things about temperature controller one (e.g. temperatures and
+setpoints of all sensors). Also usually available in the status display.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_setting_up_a_multi_sample_room_temperature_run">Setting up a multi-sample room temperature run</h3>
+<div class="paragraph"><p>A facility for auto-generating multi sample room temperature runs can be chosen by clicking on the <em>Room temperature</em>
+button at the top right (see Figure 1).  A form appears at the top left.  After filling in the field,
+click <em>Add to Queue</em> and a pre-prepared batch file will be inserted into the <em>buffer queue</em> (see following
+section).  Press the <em>Play</em> button in the batch buffer queue to start data collection.</p></div>
+<div class="imageblock">
+<div class="content">
+<img src="RT_setup.JPG" alt=""Figure 2"" />
+</div>
+</div>
+<div class="paragraph"><p>Advice and additional information about the fields in the form:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Sample description
+</dt>
+<dd>
+<p>
+This is used as an internal shorthand to describe the instrument setup. <code>mtth140-noPC</code> never
+changes. <code>noSC</code> or <code>SC10</code> refers to the secondary collimator (out or in respectively). <code>Ge335</code>
+is used for 1.62A, <code>Ge311</code> for 2.41A wavelength. <code>VacCh</code> means the RT vacuum chamber is being used.
+</p>
+</dd>
+<dt class="hdlist1">
+Sics Script
+</dt>
+<dd>
+<p>
+Usually unused
+</p>
+</dd>
+<dt class="hdlist1">
+Sample name
+</dt>
+<dd>
+<p>
+This is stored in the raw data file, and used when displaying files for data processing.
+The sample name (up until the first space) can optionally be appended to the output filename.
+</p>
+</dd>
+<dt class="hdlist1">
+Sample shape
+</dt>
+<dd>
+<p>
+<em>9</em> or <em>6</em> for a sample in a 9mm or 6mm vanadium can, respectively.
+</p>
+</dd>
+<dt class="hdlist1">
+Sample position
+</dt>
+<dd>
+<p>
+The position of the sample in the robot tray. Always tray <em>B</em>.
+</p>
+</dd>
+<dt class="hdlist1">
+Overlaps
+</dt>
+<dd>
+<p>
+How many <em>extra</em> times to scan each angular position. <em>1</em> or more is recommended for the best
+quality data.
+</p>
+</dd>
+<dt class="hdlist1">
+Step size
+</dt>
+<dd>
+<p>
+Angular separation of measurement points. 0.05 and 0.125 are common. The Echidna collimators
+have an acceptance of 0.083 degrees.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>The <em>plus</em> symbol at the end of each line adds a new line, duplicating the values on the current line.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_setting_up_a_batched_run">Setting up a batched run</h3>
+<div class="paragraph"><p>A <code>batch file</code> is simply a sequence of commands that could have been
+typed into the SICS terminal. To create a batch file, either use the
+<em>File selection area</em> to create or copy a file (right click in the
+area for choices) and then double-click to edit it, simply putting
+in the commands that you would execute at the command line. Alternatively, you
+could edit a text file using your favourite Windows text editor. The
+completed file should be saved, and then dragged and dropped into the
+<em>buffer queue</em>. Dragging and dropping from other Windows applications
+(e.g. file explorer) is also OK.</p></div>
+<div class="paragraph"><p>Some commands (in addition to those given above) that are useful for batch files include:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>drive &lt;something&gt;</code>
+</dt>
+<dd>
+<p>
+The <code>drive</code> command will request <code>&lt;something&gt;</code> (which could be a motor,
+or a temperature, or a magnetic field) to go to a new value, and the next command will
+not be accepted until this value has been reached. This way you can be sure that e.g.
+the measured temperature has reached the target value before you start a scan.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>wait nnn</code>
+</dt>
+<dd>
+<p>
+wait <code>nnn</code> seconds. Useful to allow temperature to equilibrate
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>Once you&#8217;ve dragged your file to the <em>buffer queue</em>, pressing the <em>play</em> button will start execution.
+Check the Log area immediately to the right of the buffer queue for any error messages.  The
+<em>Big Red Stop Button</em> can be used to stop batch file processing, and/or to interrupt the current scan.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">The Big Red Stop Button will immediately interrupt whatever
+is running. It will not be possible to continue a batch file from the
+point at which it stopped, so you will probably need to edit the batch file
+before restarting.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_monitoring_progress">Monitoring progress</h3>
+<div class="paragraph"><p>A web page is available to watch the data accumulating at each step, and the status panel gives
+information about temperatures, current sample name and count rates.  The plot at the bottom of
+the Gumtree Experiment screen can be configured to plot most quantities tracked by SICS. Use
+the green button to zoom out of the plot, and the notepad+arrow icon to send the plot contents
+to the electronic notebook (see below).</p></div>
+<div class="paragraph"><p>Mobile-phone optimised status is available worldwide at
+<a href="http://www.nbi.ansto.gov.au/echidna/status/mobile.html">the Echidna Status Page</a></p></div>
+</div>
+<div class="sect2">
+<h3 id="_finishing_an_experiment">Finishing an experiment</h3>
+<div class="paragraph"><p>See the checklist in the appendix.</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_processing_data_using_gumtree">Processing data using Gumtree</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Processing of Echidna data is carried out in the <em>Analysis</em> window
+(Figure 3).  Files are loaded into the <em>File selection area</em> using the
+"plus" icon, and after setting processing parameters in the <em>Data
+processing configuration</em> area, one or more files are selected and
+the <em>Run</em> button pressed.  The composite 2D image is displayed in
+Plot 1, and the final result in Plot 2. Plot 3 is used as a scratch
+area where different scans can be compared.</p></div>
+<div class="imageblock">
+<div class="content">
+<img src="analysis_explanation.png" alt="title="Echidna Analysis window"" />
+</div>
+</div>
+<div class="paragraph"><p>The <em>Processing output log</em> may be minimised, in which case an icon
+will appear to the right (Figure 4) that can be clicked on to
+restore the log.</p></div>
+<div class="imageblock">
+<div class="content">
+<img src="get_console.png" alt="title="Unminimising the processing console"" />
+</div>
+</div>
+<div class="sect2">
+<h3 id="_explanation_of_processing_parameters">Explanation of processing parameters</h3>
+<div class="paragraph"><p>The data processing area is divided into sections (with dark blue headers),
+each of which has one or more parameters.  In order, they are:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Copy datasets
+</dt>
+<dd>
+<p>
+Pressing the button at any time will transfer the contents
+of Plot 2 to Plot 3. If you want this to happen automatically (for example,
+you are extracting many datasets simultaneously and want to see/compare
+them immediately) tick the <em>auto copy</em> box.
+</p>
+</dd>
+<dt class="hdlist1">
+Output Format
+</dt>
+<dd>
+<p>
+If any format box is ticked, a pdCIF file will also
+be generated containing all data reduction parameters and as full
+a description as possible of all transformations applied to the
+raw data. This file should allow complete reproducibility of
+data processing.
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+List of formats
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+XYD
+</dt>
+<dd>
+<p>
+3 column ASCII- Angle, intensity, uncertainty in intensity
+</p>
+</dd>
+<dt class="hdlist1">
+No XYD header
+</dt>
+<dd>
+<p>
+as above, with no comments or column headers at top of file
+</p>
+</dd>
+<dt class="hdlist1">
+GSAS FXYE
+</dt>
+<dd>
+<p>
+GSAS FXYE format (see GSAS manual for details)
+</p>
+</dd>
+<dt class="hdlist1">
+Topas
+</dt>
+<dd>
+<p>
+Topas format (XYD format with exclamation marks for comments)
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+out_folder
+</dt>
+<dd>
+<p>
+the folder in which the output files will be stored. A folder
+should have been created for you when the experiment started
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Output filename
+</dt>
+<dd>
+<p>
+The output file will be named ECH00NNNNN_xxxx, where
+xxxx is entered into the box. The special characters <em>%s</em> if present, will
+have the sample name substituted. So if your samplename is <em>tnt_01</em> and
+you enter <code>%s_10K</code> here, the filename will be <code>ECH0012345_tnt_01_10K.xyd</code>
+with the extension dependent on the file format chosen.  Another shortcut
+is <code>%t1</code> which will have the average temperature of the CF7 top thermocouple
+inserted at that position.
+</p>
+</dd>
+<dt class="hdlist1">
+Normalisation
+</dt>
+<dd>
+<p>
+This should always be applied.
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Source
+</dt>
+<dd>
+<p>
+Monitor 1 is in the
+guide after the monochromator and should not be used. Monitor 2 is
+after the sample, and Monitor 3 is between the monochromator and
+the sample. Generally Monitor 2 or 3 give the same results and are
+the best choice.
+</p>
+</dd>
+<dt class="hdlist1">
+Common to all datasets
+</dt>
+<dd>
+<p>
+If multiple datasets are processed together
+and this box is ticked, all datasets are normalised to the same
+monitor counts. Otherwise, the steps in each dataset are normalised
+independently of the other datasets.
+</p>
+</dd>
+<dt class="hdlist1">
+Plot all
+</dt>
+<dd>
+<p>
+Plot all of the monitor values for the most recently
+selected dataset in Plot 2
+</p>
+</dd>
+<dt class="hdlist1">
+Plot
+</dt>
+<dd>
+<p>
+Plot counts for the selected monitor and dataset in Plot 2
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Background correction
+</dt>
+<dd>
+<p>
+This should not generally be used
+</p>
+</dd>
+<dt class="hdlist1">
+Vertical tube correction
+</dt>
+<dd>
+<p>
+This should be applied and the default value
+will be correct
+</p>
+</dd>
+<dt class="hdlist1">
+Efficiency correction
+</dt>
+<dd>
+<p>
+This should be applied and the default value
+will be correct
+</p>
+</dd>
+<dt class="hdlist1">
+Horizontal tube correction
+</dt>
+<dd>
+<p>
+This should be applied and the default
+value will be correct
+</p>
+</dd>
+<dt class="hdlist1">
+Assemble frames
+</dt>
+<dd>
+<p>
+If one or more frames should be ignored (e.g. the
+beam was down temporarily) they can be entered here in the format
+<code>a:b,c:d</code> to exclude all frames from a to b and c to d (including b and d).
+The output at the end of this step is displayed in Plot 1
+</p>
+</dd>
+<dt class="hdlist1">
+Vertical integration
+</dt>
+<dd>
+<p>
+Parameters for summing the image in
+Plot 1 in the vertical direction
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Lower limit
+</dt>
+<dd>
+<p>
+minimum pixel to include, no less than 24 is recommended
+</p>
+</dd>
+<dt class="hdlist1">
+Upper limit
+</dt>
+<dd>
+<p>
+maximum pixel, no more than 104 is recommended
+</p>
+</dd>
+<dt class="hdlist1">
+Treatment of close points
+</dt>
+<dd>
+<p>
+due to detector misalignment and slight
+differences in detector scan step size, if each
+point is scanned more than once (the usual situation), each measurement
+of a point will be at a slightly different position.  This can be
+treated in the following ways:
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Sum
+</dt>
+<dd>
+<p>
+the position is averaged and the sum of the counts output
+</p>
+</dd>
+<dt class="hdlist1">
+Merge
+</dt>
+<dd>
+<p>
+the position and counts are averaged
+</p>
+</dd>
+<dt class="hdlist1">
+None
+</dt>
+<dd>
+<p>
+no merging is performed and all points are output
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Rescale
+</dt>
+<dd>
+<p>
+the dataset is scaled so that the number entered in
+<em>Rescale target</em> is the maximum observed intensity
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Recalculate gain
+</dt>
+<dd>
+<p>
+Overlapping measurements are used to refine
+relative gain of each separate detector tube.
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Iterations
+</dt>
+<dd>
+<p>
+number of refinement cycles. 5 is usually sufficient
+</p>
+</dd>
+<dt class="hdlist1">
+Store gain result
+</dt>
+<dd>
+<p>
+the results can be stored in a file for use
+on datasets that do not have overlapping measurements
+</p>
+</dd>
+<dt class="hdlist1">
+Load gain from file
+</dt>
+<dd>
+<p>
+instead of refining gain, the gain values
+found in the file generated by a previous store operation are used
+</p>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Sum 1D datasets
+</dt>
+<dd>
+<p>
+This is a toolbox operation, that is, it is not
+executed unless the button is pressed. The sum of all datasets in Plot 3 after
+will be displayed in Plot 2 when the <em>Sum datasets</em> button is pressed, as well as the
+result being written to the file given in <code>plh_file</code>.
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+plh_sum_type
+</dt>
+<dd>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Ideal
+</dt>
+<dd>
+<p>
+All points in each dataset are assumed to be at their
+ideal positions and intensities summed accordingly
+</p>
+</dd>
+<dt class="hdlist1">
+Cluster
+</dt>
+<dd>
+<p>
+Points within <code>plh_cluster</code> of each other have their
+positions averaged and intensities summed
+</p>
+</dd>
+<dt class="hdlist1">
+Merge
+</dt>
+<dd>
+<p>
+All points are simply put into a single file, with no
+merging.
+</p>
+</dd>
+</dl></div>
+</dd>
+</dl></div>
+</dd>
+<dt class="hdlist1">
+Delete 1D datasets
+</dt>
+<dd>
+<p>
+the selected datasets in Plot 3 are removed when
+the delete button is pressed.  Note that datasets are referenced by
+their datafile number and generation time.
+</p>
+</dd>
+<dt class="hdlist1">
+Plot settings
+</dt>
+<dd>
+<p>
+Plot 1 or 2 can be displayed in d spacing. Unselect
+the tick box to return to 2-theta display.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>Consult the Echidna paper (in preparation) for more details on each
+of these processes.</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_solutions_to_common_problems">Solutions to common problems</h2>
+<div class="sectionbody">
+<div class="qlist qanda"><ol>
+<li>
+<p><em>
+How do I start Gumtree?
+</em></p>
+<p>
+If Gumtree inadvertently closes, this will not affect any data collections that are running. Find
+the Gumtree icon on the desktop, and double click to execute. After a while you should be returned to
+a familiar screen.
+</p>
+</li>
+<li>
+<p><em>
+I&#8217;m not getting an image from the neutron camera
+</em></p>
+<p>
+Check that the power cable at the back of the camera is fully inserted (green light on camera control box
+slowly flashes) and that the camera cable is fully inserted. Check that the camera is actually in the
+beam.
+</p>
+</li>
+<li>
+<p><em>
+I press <em>Run</em> to run data processing, and nothing happens
+</em></p>
+<p>
+There is
+probably an error during processing. Make sure you have the processing
+output terminal open, and press <em>Run</em> again.  Errors will produce Red
+text in the output terminal.  Common mistakes include non-printing
+characters in filenames after restarting Gumtree (check all filenames
+in the processing configuration panel), or attempting
+gain rerefinement when not enough frames have been collected.
+</p>
+</li>
+</ol></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_appendix_checklists">Appendix: Checklists</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_experiment_startup">Experiment startup</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Experiment safety sheet in place?
+</p>
+</li>
+<li>
+<p>
+<code>prop-scheduler</code> run to change experiment number?
+</p>
+</li>
+<li>
+<p>
+Electronic logbook initialised to new page?
+</p>
+</li>
+<li>
+<p>
+mom/mchi/mf1 set to correct values for wavelength?
+</p>
+</li>
+<li>
+<p>
+Correct length snout installed?
+</p>
+</li>
+<li>
+<p>
+Slits set appropriately?
+</p>
+</li>
+<li>
+<p>
+Primary/secondary collimators in/out as required?
+</p>
+</li>
+<li>
+<p>
+Goniometer stage at sx/sy/schi/sphi = zero?
+</p>
+</li>
+<li>
+<p>
+Sics configured for correct sample environment?
+</p>
+</li>
+<li>
+<p>
+Sics communicating with sample environment?
+</p>
+</li>
+<li>
+<p>
+User batch file directory created?
+</p>
+</li>
+<li>
+<p>
+User analysis output directory created?
+</p>
+</li>
+<li>
+<p>
+Data processing configured with appropriate values?
+</p>
+</li>
+<li>
+<p>
+Have users put a barcode on their samples?
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_sample_installation_checklist">Sample installation checklist</h3>
+<div class="sect3">
+<h4 id="_room_temperature">Room temperature</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Is the V can or lid labelled with proposal number/user name/sample name?
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_cf7">CF7</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Is the sample holder labelled with proposal number/user name/sample name?
+</p>
+</li>
+<li>
+<p>
+Has the height of the sample been indicated on the can?
+</p>
+</li>
+<li>
+<p>
+Is the sample stick the right length (755mm or 755mm+25mm with spacer from the base of the top flange)?
+</p>
+</li>
+<li>
+<p>
+Do the temperature sensors work?
+</p>
+</li>
+<li>
+<p>
+Do all heaters work?
+</p>
+</li>
+<li>
+<p>
+If a C bracket is used, has the position of the vertical section been
+marked on the top of the stick for reference?
+</p>
+</li>
+<li>
+<p>
+If working only below RT
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Has a Cd shield been attached?
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+If working above RT
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Has all Cd been removed from the sample stick and sample mount? (It will vaporise)
+</p>
+</li>
+<li>
+<p>
+Have the slits been set to avoid the beam hitting the bottom of the copper C bracket?
+</p>
+</li>
+<li>
+<p>
+Has an Al heat shield been installed (recommended)?
+</p>
+</li>
+<li>
+<p>
+Is there sufficient heatsink compound on the lid and base?
+</p>
+</li>
+<li>
+<p>
+If the sample is sealed, could it become overpressurised and explode? Consider evolution of water.
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_vacuum_furnace">Vacuum furnace</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Is the sample holder inert with respect to anything the sample might evolve at high temperature?
+</p>
+</li>
+<li>
+<p>
+Will the sample holder and attachment wire survive the maximum temperature?
+</p>
+</li>
+<li>
+<p>
+Is the stick at the right height (xxx mm from the base of the top flange)?
+</p>
+</li>
+<li>
+<p>
+If sample is sealed:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Could it become overpressurised?
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+If sample is not sealed:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Could the powder sample be extracted by the vacuum pump?
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Is the temperature sensor type correct?
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_magnet">Magnet</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Are all screws non-magnetic?
+</p>
+</li>
+<li>
+<p>
+If the sample will have a net magnetic moment (ferro/ferri-magnetic), has it been suitably immobilised?
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Suggestions:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Cd disk inside can on top of sample, held in place by a Cd cylinder jammed in by lid.
+</p>
+</li>
+<li>
+<p>
+Heavy water (freezes) or fluorosilicate (forms gel)
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Is the sample holder labelled with proposal number/user name/sample name?
+</p>
+</li>
+<li>
+<p>
+Has the height of the sample been indicated on the can?
+</p>
+</li>
+<li>
+<p>
+Is the sample stick the right length (1xxx mm from the base of the top flange)?
+</p>
+</li>
+<li>
+<p>
+Do the temperature sensors work?
+</p>
+</li>
+<li>
+<p>
+Is the correct input sensor (1 or 2) plugged in?
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_checklist_before_executing_a_long_run">Checklist before executing a long run</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Is the sample name correct for each scan?
+</p>
+</li>
+<li>
+<p>
+Have temperature setting commands been verified to work?
+</p>
+</li>
+<li>
+<p>
+Are the correct temperature loops referenced (tc1_driveable/tc1_driveable2 etc.)?
+</p>
+</li>
+<li>
+<p>
+Are the necessary heaters enabled?
+</p>
+</li>
+<li>
+<p>
+Is the beam open?
+</p>
+</li>
+</ul></div>
+<div class="sect3">
+<h4 id="_cf7_below_rt">CF7 (below RT)</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Have you added exchange gas to the sample space?
+</p>
+</li>
+<li>
+<p>
+Does your time estimate include cooling?
+</p>
+</li>
+<li>
+<p>
+Have you set your cold head temperature to your desired sample temperature at
+each measurement point?
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_cf7_above_rt">CF7 (above RT)</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Is the cold head temperature fixed at 300K for the whole time?
+</p>
+</li>
+<li>
+<p>
+Is the sample under rough vacuum? (It should be)
+</p>
+</li>
+<li>
+<p>
+Does your time estimate include cooling?
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_magnet_2">Magnet</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Is the temperature controller in remote mode?
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_end_of_experiment_checklist">End of experiment checklist</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Have all samples that are no longer radioactive been unloaded and submitted for clearance?
+</p>
+</li>
+<li>
+<p>
+Have all samples that are still radioactive been labelled and placed in the radiation safe?
+</p>
+</li>
+<li>
+<p>
+Is the instrument scientist aware of all samples in the radiation safe?
+</p>
+</li>
+<li>
+<p>
+Is the instrument scientist aware of any samples that are still in sample environment?
+</p>
+</li>
+<li>
+<p>
+Is the online experimental logbook up to date?
+</p>
+</li>
+<li>
+<p>
+Has all data been processed and transferred to appropriate storage?
+</p>
+</li>
+<li>
+<p>
+Has a PDF copy of the online logbook been generated?
+</p>
+</li>
+<li>
+<p>
+Has <code>prop-scheduler</code> been run to terminate the current experiment?
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_about_this_document">About this document</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This document is maintained in plain-text <a href="http://asciidoc.org">Asciidoc</a> format, from which HTML and
+printed versions are created.  The source version may be viewed at
+<a href="http://github.org/Gumtree/Echidna_scripts/Manual/user_guide.adoc">Github</a></p></div>
+<div class="paragraph"><p>Please annotate the printed version in the cabin with corrections, or else use Github to clone the
+manual and send a pull request after editing the raw text.</p></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Last updated
+ 2016-10-17 10:53:17 AEDT
+</div>
+</div>
+</body>
+</html>
