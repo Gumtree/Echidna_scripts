@@ -774,10 +774,13 @@ def calculate_average_angles(tube_steps,angular_file,pixel_step,tube_sep,extra_d
     print 'Check: counter' + `counter`
     print 'Check: no of overlaps, tubes: %d %d ' % (no_of_overlaps,no_of_tubes)
     # Now apply these average corrections to the actual angles
-    final_values = array.zeros((no_of_tubes+no_of_overlaps)*pixel_step)
+    real_step = pixel_step
+    if len(tube_steps)<pixel_step:
+        real_step = len(tube_steps)  #for when we have no overlap and missing steps
+    final_values = array.zeros((no_of_tubes+no_of_overlaps)*real_step)
     print 'Final values has len %d' % len(final_values)
     for stepno in range(no_of_tubes+no_of_overlaps):
-        final_values[stepno*pixel_step:(stepno+1)*pixel_step] = tube_steps + tube_sep*stepno + ave_angles[stepno]
+        final_values[stepno*real_step:(stepno+1)*real_step] = tube_steps + tube_sep*stepno + ave_angles[stepno]
     return final_values
 
 # Calculate adjusted gain based on matching intensities between overlapping
@@ -846,21 +849,20 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     frame_sum = frame_check.intg(axis=1)
     print `b.shape` + "->" + `c.shape`
     print 'Relative no of frames: ' + `frame_sum`
-    if c.shape[0] == 1 and len(use_gains)==0:   #can't be done, there is no overlap
-        return None,None,None,None,None
-    elif c.shape[0] > 1:
+    if len(use_gains)==0:   #we have to calculate them
+        if c.shape[0] == 1:   #can't be done, there is no overlap
+            return None,None,None,None,None
         # sum the individual unoverlapped sections
         d = c.intg(axis=1) #array of [rangeno,stepno,tubeno]
         # normalise by the number of frames in each section
         print "Data shape: " + `d.shape`
         print "Check shape: " + `frame_sum.shape`
         e = d.transpose()  #array of [rangestep,tubeno]
-        if len(use_gains)==0:
-            gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
-                iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
-            if dumpfile is not None:
-                dump_gain_file(dumpfile,raw=d[:,ignore:],gain=gain,model=interim_result,stepsize=1)
-    else:
+        gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
+            iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
+        if dumpfile is not None:
+            dump_gain_file(dumpfile,raw=d[:,ignore:],gain=gain,model=interim_result,stepsize=1)
+    else:        #we have been provided with gains
         gain = use_gains
         chisquared=0.0
     # calculate errors based on full dataset
@@ -873,6 +875,18 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     print 'Have full model and errors at %f' % time.clock()
     if dumpfile is not None:
             dump_gain_file(dumpfile,raw=b_zeroed[:,ignore:],gain=gain,model=model,name_prefix="full",stepsize=pixel_step)
+    # step size could be less than pixel_step if we have a short non-overlap scan
+    real_step = pixel_step
+    if len(tube_steps)< pixel_step:
+        real_step = len(tube_steps)
+        # and we have to prune the output data too
+        holeless_model = zeros([real_step*start_ds.shape[0]])
+        holeless_var = zeros_like(holeless_model)
+        for tube_set in range(start_ds.shape[0]):
+            holeless_model[tube_set*real_step:(tube_set+1)*real_step]=model[tube_set*pixel_step:(tube_set+1)*pixel_step]    
+            holeless_var[tube_set*real_step:(tube_set+1)*real_step]=model_var[tube_set*pixel_step:(tube_set+1)*pixel_step]    
+        model = holeless_model
+        model_var = holeless_var  
     cs = Dataset(model)
     cs.var = model_var
     # Now build up the important information
@@ -888,7 +902,8 @@ and a tube separation of %8.3f starting at %f.""" % (bin_size,tubesep,ds.axes[0]
         new_axis = calculate_average_angles(tube_steps,exact_angles,pixel_step,tubesep,
                                             extra_dummy=extra_dropped_frames)
         # Remove ignored tubes
-        new_axis = new_axis[ignore*pixel_step:]
+ 
+        new_axis = new_axis[ignore*real_step:]
         
         axis_string = \
     """Following application of gain correction, two theta values were recalculated using a tube separation of 
