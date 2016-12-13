@@ -29,21 +29,21 @@ image::neutron_camera_connections.png["Figure 1",align=left,title="Neutron camer
 === Electronic logbook
 
 http://www.nbi.ansto.gov.au/echidna/status/notebook.html[An interactive electronic logbook]
-is providedfor users and instrument scientists to document the experiment.  All
+(http://www.nbi.ansto.gov.au/echidna/status/notebook.html) 
+is provided for users and instrument scientists to document the experiment.  All
 plots generated during data analysis are instantly accessible for
 insertion into the main logbook through the "Database" tab at the far
 right of the browser page.  If a recent plot does not appear, scroll
-down and up again to the top to initiate a refresh.
+down and up again to the top within the database tab to initiate a refresh.
 
 Note that all Gumtree plots also have a 'send to logbook database'
 icon (see Figure 2) which can be used to place the plot into the
-database tab ready for insertion into the logbook.  This is
-particularly useful for placing temperature traces into the logbook.
+database tab ready for insertion into the logbook.
 
 Logbook snapshots are recorded every ten minutes in a backed-up
 version control system to there is no danger of any loss of notes. PDF
-versions can be generated at the end of the experiment as a permanent
-record.
+versions can be generated as a permanent record by clicking on the
+PDF icon at the top of the logbook page.
 
 === Driving Echidna
 
@@ -154,7 +154,7 @@ measured temperature has reached the target value before you start a
 scan.  Some typical names for `<something>` are `tc1_driveable`
 (temperature at top of sample), `tc1_driveable2` (temperature at
 bottom of sample) and `tc2_driveable` (temperature of cold head).
-Typing the "motor" name by itself gives the current value.
+Typing each of these names by themselves gives the current value.
 
 `wait nnn`:: wait `nnn` seconds. Useful to allow temperature to equilibrate
 
@@ -179,8 +179,8 @@ notebook (xref:_electronic_logbook[see above]).
 
 If away from the instrument, mobile-phone optimised Echidna status is
 available worldwide at
-http://www.nbi.ansto.gov.au/echidna/status/mobile.html[the Echidna Status Page].
-
+http://www.nbi.ansto.gov.au/echidna/status/mobile.html[the Echidna Status Page]
+(http://www.nbi.ansto.gov.au/echidna/status/mobile.html)
 
 === Finishing an experiment
 
