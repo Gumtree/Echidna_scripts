@@ -108,8 +108,10 @@ Group('Horizontal Tube Correction').add(htc_apply, htc_file, htc_show)
 
 # Assemble (note this is before rescaling)
 asm_drop_frames = Par('string')
-asm_drop_frames.title = 'Remove frames:'
-Group('Assemble frames').add(asm_drop_frames)
+asm_drop_tubes = Par('string')
+asm_drop_frames.title = 'Remove frames (count from 0, format a:b,c:d):'
+asm_drop_tubes.title = 'Remove detectors (count from 0, format a:b,c:d):'
+Group('Assemble frames').add(asm_drop_frames,asm_drop_tubes)
 
 # Vertical Integration (note that gain recalc will include vertical integration)
 vig_lower_boundary = Par('int', '0')
@@ -690,9 +692,11 @@ def __run_script__(fns):
             # Stitching. If we are recalculating gain, this is purely for
             # informational purposes. We don't want to take the 100x time penalty of
             # multiplying a 2D array by the gain factor for each tube, so we
-            # stitch on a 1D array after doing the gain re-refinement.
+            # stitch using a 1D array after doing the gain re-refinement.
             if ds.ndim > 2:
-                stitched = reduction.getStitched(ds,ignore=str(asm_drop_frames.value))
+                # See if we are ignoring any tubes
+                drop_tubes = str(asm_drop_tubes.value)
+                stitched = reduction.getStitched(ds,ignore=str(asm_drop_frames.value),drop_tubes=drop_tubes)
             # Display dataset
             print 'Finished stitching at %f' % (time.clock()-elapsed)
             prog_bar.selection = fn_idx * num_step + 6
@@ -704,7 +708,7 @@ def __run_script__(fns):
                bottom = int(vig_lower_boundary.value)
                top = int(vig_upper_boundary.value)
                cs,gain,esds,chisquared,no_overlaps = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
-                                                                          exact_angles=htc,drop_frames=str(asm_drop_frames.value),use_gains=regain_data)
+                                                                          exact_angles=htc,drop_frames=str(asm_drop_frames.value),drop_tubes=drop_tubes,use_gains=regain_data)
                if cs is not None:
                    print 'Have new gains at %f' % (time.clock() - elapsed)
                    fg = Dataset(gain)
@@ -731,7 +735,7 @@ def __run_script__(fns):
             if not regain_apply.value:  #already done
                 final_result = reduction.getVerticalIntegrated(stitched, axis=0, normalization=norm_const,
                                                      cluster=cluster,bottom = int(vig_lower_boundary.value),
-                                                     top=int(vig_upper_boundary.value))
+                                                               top=int(vig_upper_boundary.value))
                 print 'Finished vertical integration at %f' % (time.clock()-elapsed)
             else:
                 if str(vig_cluster.value) == 'Sum':  #simulate a sum for the gain recalculated value

@@ -220,7 +220,7 @@ def getSummed(ds, floatCopy=True, applyStth=True):
 
     return rs
 
-def getStitched(ds,ignore=None):
+def getStitched(ds,ignore=None,drop_tubes=None):
     """The returned dataset is 2D after each segment of data from the multiple detectors has
     been placed at the correct angular position.  Ignore is a string specifying which frames
     should be ignored.  The format is 'a:b,c:d' to ignore from a to b inclusive and from c to
@@ -240,7 +240,13 @@ def getStitched(ds,ignore=None):
     else:
         drop_frames = set([])
 
+    if drop_tubes is not None:
+        drop_tubes = parse_ignore_spec(drop_tubes)
+    else:
+        drop_tubes = set([])
     print 'Dropping frames ' + `drop_frames`
+    print 'Dropping detector tubes ' + `drop_tubes`
+    
     frame_count = ds.shape[0]
     y_count     = ds.shape[1]
     x_count     = ds.shape[2]
@@ -268,18 +274,21 @@ def getStitched(ds,ignore=None):
     # We have switched to an imgCIF description of the axes (see AddCifMetadata module). Therefore our
     # axis values are kept in a CIF loop
     stth_info = ds.harvest_metadata("CIF").GetLoop("_diffrn_scan_frame_axis.frame_id")
-    for info_packet in stth_info:
+    for info_packet in stth_info:  #one per step
         src_frame = int(getattr(info_packet,"_diffrn_scan_frame_axis.frame_id"))
+        stth = float(getattr(info_packet,"_diffrn_scan_frame_axis.angle"))
+        column_with_angle = enumerate(axisX+stth)
+        # remove unneeded 'columns' (ie tubes)
+        column_with_angle = [c for c in column_with_angle if c[0] not in drop_tubes]
         if src_frame not in drop_frames:
-            stth = float(getattr(info_packet,"_diffrn_scan_frame_axis.angle"))
-            container.extend(map(lambda (src_column, angle): (angle, src_frame, src_column), enumerate(axisX + stth)))
+            container.extend(map(lambda (src_column, angle): (angle, src_frame, src_column),column_with_angle))
 
     # sort by angles
     container = sorted(container, key=lambda (angle, src_frame, src_column): angle)
     print 'Check: total angles %d' % len(container)
 
     # resulting dataset
-    rs = zeros([y_count, x_count * (frame_count-len(drop_frames))])
+    rs = zeros([y_count, (x_count-len(drop_tubes)) * (frame_count-len(drop_frames))])
 
     # copy meta data
     copy_metadata_deep(rs, ds[0]) # for Echidna second dimension is just legacy
@@ -323,6 +332,11 @@ def getStitched(ds,ignore=None):
         info_string += "\nFrames in the following list were excluded from the final dataset:\n"
         for i in sorted(drop_frames):
             info_string +="%d " % i
+    if len(drop_tubes)>0:
+        info_string += "\nData from detector tubes in the following list were excluded from the final dataset:\n"
+        for i in sorted(drop_tubes):
+            info_string +="%d " % i
+            
     rs.add_metadata("_pd_proc_info_data_reduction",info_string,tag="CIF",append=True)
     # axes
     rs.axes[0].title = ds.axes[1].title
@@ -369,7 +383,11 @@ def read_efficiency_cif(filename):
 # The following routine can be called with unstitched data, in
 # which case we will return the data with the 'axis' dimension
 # summed. The default is for axis=1
+
 def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=(0.0,'None'),top=None,bottom=None):
+    """
+    Sum the provided data vertically. okMap is a mask of contributing pixels.
+    """
     print 'vertical integration of', ds.title
     start_dim = ds.ndim
 
