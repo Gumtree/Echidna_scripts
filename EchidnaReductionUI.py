@@ -693,9 +693,9 @@ def __run_script__(fns):
             # informational purposes. We don't want to take the 100x time penalty of
             # multiplying a 2D array by the gain factor for each tube, so we
             # stitch using a 1D array after doing the gain re-refinement.
+            drop_tubes = str(asm_drop_tubes.value)
             if ds.ndim > 2:
                 # See if we are ignoring any tubes
-                drop_tubes = str(asm_drop_tubes.value)
                 stitched = reduction.getStitched(ds,ignore=str(asm_drop_frames.value),drop_tubes=drop_tubes)
             # Display dataset
             print 'Finished stitching at %f' % (time.clock()-elapsed)

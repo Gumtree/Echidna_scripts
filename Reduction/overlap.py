@@ -62,8 +62,6 @@ def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_ma
    been zeroed previously."""
    import time
    elapsed = time.clock()
-   if pixel_mask is None:
-       pixel_mask = array.ones_like(full_ds[0])
    #sanitise - we don't like zeros or complicated datastructures
    full_data = full_ds.storage
    my_weights = copy(weights)
@@ -73,26 +71,30 @@ def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_ma
       pass
    if calc_var is True:  #we assume variance is 1/weights for esd calcs
       my_variance = 1.0/my_weights  #we are assuming that 1.0/0 = 0 for excluded bits
-   #weighted_data = divide(full_data,my_variance)  #wd = (F_hl^2/sigma_hl^2)
+   if pixel_mask is None:
+       pixel_mask = array.ones_like(full_ds)
+   my_weights = my_weights*pixel_mask   #remove unused points
    weighted_data = full_data*my_weights  #wd = (F_hl^2/sigma_hl^2) 
    trans_gain = gain_array.reshape([len(gain_array),1])
-   #scaled_data = multiply(trans_gain,weighted_data)  #G_l(rho-1)*wd ; should broadcast to all scans
    # gumpy doesn't have broadcasting, so...
    scaled_data = zeros_like(weighted_data)
    for section in range(weighted_data.shape[-1]):
        scaled_data[:,section] = trans_gain*weighted_data[:,section]  #G_l(rho-1)*wd
-   summed_data = shift_tube_add_new(scaled_data,steps_per_tube,pixel_mask) # Sum_l[previous line]
+   summed_data = shift_tube_add_new(scaled_data,steps_per_tube,None) # Sum_l[previous line]
    scaled_weights = zeros_like(my_weights)
    for section in range(my_weights.shape[-1]):
       scaled_weights[:,section] = trans_gain**2*my_weights[:,section]
-   # if True in isnan(scaled_variance): raise ValueError,"NaN found!"
-   summed_denominator = shift_tube_add_new(scaled_weights,steps_per_tube,pixel_mask)
+   summed_denominator = shift_tube_add_new(scaled_weights,steps_per_tube,None)
    if 0 in summed_denominator:
           if pixel_mask is None: 
               print "Warning: 0 found in summed denominator"
               print "New minimum is %g" % summed_denominator.min()
           summed_denominator[summed_denominator<1e-10] = 1e-10
-          #clip(summed_denominator,1e-10,summed_denominator.max(),summed_denominator) 
+          #clip(summed_denominator,1e-10,summed_denominator.max(),summed_denominator)
+   print 'summed_data 60-65:'
+   print repr(summed_data[57*steps_per_tube:62*steps_per_tube])
+   print 'summed_denominator 60-65:'
+   print repr(summed_denominator[57*steps_per_tube:62*steps_per_tube])
    outdata = summed_data/summed_denominator #F_h^2 in original paper
    # Get a proper error for observations
    if calc_var is True:
@@ -100,7 +102,7 @@ def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_ma
       weighted_scales = zeros_like(weighted_data)
       for section in range(weighted_data.shape[-1]):
          weighted_scales[:,section] = trans_gain*my_weights[:,section] #(G_l * weights)
-      summed_vars = shift_tube_add_new(weighted_scales**2 * my_variance,steps_per_tube,pixel_mask) #Sum of variances
+      summed_vars = shift_tube_add_new(weighted_scales**2 * my_variance,steps_per_tube,None) #Sum of variances
       final_variances_fh = summed_vars/summed_denominator**2   #contribution for sig(F_h)
       # now calculate the derivative with respect to G_p
       # create an array like the input array with the observed intensities replaced by
@@ -116,7 +118,7 @@ def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_ma
       #print 'Check df_H/dg_p for p=5:7, gain esd is '+ str(esds[5:7])
       #print str(acc_gp.storage[5:7])
       # now add up the contributions
-      final_variances_gp = shift_tube_add_new(acc_gp,steps_per_tube,pixel_mask)/summed_denominator**2
+      final_variances_gp = shift_tube_add_new(acc_gp,steps_per_tube,None)/summed_denominator**2
       print 'Errors in F_h due to errors in F_hp:' + str(final_variances_fh[100:150])
       print 'Errors in F_h due to errors in G_p: ' + str(final_variances_gp[100:150])
       final_variances = final_variances_fh  # + final_variances_gp
@@ -190,10 +192,12 @@ def shift_tube_add_new(inarray,tube_offset,pixel_mask,average=False):
     result = array.zeros(newshape)
     contribs = array.zeros(newshape)
     slice_iter = working_data.__iter__()
+    if pixel_mask is None:
+       pixel_mask = array.ones_like(inarray)
     # Add the arrays
     for atubeno in range(len(inarray)):
         rta = result.get_section([atubeno*tube_offset],[oldshape[1]])
-        rta += slice_iter.next()
+        rta += slice_iter.next()*pixel_mask[atubeno]
     return result
 
 def shift_mult_add(fixed_array, sliding_array,offset, pixel_mask,squareit = False):
@@ -326,7 +330,7 @@ def apply_point_gain(gain_array,gain_variance,ds,variance,offset):
          variance[gain_step][region*offset:(region+1)*offset] += extra_term
    return final_array,final_variance
 
-def shift_mult_fr_add(gain_array,model_array,obs_array,weight_array,offset,pixel_mask):
+def shift_mult_fr_add(gain_array,model_array,obs_array,weight_array,offset):
    """ Perform the summation in eqn 3 of Fox and Rollet """
    import time
    # Calculate the normalising factor
@@ -339,7 +343,7 @@ def shift_mult_fr_add(gain_array,model_array,obs_array,weight_array,offset,pixel
       sws = scaled_weight.get_section([tube_no,0],[1,swlen])
       was = weight_array.get_section([tube_no,0],[1,swlen])
       sws += gain_array[tube_no]**2 * was
-   scale_factors = shift_tube_add_new(scaled_weight,offset,pixel_mask)
+   scale_factors = shift_tube_add_new(scaled_weight,offset,None)
    # Now for the other terms
    a_p_array = array.zeros_like(gain_array)
    tube_steps = obs_array.shape[1]   #How many steps each tube takes
@@ -356,8 +360,9 @@ def shift_mult_fr_add(gain_array,model_array,obs_array,weight_array,offset,pixel
           scale_factors.get_section([offset*tube_no],[tube_steps])).sum()
    return a_p_array
 
-def fr_get_cpr(gain_array,model_array,obs_array,weight_array,aparray,offset,pixel_mask):
-   """Calculate Cp,r as per eqn (5) of Fox and Rollett"""
+def fr_get_cpr(gain_array,model_array,obs_array,weight_array,aparray,offset):
+   """Calculate Cp,r as per eqn (5) of Fox and Rollett. Note that aparray will be
+      zero for tubes that are excluded"""
    cpr_array = array.zeros_like(gain_array)
    tube_steps = obs_array.shape[1]   #How many steps each tube takes
    try:
@@ -365,6 +370,7 @@ def fr_get_cpr(gain_array,model_array,obs_array,weight_array,aparray,offset,pixe
    except AttributeError:
       oba = obs_array
    for tube_no in range(len(gain_array)):
+      if aparray[tube_no]==0: continue
       obs_section = oba[tube_no]  #F^2_{hp}
       wt_section = weight_array[tube_no]#w_{hp}
       mod_section = model_array.get_section([offset*tube_no],[tube_steps]) #F^2_{h,r}
@@ -406,10 +412,11 @@ def shift_sub_tube_mult_new(gain_vector,model_vector,obs_array,offset,pixel_mask
     for atubeno in range(numslices):
         obi = obs_i.next()
         gvi = gv_iter.next()
+        mski = pixel_mask[atubeno]
         model_sec = model_vector.get_section([atubeno*offset],[scanlen])
-        # if atubeno == 64:
-        #    print 'mask, obi,gvi ' + `pixel_mask` + `gvi` + ' ' + `obi` + ' ' + `model_sec`
-        result[atubeno] = (obi*pixel_mask - gvi*model_sec)**2
+        #if atubeno == 64:
+        #    print 'mask, obi,gvi ' + `mski` + `gvi` + ' ' + `obi` + ' ' + `model_sec`
+        result[atubeno] = (obi*mski - gvi*model_sec*mski)**2
         #if atubeno == 64:
         #    print 'rta ' + `rta`
     #print 'Result [64,1] = ' + `result[64][1]`
@@ -453,7 +460,7 @@ def calc_error_new(obs,model,gain_vector,offset):
 
 # The treatment of Ford and Rollett  Acta Cryst. (1968) B24,293
 # In find_gain, we do not want to use datapoints that are zero.  We have to mask these out
-def find_gain_fr(data, data_weights, steps_per_tube, gain_array,arminus1=None,pixel_mask=None,errors=False,
+def find_gain_fr(data, data_weights, steps_per_tube, gain_array,arminus1=None,errors=False,
                  accel_flag=True):
    import math,time
    """usage: data is a 2D gumpy Array consisting of vertically-integrated scans from multiple tubes on Echidna, 
@@ -461,15 +468,11 @@ def find_gain_fr(data, data_weights, steps_per_tube, gain_array,arminus1=None,pi
       Variance is the corresponding variance.
       To avoid duplication of calculations, the corrected data corresponding to
       the input gain is returned as well as the new gain.  
-      Pixel mask is a data-shaped array containing 0s in those positions
-      where the pixel information should not be used.  If None, all pixels are used.
       If errors is True, errors are calculated.
       If accel_flag is True, the accelerated version of Ford and Rollett is used.
       """
-   if pixel_mask is None:
-       pixel_mask = array.ones_like(data[0])
    elapsed = time.clock()
-   outdata,weighted_data,outdata_vars,dummy = apply_gain(data,data_weights,steps_per_tube,gain_array,pixel_mask)
+   outdata,weighted_data,outdata_vars,dummy = apply_gain(data,data_weights,steps_per_tube,gain_array)
    # Now calculate A_p (Equation 3 of FR)
    # Refresher: 
    # index 'h' in FR refers to a particular angle for us
@@ -478,8 +481,8 @@ def find_gain_fr(data, data_weights, steps_per_tube, gain_array,arminus1=None,pi
    # index 'r' is the cycle number
    # index 'j' in equation (3) is a sum over tubes
    #
-   aparray = shift_mult_fr_add(gain_array,outdata,data,data_weights,steps_per_tube,pixel_mask)
-   cpr = fr_get_cpr(gain_array,outdata,data,data_weights,aparray,steps_per_tube,pixel_mask)
+   aparray = shift_mult_fr_add(gain_array,outdata,data,data_weights,steps_per_tube)
+   cpr = fr_get_cpr(gain_array,outdata,data,data_weights,aparray,steps_per_tube)
    #
    dpr = zeros_like(cpr)
    dpr[cpr>0.5*gain_array] = cpr

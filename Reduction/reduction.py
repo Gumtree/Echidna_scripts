@@ -804,7 +804,7 @@ def calculate_average_angles(tube_steps,angular_file,pixel_step,tube_sep,extra_d
 # Calculate adjusted gain based on matching intensities between overlapping
 # sections of data from different detectors
 def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,bottom=None,
-               exact_angles=None,drop_frames='',use_gains = [],dumpfile=None):
+               exact_angles=None,drop_frames='',drop_tubes = '',use_gains = [],dumpfile=None):
     """Calculate rescaling factors for tubes based on overlapping data
     regions. The ignore parameter specifies the number of initial tubes for
     which data are unreliable and should be ignored. Specifying unit weights
@@ -813,7 +813,8 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     algorithm. The vertical integration limits are set by top and bottom, if
     None all points are included. Exact_angles either contains the name of a
     file with per-detector angular corrections, or None.  Drop_frames is a
-    specially-formatted string giving a list of frames to be ignored. If 
+    specially-formatted string giving a list of frames to be ignored. Drop_tubes
+    is a similarly-formatted string giving a list of detectors to be ignored. If 
     use_gains is not empty, these [val,esd] values will be used instead of those
     obtained from the iteration routine. Dumpfile, if set, will output
     starting values for use by other routines."""
@@ -832,6 +833,7 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     bin_size = tubesep/pixel_step
     print '%f tube separation, %d steps before overlap, ideal binsize %f' % (tubesep,pixel_step,bin_size)
     dropped_frames = parse_ignore_spec(drop_frames)
+    dropped_tubes = parse_ignore_spec(drop_tubes)
     # Do we need to add dummy missing frames?
     extra_steps = b.shape[0]%pixel_step
     if extra_steps > 0:
@@ -862,6 +864,12 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
             frame_check[drop_step] = 0
             all_zeroed[drop_step] = 0
             all_zeroed.var[drop_step] = 0
+    # Now drop out whole detectors
+    for tube_no in dropped_tubes:
+        b_zeroed[:,tube_no] = 0
+        b_zeroed.var[:,tube_no] = 0
+        all_zeroed[:,tube_no] = 0
+        all_zeroed.var[:,tube_no] = 0
     c = all_zeroed.reshape([b.shape[0]/pixel_step,pixel_step,b.shape[-1]])
     frame_check = frame_check.reshape([b.shape[0]/pixel_step,pixel_step])
     frame_sum = frame_check.intg(axis=1)
@@ -876,8 +884,13 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
         print "Data shape: " + `d.shape`
         print "Check shape: " + `frame_sum.shape`
         e = d.transpose()  #array of [rangestep,tubeno]
+        # create the mask: any values of zero are assumed to be incorrect and masked out
+        pixel_mask = array.ones_like(e[ignore:])
+        pixel_mask[e[ignore:] == 0] = 0
+        print "Pixel mask: " + repr(pixel_mask)
         gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
-            iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
+            iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights,
+                         pixel_mask = pixel_mask)
         if dumpfile is not None:
             dump_gain_file(dumpfile,raw=d[:,ignore:],gain=gain,model=interim_result,stepsize=1)
     else:        #we have been provided with gains
@@ -887,8 +900,15 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     # First get a full model
     start_ds = b_zeroed.transpose()[ignore:] #array of [tubeno,stepno]
     start_var = start_ds.var
+    # Our new pixel mask has to have all of the steps in
+    pixel_mask = array.ones_like(start_ds)
+    pixel_mask[start_ds==0]=0
+    # Check
+    for a in dropped_tubes:
+        print 'Check start_var: ' + repr(start_var[a-ignore,:])
     model,wd,model_var,esds = overlap.apply_gain(start_ds,1.0/start_var,pixel_step,gain,
-                                            calc_var=True,bad_steps=dropped_frames)
+                                                 calc_var=True,bad_steps=dropped_frames,
+                                                 pixel_mask=pixel_mask)
     # model and model_var have shape tubeno*pixel_step + no_steps (see shift_tube_add_new)
     print 'Have full model and errors at %f' % time.clock()
     if dumpfile is not None:
@@ -941,8 +961,8 @@ angular corrections for the tubes contributing to each two theta position.""" % 
         )
     if len(use_gains)==0:
         info_string = "After vertical integration between pixels %d and %d," % (bottom,top) + \
-        " individual tube gains were iteratively refined using the Ford/Rollett algorithm. Final gains " + \
-        "are stored in the _[local]_refined_gain loop." + axis_string
+        """ individual tube gains were iteratively refined using the Ford/Rollett algorithm (Acta Cryst. (1968) B24,293). 
+            Final gains are stored in the _[local]_refined_gain loop.""" + axis_string
     else:
         info_string =  "After vertical integration between pixels %d and %d," % (bottom,top) + \
         " individual tube gains were corrected based on a previous iterative refinement using the Ford/Rollett algorithm. The gains used" + \
@@ -965,10 +985,13 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True
         weights = array.ones_like(dataset)
     else:
         weights = 1.0/dataset.var
+    # Use weights as the mask
+    if pixel_mask is not None:
+        weights = weights*pixel_mask
     if algo == "FordRollett":
-        gain,first_ave,ar,esds,k = overlap.find_gain_fr(dataset,weights,pixel_step,start_gain,pixel_mask=pixel_mask)
+        gain,first_ave,ar,esds,k = overlap.find_gain_fr(dataset,weights,pixel_step,start_gain)
     else:
-        gain,first_ave,esds = overlap.find_gain(dataset,dataset.var,pixel_step,start_gain,pixel_mask=pixel_mask)
+        gain,first_ave,esds = overlap.find_gain(dataset,dataset.var,pixel_step,start_gain)
     chisquared,residual_map = overlap.get_statistics_fr(gain,first_ave,dataset,dataset.var,pixel_step,pixel_mask)
     old_result = first_ave    #store for later
     chisq_history = [chisquared]
@@ -982,7 +1005,7 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True
         if cycle_no > 3 and iter_no < 0:
             esdflag = (esdflag or (abs(chisq_history[-2]-chisq_history[-1]))<0.005)
         if algo == "FordRollett":
-            gain,interim_result,ar,esds,k = overlap.find_gain_fr(dataset,weights,pixel_step,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
+            gain,interim_result,ar,esds,k = overlap.find_gain_fr(dataset,weights,pixel_step,gain,arminus1=ar,errors=esdflag)
         else:
             gain,interim_result,ar,esds = overlap.find_gain(dataset,dataset,pixel_step,gain,pixel_mask=pixel_mask,errors=esdflag)
         chisquared,residual_map = overlap.get_statistics_fr(gain,interim_result,dataset,dataset.var,pixel_step,pixel_mask)
