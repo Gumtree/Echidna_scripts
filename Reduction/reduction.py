@@ -875,6 +875,9 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     frame_sum = frame_check.intg(axis=1)
     print `b.shape` + "->" + `c.shape`
     print 'Relative no of frames: ' + `frame_sum`
+    # Output the starting data for external use
+    if dumpfile is not None:
+        dump_tube_intensities(dumpfile,raw=b_zeroed)
     if len(use_gains)==0:   #we have to calculate them
         if c.shape[0] == 1:   #can't be done, there is no overlap
             return None,None,None,None,None
@@ -891,8 +894,6 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
         gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
             iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights,
                          pixel_mask = pixel_mask)
-        if dumpfile is not None:
-            dump_gain_file(dumpfile,raw=d[:,ignore:],gain=gain,model=interim_result,stepsize=1)
     else:        #we have been provided with gains
         gain = use_gains
         chisquared=0.0
@@ -911,8 +912,6 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
                                                  pixel_mask=pixel_mask)
     # model and model_var have shape tubeno*pixel_step + no_steps (see shift_tube_add_new)
     print 'Have full model and errors at %f' % time.clock()
-    if dumpfile is not None:
-            dump_gain_file(dumpfile,raw=b_zeroed[:,ignore:],gain=gain,model=model,name_prefix="full",stepsize=pixel_step)
     # step size could be less than pixel_step if we have a short non-overlap scan
     real_step = pixel_step
     if len(tube_steps)< pixel_step:
@@ -1057,6 +1056,19 @@ def dump_gain_file(filename,raw=None,gain=None,model=None,name_prefix="",stepsiz
         outfile.write("%8.3f\n" % g)
     outfile.close()
 
+def dump_tube_intensities(filename,raw):
+    """Dump a table of intensity by tube then by step. Raw contains an array
+    of tube and step"""
+    import math
+    outfile = open(filename,"w")
+    outfile.write("#Dump of detector tube intensities: %d detectors, %d steps each\n" % (raw.shape[0],raw.shape[1]))
+    outfile.write("#Step Intensity ESD\n")
+    for tube_no in range(raw.shape[1]):
+        outfile.write("#Data for tube %d\n" % tube_no)
+        for step_no in range(raw.shape[0]):
+            outfile.write("%4d%8.2f %7.3f\n" % (step_no,raw.storage[step_no,tube_no],math.sqrt(raw.var[step_no,tube_no])))
+    outfile.close()
+    
 def get_stepsize(ds):
     """A utility function to determine the step size of the given dataset. This
     will only work if the data have not yet been stitched."""

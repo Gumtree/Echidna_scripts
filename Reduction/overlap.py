@@ -91,10 +91,6 @@ def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_ma
               print "New minimum is %g" % summed_denominator.min()
           summed_denominator[summed_denominator<1e-10] = 1e-10
           #clip(summed_denominator,1e-10,summed_denominator.max(),summed_denominator)
-   print 'summed_data 60-65:'
-   print repr(summed_data[57*steps_per_tube:62*steps_per_tube])
-   print 'summed_denominator 60-65:'
-   print repr(summed_denominator[57*steps_per_tube:62*steps_per_tube])
    outdata = summed_data/summed_denominator #F_h^2 in original paper
    # Get a proper error for observations
    if calc_var is True:
