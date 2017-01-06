@@ -137,8 +137,10 @@ regain_load = Par('bool','False')
 regain_load.title = 'Load gain from file'
 regain_load_filename = Par('file')
 regain_load_filename.title = 'Gain file'
+regain_nosum = Par('bool','False')
+regain_nosum.title = 'No sum before refinement'
 Group('Recalculate Gain').add(regain_apply,regain_iterno,regain_store,regain_store_filename,
-                              regain_load,regain_load_filename)
+                              regain_load,regain_load_filename,regain_nosum)
 
 
 # Allow summation of plots
@@ -704,7 +706,7 @@ def __run_script__(fns):
                bottom = int(vig_lower_boundary.value)
                top = int(vig_upper_boundary.value)
                cs,gain,esds,chisquared,no_overlaps = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
-                                                                          exact_angles=htc,drop_frames=str(asm_drop_frames.value),use_gains=regain_data)
+                                                                          exact_angles=htc,drop_frames=str(asm_drop_frames.value),use_gains=regain_data,no_sum=regain_nosum.value)
                if cs is not None:
                    print 'Have new gains at %f' % (time.clock() - elapsed)
                    fg = Dataset(gain)

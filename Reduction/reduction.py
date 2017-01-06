@@ -786,7 +786,9 @@ def calculate_average_angles(tube_steps,angular_file,pixel_step,tube_sep,extra_d
 # Calculate adjusted gain based on matching intensities between overlapping
 # sections of data from different detectors
 def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,bottom=None,
-               exact_angles=None,drop_frames='',use_gains = [],dumpfile=None):
+               exact_angles=None,drop_frames='',use_gains = [],
+               dumpfile="/home/jrh/programs/echidna/overlap/NAC_gains.txt",
+               no_sum=False):
     """Calculate rescaling factors for tubes based on overlapping data
     regions. The ignore parameter specifies the number of initial tubes for
     which data are unreliable and should be ignored. Specifying unit weights
@@ -798,7 +800,8 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     specially-formatted string giving a list of frames to be ignored. If 
     use_gains is not empty, these [val,esd] values will be used instead of those
     obtained from the iteration routine. Dumpfile, if set, will output
-    starting values for use by other routines."""
+    starting values for use by other routines. no_sum does not sum each
+    detector step before refining."""
     import time
     from Reduction import overlap
     # Get sensible values
@@ -852,16 +855,25 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=True,top=None,
     if len(use_gains)==0:   #we have to calculate them
         if c.shape[0] == 1:   #can't be done, there is no overlap
             return None,None,None,None,None
-        # sum the individual unoverlapped sections
-        d = c.intg(axis=1) #array of [rangeno,stepno,tubeno]
-        # normalise by the number of frames in each section
-        print "Data shape: " + `d.shape`
-        print "Check shape: " + `frame_sum.shape`
-        e = d.transpose()  #array of [rangestep,tubeno]
-        gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
-            iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
+        if not no_sum:
+            # sum the individual unoverlapped sections
+            d = c.intg(axis=1) #array of [rangeno,stepno,tubeno]
+            # normalise by the number of frames in each section
+            print "Data shape: " + `d.shape`
+            print "Check shape: " + `frame_sum.shape`
+            e = d.transpose()  #array of [rangestep,tubeno]
+            gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
+                                                                                       iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
+        else:
+            # no sum required
+            e = c.transpose((2,0))
+            print "Data shape: " + `e.shape`
+            print "Check shape: " + `frame_sum.shape`
+            gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
+                                                                                       iterate_data(e[ignore:],pixel_step=pixel_step,iter_no=iterno,unit_weights=unit_weights)
+
         if dumpfile is not None:
-            dump_gain_file(dumpfile,raw=d[:,ignore:],gain=gain,model=interim_result,stepsize=1)
+                dump_gain_file(dumpfile,raw=d[:,ignore:],gain=gain,model=interim_result,stepsize=1)
     else:        #we have been provided with gains
         gain = use_gains
         chisquared=0.0
@@ -1002,6 +1014,7 @@ def dump_gain_file(filename,raw=None,gain=None,model=None,name_prefix="",stepsiz
     full_filename = os.path.join(dirname,name_prefix+basename)
     outfile = open(full_filename,"w")
     d = raw
+    print 'Dumping gains to %s' % full_filename
     # Header
     outfile.write("%d %d %d\n" % (d.shape[-1],d.shape[0],stepsize))
     # raw data

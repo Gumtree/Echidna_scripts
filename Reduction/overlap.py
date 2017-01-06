@@ -46,7 +46,7 @@ def find_gain(data, variance, steps_per_tube, gain_array,pixel_mask=None,errors=
    print 'Gain at %f' % (time.clock() - elapsed)
    # calculate the error in each gain  from the rms differences
    if errors:
-       esds = calc_error_new(data,outdata,gain,steps_per_tube)
+       esds = calc_error_rough(gain)
        print 'Final errors at %f' % (time.clock() - elapsed)
    else: esds = array.zeros_like(gain)
    return gain,outdata,chisquared,residual_map,esds
@@ -63,7 +63,7 @@ def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_ma
    import time
    elapsed = time.clock()
    if pixel_mask is None:
-       pixel_mask = array.ones_like(full_ds[0])
+       pixel_mask = array.ones_like(full_ds)
    #sanitise - we don't like zeros or complicated datastructures
    full_data = full_ds.storage
    my_weights = copy(weights)
@@ -96,7 +96,7 @@ def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_ma
    outdata = summed_data/summed_denominator #F_h^2 in original paper
    # Get a proper error for observations
    if calc_var is True:
-      esds = calc_error_new(full_ds,outdata,gain_array,steps_per_tube)
+      esds = calc_error_rough(gain_array)
       weighted_scales = zeros_like(weighted_data)
       for section in range(weighted_data.shape[-1]):
          weighted_scales[:,section] = trans_gain*my_weights[:,section] #(G_l * weights)
@@ -105,21 +105,22 @@ def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_ma
       # now calculate the derivative with respect to G_p
       # create an array like the input array with the observed intensities replaced by
       # the expected intensites
-      outdata_by_tube = zeros_like(weighted_data)
+      outdata_by_tube = array.zeros_like(weighted_data)
       for section in range(weighted_data.shape[-1]):
-         outdata_by_tube[section] = outdata[section*steps_per_tube:(section+1)*steps_per_tube]
+         outdata_by_tube[section] = outdata[section*steps_per_tube:(section*steps_per_tube)+weighted_data.shape[0]]
       fv_gp = (weighted_data - 2.0 * weighted_scales * outdata_by_tube)
       # multiply through the gains and add
-      acc_gp = zeros_like(my_weights)
+      acc_gp = array.zeros_like(my_weights)
       for section in range(my_weights.shape[-1]):
          acc_gp[:,section] = (fv_gp[:,section] * esds[section])**2
       #print 'Check df_H/dg_p for p=5:7, gain esd is '+ str(esds[5:7])
       #print str(acc_gp.storage[5:7])
       # now add up the contributions
       final_variances_gp = shift_tube_add_new(acc_gp,steps_per_tube,pixel_mask)/summed_denominator**2
-      print 'Errors in F_h due to errors in F_hp:' + str(final_variances_fh[100:150])
-      print 'Errors in F_h due to errors in G_p: ' + str(final_variances_gp[100:150])
-      final_variances = final_variances_fh  # + final_variances_gp
+      print 'F_h: ' + str(outdata[715:765])
+      print 'Variance in F_h due to errors in F_hp:' + str(final_variances_fh[715:765])
+      print 'Variance in F_h due to errors in G_p: ' + str(final_variances_gp[715:765])
+      final_variances = final_variances_fh  + final_variances_gp
    else:
       final_variances = zeros_like(outdata)
       esds = zeros_like(gain_array)
@@ -437,6 +438,7 @@ def calc_error(obs,model,gain_vector,offset,pixel_mask):
     return result
 
 # This function calculates the error in the gain numbers by getting the RMS deviation of obs_point/model_point
+# This is incorrect as the RMS deviation contains contributions from counting error as well.
 def calc_error_new(obs,model,gain_vector,offset):
     # We should calculate  as for shift_sub_tube_mult, but dividing instead
     import math
@@ -450,6 +452,12 @@ def calc_error_new(obs,model,gain_vector,offset):
         mod_sec = model.get_section([offset*atubeno],[scanlen])
         ri.set_next(math.sqrt(sum((gi.next()-(oi.next()/mod_sec))**2)/scanlen))
     return result
+
+def calc_error_rough(gain_vector):
+   """Provide a previously-calculated error for the provided gain vector"""
+   result = array.ones_like(gain_vector)
+   result = result * 0.01   #approximate error
+   return result
 
 # The treatment of Ford and Rollett  Acta Cryst. (1968) B24,293
 # In find_gain, we do not want to use datapoints that are zero.  We have to mask these out
@@ -467,7 +475,7 @@ def find_gain_fr(data, data_weights, steps_per_tube, gain_array,arminus1=None,pi
       If accel_flag is True, the accelerated version of Ford and Rollett is used.
       """
    if pixel_mask is None:
-       pixel_mask = array.ones_like(data[0])
+       pixel_mask = array.ones_like(data)
    elapsed = time.clock()
    outdata,weighted_data,outdata_vars,dummy = apply_gain(data,data_weights,steps_per_tube,gain_array,pixel_mask)
    # Now calculate A_p (Equation 3 of FR)
