@@ -114,9 +114,9 @@ asm_drop_tubes.title = 'Remove detectors (count from 0, format a:b,c:d):'
 Group('Assemble frames').add(asm_drop_frames,asm_drop_tubes)
 
 # Vertical Integration (note that gain recalc will include vertical integration)
-vig_lower_boundary = Par('int', '0')
+vig_lower_boundary = Par('int', '24')
 vig_lower_boundary.title = 'Lower limit'
-vig_upper_boundary = Par('int', '127')
+vig_upper_boundary = Par('int', '103')
 vig_upper_boundary.title = 'Upper limit'
 vig_apply_rescale  = Par('bool', 'False')
 vig_apply_rescale.title = 'Rescale'
@@ -251,7 +251,7 @@ def vtc_show_proc():
         f = None
         try:
             # open file
-            f  = open(str(vtc_file.value), 'r')
+            f  = open("%r"%str(vtc_file.value), 'r')
             ds = zeros(128, int)
             
             # read file

@@ -55,7 +55,7 @@ def determine_missed_steps(one_dataset,mon="bm3_counts",tolerance=0.5):
     return bad_ones
     
     
-def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",bottom = 24, top = 104, 
+def calc_eff_mark2(vanad,backgr,v_off,edge=[(0,50),(1,25)],norm_ref="bm3_counts",bottom = 24, top = 104, 
     detail=None,splice=None):
     """Calculate efficiencies given vanadium and background hdf files.  If detail is
     some integer, detailed calculations for that tube will be displayed. Edge is a
@@ -185,11 +185,13 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     nonzero_contribs[gain_as_vectors>0] = 1.0
     nz_sum = nonzero_contribs.sum(axis=0)
     gain_sum = gain_as_vectors.sum(axis=0)
-    total_gain = gain_sum/nz_sum
+    total_gain = array.ones_like(gain_sum)
+    total_gain[nz_sum>0] = gain_sum/nz_sum
     final_gain = total_gain.reshape([step_gain.shape[1],step_gain.shape[2]])
     print 'We have total gain: ' + `final_gain`
     print 'Shape ' + `final_gain.shape`
     print 'Min observations per point: %f' % nz_sum.min()
+    print 'nz_sum beginning: ' + str(nz_sum.storage[0:200])
     import time
     elapsed = time.clock()
     # efficiency speedup; we would like to write
@@ -209,7 +211,7 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=((1,10),),norm_ref="bm3_counts",botto
     total_gain = total_gain.reshape([total_gain.shape[0],1])
     print 'Shapes: ' + `cov_array[:,0].shape` + `gain_as_vectors[:,0].shape` + `total_gain.shape`
     for step in xrange(gain_as_vectors.shape[1]):
-        print 'Covariance step %d' % step
+        # print 'Covariance step %d' % step
         cov_array[:,step] = (gain_as_vectors[:,step] - total_gain)**2
     # Now ignore the points that are not observed before summing
     cov_array[gain_as_vectors<=0] = 0
@@ -312,7 +314,7 @@ def output_2d_efficiencies(result_dict,filename,comment='',transpose=False):
         except StopIteration:
             pass
         outfile.write("##End row %d\n" % (col_count))  #a line at the end of each tube
-        print 'Finished row %d' % col_count
+        # print 'Finished row %d' % col_count
         col_count = col_count + 1
     except StopIteration:
        pass
