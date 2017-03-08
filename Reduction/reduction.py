@@ -410,7 +410,7 @@ def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=(0.0
     working_slice = ds[bottom:top,:]
     totals = working_slice.intg(axis=axis)
     contrib_map = zeros(working_slice.shape,dtype=int)
-    contrib_map[working_slice>0.1] = 1
+    contrib_map[working_slice>-1] = 1  #Disabled
     contribs = contrib_map.intg(axis=axis)
     #
     # We have now reduced the scale of the problem by 100
@@ -1061,7 +1061,7 @@ def dump_tube_intensities(filename,raw):
     of tube and step"""
     import math
     outfile = open(filename,"w")
-    outfile.write("#Dump of detector tube intensities: %d detectors, %d steps each\n" % (raw.shape[0],raw.shape[1]))
+    outfile.write("#Dump of detector tube intensities: %d detectors, %d steps each\n" % (raw.shape[1],raw.shape[0]))
     outfile.write("#Step Intensity ESD\n")
     for tube_no in range(raw.shape[1]):
         outfile.write("#Data for tube %d\n" % tube_no)
