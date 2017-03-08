@@ -713,7 +713,7 @@ def __run_script__(fns):
                    fg.var = esds**2
                    # set horizontal axis (ideal values)
                    Plot4.set_dataset(Dataset(chisquared))   #chisquared history
-                   Plot5.set_dataset(fg)   #final gain plot
+                   Plot5.add_dataset(fg)   #final gain plot
                    # now save the file if requested
                    if regain_store.value and not regain_load.value:
                        gain_comment = "Gains refined from file %s" % fn

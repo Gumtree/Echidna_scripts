@@ -10,7 +10,7 @@ from gumpy.nexus import *
 # In find_gain, we do not want to use datapoints that are zero.  We have to mask these out
 def find_gain(data, variance, steps_per_tube, gain_array,pixel_mask=None,errors=False):
    import math,time
-   """usage: data is a 2D gumpy Array consisting of vertically-integrated scans from multiple tubes on Echidna, 
+   """usage: data is a 3D gumpy Array consisting of vertically-integrated scans from multiple tubes on Echidna, 
       where successive scans start overlapping neighbouring tubes after steps_per_tube steps. 
       Variance is the corresponding variance.
       To avoid duplication of calculations, the corrected data corresponding to
@@ -74,17 +74,21 @@ def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_ma
    if calc_var is True:  #we assume variance is 1/weights for esd calcs
       my_variance = 1.0/my_weights  #we are assuming that 1.0/0 = 0 for excluded bits
    #weighted_data = divide(full_data,my_variance)  #wd = (F_hl^2/sigma_hl^2)
-   weighted_data = full_data*my_weights  #wd = (F_hl^2/sigma_hl^2) 
-   trans_gain = gain_array.reshape([len(gain_array),1])
+   weighted_data = full_data*my_weights  #wd = (F_hl^2/sigma_hl^2)
+   # create a gain array with the same shape as the data
+   trans_gain = zeros_like(weighted_data)
+   for tubeno in range(weighted_data.shape[0]):   #loop over tubes
+      trans_gain[tubeno] = gain_array[tubeno]
+   # trans_gain = gain_array.reshape([len(gain_array),1])
    #scaled_data = multiply(trans_gain,weighted_data)  #G_l(rho-1)*wd ; should broadcast to all scans
    # gumpy doesn't have broadcasting, so...
    scaled_data = zeros_like(weighted_data)
-   for section in range(weighted_data.shape[-1]):
-       scaled_data[:,section] = trans_gain*weighted_data[:,section]  #G_l(rho-1)*wd
+   #for section in range(weighted_data.shape[-1]):
+   scaled_data = trans_gain*weighted_data  #G_l(rho-1)*wd
    summed_data = shift_tube_add_new(scaled_data,steps_per_tube,pixel_mask) # Sum_l[previous line]
    scaled_weights = zeros_like(my_weights)
-   for section in range(my_weights.shape[-1]):
-      scaled_weights[:,section] = trans_gain**2*my_weights[:,section]
+   #for section in range(my_weights.shape[-1]):
+   scaled_weights = trans_gain**2*my_weights
    # if True in isnan(scaled_variance): raise ValueError,"NaN found!"
    summed_denominator = shift_tube_add_new(scaled_weights,steps_per_tube,pixel_mask)
    if 0 in summed_denominator:
@@ -98,8 +102,8 @@ def apply_gain(full_ds,weights,steps_per_tube,gain_array,calc_var=False,pixel_ma
    if calc_var is True:
       esds = calc_error_rough(gain_array)
       weighted_scales = zeros_like(weighted_data)
-      for section in range(weighted_data.shape[-1]):
-         weighted_scales[:,section] = trans_gain*my_weights[:,section] #(G_l * weights)
+   #   for section in range(weighted_data.shape[-1]):
+      weighted_scales = trans_gain*my_weights #(G_l * weights)
       summed_vars = shift_tube_add_new(weighted_scales**2 * my_variance,steps_per_tube,pixel_mask) #Sum of variances
       final_variances_fh = summed_vars/summed_denominator**2   #contribution for sig(F_h)
       # now calculate the derivative with respect to G_p
@@ -180,7 +184,7 @@ def shift_tube_add_new(inarray,tube_offset,pixel_mask,average=False):
 
     # We imagine that we have no_tubes slices of data which we want to overlap, shifting each time
     # by steps_per_tube.  The total length will be no_tubes* no_steps + offset
-    no_steps = len(inarray[0])    #store for efficiency
+    no_steps = inarray.shape[1]*inarray.shape[2]    #store for efficiency
     # The final tube covers an extra (no_steps - tube_offset) points compared to non-overlapping scans
     newshape = [len(inarray)*tube_offset + no_steps - tube_offset]
     oldshape = inarray.shape
@@ -192,9 +196,11 @@ def shift_tube_add_new(inarray,tube_offset,pixel_mask,average=False):
     contribs = array.zeros(newshape)
     slice_iter = working_data.__iter__()
     # Add the arrays
+    #print 'inarray ' + repr(inarray.shape) + ' result ' + repr(result.shape)
     for atubeno in range(len(inarray)):
-        rta = result.get_section([atubeno*tube_offset],[oldshape[1]])
-        rta += slice_iter.next()
+        rta = result.get_section([atubeno*tube_offset],[oldshape[1]*oldshape[2]])
+        rtan = slice_iter.next()
+        rta += rtan.transpose().flatten()
     return result
 
 def shift_mult_add(fixed_array, sliding_array,offset, pixel_mask,squareit = False):
@@ -336,21 +342,22 @@ def shift_mult_fr_add(gain_array,model_array,obs_array,weight_array,offset,pixel
    # variance, then do a shift-sum to get the totals
    scaled_weight = array.zeros_like(weight_array)
    swlen = scaled_weight.shape[1]
-   for tube_no in range(len(gain_array)):  
-      sws = scaled_weight.get_section([tube_no,0],[1,swlen])
-      was = weight_array.get_section([tube_no,0],[1,swlen])
+   seclen = scaled_weight.shape[2]
+   for tube_no in range(len(gain_array)):
+      sws = scaled_weight.get_section([tube_no,0,0],[1,swlen,seclen])
+      was = weight_array.get_section([tube_no,0,0],[1,swlen,seclen])
       sws += gain_array[tube_no]**2 * was
    scale_factors = shift_tube_add_new(scaled_weight,offset,pixel_mask)
    # Now for the other terms
    a_p_array = array.zeros_like(gain_array)
-   tube_steps = obs_array.shape[1]   #How many steps each tube takes
+   tube_steps = obs_array.shape[1]*obs_array.shape[2]   #How many steps each tube takes
    try:
       oba = obs_array.storage
    except AttributeError:
       oba = obs_array
    for tube_no in range(len(gain_array)):
-      obs_section = oba[tube_no]  #F^2_{hp}
-      wt_section = weight_array[tube_no]#w_{hp}
+      obs_section = oba[tube_no].transpose().flatten()  #F^2_{hp}
+      wt_section = weight_array[tube_no].transpose().flatten() #w_{hp}
       mod_section = model_array.get_section([offset*tube_no],[tube_steps]) #F^2_{h,r}
       a_p_array[tube_no] = (wt_section*(mod_section**2) + \
           wt_section**2 * obs_section * (obs_section - 2.0*mod_section*gain_array[tube_no]) / \
@@ -360,14 +367,14 @@ def shift_mult_fr_add(gain_array,model_array,obs_array,weight_array,offset,pixel
 def fr_get_cpr(gain_array,model_array,obs_array,weight_array,aparray,offset,pixel_mask):
    """Calculate Cp,r as per eqn (5) of Fox and Rollett"""
    cpr_array = array.zeros_like(gain_array)
-   tube_steps = obs_array.shape[1]   #How many steps each tube takes
+   tube_steps = obs_array.shape[1]*obs_array.shape[2]   #How many steps each tube takes
    try:
       oba = obs_array.storage
    except AttributeError:
       oba = obs_array
    for tube_no in range(len(gain_array)):
-      obs_section = oba[tube_no]  #F^2_{hp}
-      wt_section = weight_array[tube_no]#w_{hp}
+      obs_section = oba[tube_no].transpose().flatten()  #F^2_{hp}
+      wt_section = weight_array[tube_no].transpose().flatten() #w_{hp}
       mod_section = model_array.get_section([offset*tube_no],[tube_steps]) #F^2_{h,r}
       cpr_array[tube_no] = gain_array[tube_no] + (wt_section*mod_section*obs_section).sum()/aparray[tube_no] - \
           gain_array[tube_no]*(wt_section*mod_section**2).sum()/aparray[tube_no]
@@ -398,16 +405,16 @@ def shift_sub_tube_mult_new(gain_vector,model_vector,obs_array,offset,pixel_mask
        slice of obs_array, the gain and model relative placements are chosen. 
        Optimised for speed on gumpy."""
     result = array.zeros_like(obs_array)
-    scanlen = obs_array.shape[1]
+    scanlen = obs_array.shape[1]*obs_array.shape[2]
     numslices = len(obs_array)   #for convenience
     working_obs = obs_array.storage
     obs_i = working_obs.__iter__() #for speed
     gv_iter = gain_vector.__iter__() # for speed
-    #print 'Result shape: ' + `result.shape`
+    #print 'Result shape: ' + repr(result.shape)
     for atubeno in range(numslices):
         obi = obs_i.next()
         gvi = gv_iter.next()
-        model_sec = model_vector.get_section([atubeno*offset],[scanlen])
+        model_sec = model_vector.get_section([atubeno*offset],[scanlen]).reshape(obi.shape)
         # if atubeno == 64:
         #    print 'mask, obi,gvi ' + `pixel_mask` + `gvi` + ' ' + `obi` + ' ' + `model_sec`
         result[atubeno] = (obi*pixel_mask - gvi*model_sec)**2
@@ -446,11 +453,12 @@ def calc_error_new(obs,model,gain_vector,offset):
     ri = result.__iter__()
     gi = gain_vector.__iter__()
     oi = obs.storage.__iter__()
-    scanlen = obs.shape[1]
+    scanlen = obs.shape[1]*obs.shape[2]
     numslices = len(obs)
     for atubeno in range(numslices):
         mod_sec = model.get_section([offset*atubeno],[scanlen])
-        ri.set_next(math.sqrt(sum((gi.next()-(oi.next()/mod_sec))**2)/scanlen))
+        oin = oi.next().transpose().flatten()
+        ri.set_next(math.sqrt(sum((gi.next()-(oin/mod_sec))**2)/scanlen))
     return result
 
 def calc_error_rough(gain_vector):
@@ -464,7 +472,7 @@ def calc_error_rough(gain_vector):
 def find_gain_fr(data, data_weights, steps_per_tube, gain_array,arminus1=None,pixel_mask=None,errors=False,
                  accel_flag=True):
    import math,time
-   """usage: data is a 2D gumpy Array consisting of vertically-integrated scans from multiple tubes on Echidna, 
+   """usage: data is a 3D gumpy Array consisting of vertically-integrated scans from multiple tubes on Echidna, 
       where successive scans start overlapping neighbouring tubes after steps_per_tube steps. 
       Variance is the corresponding variance.
       To avoid duplication of calculations, the corrected data corresponding to
