@@ -785,7 +785,7 @@ def calculate_average_angles(tube_steps,angular_file,pixel_step,tube_sep,extra_d
 
 # Calculate adjusted gain based on matching intensities between overlapping
 # sections of data from different detectors
-def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=False,top=None,bottom=None,
+def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None,bottom=None,
                exact_angles=None,drop_frames='',use_gains = [],
                dumpfile="/home/jrh/programs/echidna/overlap/NAC_gains.txt",
                no_sum=False):
@@ -793,7 +793,7 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=False,top=None
     regions. The ignore parameter specifies the number of initial tubes for
     which data are unreliable and should be ignored. Specifying unit weights
     = False will use the variances contained in the input dataset. Note that
-    the output dataset has already been vertically integrated as part of the
+    the output dataset will have been vertically integrated as part of the
     algorithm. The vertical integration limits are set by top and bottom, if
     None all points are included. Exact_angles either contains the name of a
     file with per-detector angular corrections, or None.  Drop_frames is a
@@ -869,9 +869,6 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=False,top=None
         e = e.transpose((1,2))  #array of [tubeno,section,stepno]
         print "Data shape: " + repr(e.shape)
         print "Check shape: " + repr(frame_sum.shape)
-        print "Check entry 5: " + repr(e[5].storage)
-        print "Unreshaped was: " + repr(b[:,5].storage)
-        print "Variances: " + repr(b[:,5].var)
         gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
                                                                                        iterate_data(e[ignore:],iter_no=iterno,unit_weights=unit_weights)
         if dumpfile is not None:
@@ -985,6 +982,7 @@ def iterate_data(dataset,iter_no=5,pixel_mask=None,plot_clear=True,algo="FordRol
         no_iters = abs(iter_no)
     for cycle_no in range(no_iters+1):
         esdflag = (cycle_no == no_iters)  # need esds as well, and flags the last cycle
+        print 'Cycle %d' % cycle_no
         if cycle_no > 3 and iter_no < 0:
             esdflag = (esdflag or (abs(chisq_history[-2]-chisq_history[-1]))<0.005)
         if algo == "FordRollett":
@@ -1017,10 +1015,6 @@ def test_iterate_data():
     start_data = Dataset(start_data).reshape([20,2,10])
     print 'Starting array, first 3: ' + repr(start_data.storage[:3])
     g,d,ir,rm,hist,esds,fa,wts = iterate_data(start_data,10,20)
-    #print 'Final gains: ' + repr(g)
-    #print 'True gains: ' + repr(true_gains*1.0/true_gains[0])
-    #print 'Final data: ' + repr(ir)
-    #print 'Final data - truth: ' + repr(ir - true_vals)
     return g,true_gains,ir,true_vals
 
 def make_peak(width):
