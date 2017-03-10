@@ -807,6 +807,7 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=False,top=None
     # Get sensible values
     if top is None: top = ds.shape[1]-1
     if bottom is None: bottom = 0
+    # Dimensions are step,vertical,tube
     b = ds[:,bottom:top,:].intg(axis=1).get_reduced()
     # Determine pixels per tube interval
     tube_pos = ds.axes[-1]
@@ -847,6 +848,7 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=False,top=None
             frame_check[drop_step] = 0
             all_zeroed[drop_step] = 0
             all_zeroed.var[drop_step] = 0
+    # Now reshape to divide each step into sections of length pixel_step
     c = all_zeroed.reshape([b.shape[0]/pixel_step,pixel_step,b.shape[-1]])
     frame_check = frame_check.reshape([b.shape[0]/pixel_step,pixel_step])
     frame_sum = frame_check.intg(axis=1)
@@ -861,22 +863,26 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=False,top=None
             # normalise by the number of frames in each section
             print "Data shape: " + `d.shape`
             print "Check shape: " + `frame_sum.shape`
-            e = d.transpose((2,0))  #array of [tubeno,step,section]
+            # Note gumpy can't do transposes of more than two axes at once
+            e = d.transpose((2,0))  #array of [tubeno,stepno,section]
+            e = e.transpose((1,2))  #array of [tubeno,section,stepno]
             gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
-                                                                                       iterate_data(e[ignore:],pixel_step=1,iter_no=iterno,unit_weights=unit_weights)
+                                                                                       iterate_data(e[ignore:],iter_no=iterno,unit_weights=unit_weights)
             if dumpfile is not None:
                 dump_gain_file(dumpfile,raw=d[:,:,ignore:],gain=gain,model=interim_result,chisq=chisquared,stepsize=1)
         else:
             # no sum required
             e = c.transpose((2,0))  #array of [tubeno,step,section]
-            print "Data shape: " + `e.shape`
-            print "Check shape: " + `frame_sum.shape`
-            print "Check entry 4: " + repr(e[4].storage)
-            print "Unreshaped was: " + repr(b[:,4].storage)
+            e = e.transpose((1,2))  #array of [tubeno,section,stepno]
+            print "Data shape: " + repr(e.shape)
+            print "Check shape: " + repr(frame_sum.shape)
+            print "Check entry 5: " + repr(e[5].storage)
+            print "Unreshaped was: " + repr(b[:,5].storage)
+            print "Variances: " + repr(b[:,5].var)
             gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
-                                                                                       iterate_data(e[ignore:],pixel_step=pixel_step,iter_no=iterno,unit_weights=unit_weights)
+                                                                                       iterate_data(e[ignore:],iter_no=iterno,unit_weights=unit_weights)
             if dumpfile is not None:
-                dump_gain_file(dumpfile,raw=c[:,:,ignore:],gain=gain,model=interim_result,chisq=chisquared,stepsize=pixel_step)
+                dump_gain_file(dumpfile,raw=c[:,:,ignore:],gain=gain,model=interim_result,chisq=chisquared)
     else:        #we have been provided with gains
         gain = use_gains
         chisquared=0.0
@@ -884,13 +890,16 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=False,top=None
     # First get a full model
     reshape_ds = b_zeroed.reshape([b.shape[0]/pixel_step,pixel_step,b.shape[-1]])
     start_ds = reshape_ds.transpose((2,0))[ignore:] #array of [tubeno,stepno,section]
+    start_ds = start_ds.transpose((1,2))
     start_var = start_ds.var
-    model,wd,model_var,esds = overlap.apply_gain(start_ds,1.0/start_var,pixel_step,gain,
+    # Normalise gains so that average is 1.0
+    gain = gain*len(gain)/gain.sum()
+    model,wd,model_var,esds = overlap.apply_gain(start_ds,1.0/start_var,gain,
                                             calc_var=True,bad_steps=dropped_frames)
     # model and model_var have shape tubeno*pixel_step + no_steps (see shift_tube_add_new)
     print 'Have full model and errors at %f' % time.clock()
     if dumpfile is not None:
-            dump_gain_file(dumpfile,raw=reshape_ds[:,:,ignore:],gain=gain,model=model,name_prefix="full",stepsize=pixel_step)
+            dump_gain_file(dumpfile,raw=reshape_ds[:,:,ignore:],gain=gain,model=model,name_prefix="full")
     # step size could be less than pixel_step if we have a short non-overlap scan
     real_step = pixel_step
     if len(tube_steps)< pixel_step:
@@ -950,13 +959,19 @@ angular corrections for the tubes contributing to each two theta position.""" % 
 
 # Do an iterative refinement of the gain values. We calculate errors only when chisquared shift is
 # small, and aim for a shift/esd of <0.1
-def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True,algo="FordRollett",unit_weights=False):
-    """Iteratively refine the gain. The pixel_step is the number of steps a tube takes before it
-    overlaps with the next tube. Parameter 'dataset' is an n x m array, for m distinct angular regions covered by 
-    detector number n. iter_no is the number of iterations, if negative the routine will iterate
-    until chisquared does not change by more than 0.01 or abs(iter_no) steps, whichever comes first. Pixel_mask 
-    has a zero for any tube that should be excluded. Algo 'ford rollett' applies the algorithm of Ford and Rollet, 
-    Acta Cryst. (1968) B24, p293"""
+def iterate_data(dataset,iter_no=5,pixel_mask=None,plot_clear=True,algo="FordRollett",unit_weights=False):
+    """Iteratively refine the gain. The pixel_step is the number of steps
+    a tube takes before it overlaps with the next tube. Parameter
+    'dataset' is an n x m x s array, for m distinct angular regions of
+    s steps each covered by detector number n.  Note that this layout is
+    convenient as a reshape([m,s]) operation applied to the flat model
+    array will put sequential values together. iter_no is the number
+    of iterations, if negative the routine will iterate until
+    chisquared does not change by more than 0.01 or abs(iter_no)
+    steps, whichever comes first. Pixel_mask has a zero for any tube
+    that should be excluded. Algo 'ford rollett' applies the algorithm
+    of Ford and Rollet, Acta Cryst. (1968) B24, p293
+    """
     import overlap
     start_gain = array.ones(len(dataset))
     if unit_weights is True:
@@ -964,10 +979,10 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True
     else:
         weights = 1.0/dataset.var
     if algo == "FordRollett":
-        gain,first_ave,ar,esds,k = overlap.find_gain_fr(dataset,weights,pixel_step,start_gain,pixel_mask=pixel_mask)
+        gain,first_ave,ar,esds,k = overlap.find_gain_fr(dataset,weights,start_gain,pixel_mask=pixel_mask)
     else:
-        gain,first_ave,esds = overlap.find_gain(dataset,dataset.var,pixel_step,start_gain,pixel_mask=pixel_mask)
-    chisquared,residual_map = overlap.get_statistics_fr(gain,first_ave,dataset,dataset.var,pixel_step,pixel_mask)
+        gain,first_ave,esds = overlap.find_gain(dataset,dataset.var,start_gain,pixel_mask=pixel_mask)
+    chisquared,residual_map = overlap.get_statistics_fr(gain,first_ave,dataset,dataset.var,pixel_mask)
     old_result = first_ave    #store for later
     chisq_history = [chisquared]
     k_history = [k]
@@ -980,10 +995,10 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True
         if cycle_no > 3 and iter_no < 0:
             esdflag = (esdflag or (abs(chisq_history[-2]-chisq_history[-1]))<0.005)
         if algo == "FordRollett":
-            gain,interim_result,ar,esds,k = overlap.find_gain_fr(dataset,weights,pixel_step,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
+            gain,interim_result,ar,esds,k = overlap.find_gain_fr(dataset,weights,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
         else:
-            gain,interim_result,ar,esds = overlap.find_gain(dataset,dataset,pixel_step,gain,pixel_mask=pixel_mask,errors=esdflag)
-        chisquared,residual_map = overlap.get_statistics_fr(gain,interim_result,dataset,dataset.var,pixel_step,pixel_mask)
+            gain,interim_result,ar,esds = overlap.find_gain(dataset,dataset,gain,pixel_mask=pixel_mask,errors=esdflag)
+        chisquared,residual_map = overlap.get_statistics_fr(gain,interim_result,dataset,dataset.var,pixel_mask)
         chisq_history.append(chisquared)
         k_history.append(k)
         if esdflag is True:
@@ -997,19 +1012,19 @@ def iterate_data(dataset,pixel_step=25,iter_no=5,pixel_mask=None,plot_clear=True
 def test_iterate_data():
     import random,math
     """Generate a simple dataset and check that it refines to reasonable values"""
-    # Dimensions 5 x 10 x 2 i.e. 5 tubes, 20 steps overlapping after 10
+    # Dimensions 5 x 2 x 10 i.e. 5 tubes, 20 steps overlapping after 10
     true_gains = rand(20) + 0.5   #20 gains between 0.5 and 1.5
     true_vals = ones([210])*100.0  #background is 100
     peak_1 = make_peak(4)
     true_vals[25:25+len(peak_1)] += 1000*peak_1
     true_vals[95:95+len(peak_1)] += 550*peak_1
     true_vals[143:143+len(peak_1)] += 2000*peak_1
-    start_data = ones([20,20])
+    start_data = ones([20,20])     #20 tubes take 20 steps
     for i in range(len(start_data)):
         start_data[i] = true_vals[i*10:i*10+20]*true_gains[i]
         start_data[i] = [random.gauss(a,math.sqrt(a)) for a in start_data[i]] 
-    start_data = Dataset(start_data).reshape([20,10,2])
-    print 'Starting array: ' + repr(start_data)
+    start_data = Dataset(start_data).reshape([20,2,10])
+    print 'Starting array, first 3: ' + repr(start_data.storage[:3])
     g,d,ir,rm,hist,esds,fa,wts = iterate_data(start_data,10,20)
     #print 'Final gains: ' + repr(g)
     #print 'True gains: ' + repr(true_gains*1.0/true_gains[0])
@@ -1042,7 +1057,7 @@ def store_regain_values(filename,gain_vals,gain_comment=""):
         f.write("%d   %8.3f\n" % (pos,gain))
     f.close()
 
-def dump_gain_file(filename,raw=None,gain=None,model=None,chisq=[],name_prefix="",stepsize=1):
+def dump_gain_file(filename,raw=None,gain=None,model=None,chisq=[],name_prefix=""):
     """Dump data for external gain refinement. We are provided a [sector,steps,tubeno]
     array, where each tubes scan is split into sectors of steps length."""
     import os
@@ -1051,6 +1066,7 @@ def dump_gain_file(filename,raw=None,gain=None,model=None,chisq=[],name_prefix="
     outfile = open(full_filename,"w")
     d = raw
     print 'Dumping gains to %s' % full_filename
+    stepsize = d.shape[1]
     # Header
     outfile.write("#Tubes Sectors Steps\n")
     outfile.write("%d %d %d\n" % (d.shape[-1],d.shape[0],d.shape[1]))
@@ -1058,10 +1074,10 @@ def dump_gain_file(filename,raw=None,gain=None,model=None,chisq=[],name_prefix="
     for tube_no in range(d.shape[-1]):
         for sector_no in range(d.shape[0]):
             for step_no in range(stepsize):
-                    outfile.write("%8.2f %7.3f\n" % (d.storage[sector_no,step_no,tube_no],d.var[sector_no,step_no,tube_no]))
+                    outfile.write("%8.3f %7.3f\n" % (d.storage[sector_no,step_no,tube_no],d.var[sector_no,step_no,tube_no]))
     outfile.write("#intensities\n")
     for intensity in model:
-        outfile.write("%8.2f\n" % intensity)
+        outfile.write("%8.3f\n" % intensity)
     outfile.write("#gains\n")
     for g in gain:
         outfile.write("%8.3f\n" % g)
