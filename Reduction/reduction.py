@@ -858,31 +858,24 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=3,unit_weights=False,top=None
         if c.shape[0] == 1:   #can't be done, there is no overlap
             return None,None,None,None,None
         if not no_sum:
-            # sum the individual unoverlapped sections
+            # sum the individual unoverlapped sections. Reshape is required as the
+            # intg function removes the dimension
             d = c.intg(axis=1).reshape([c.shape[0],1,c.shape[2]]) #array of [rangeno,stepno,tubeno]
             # normalise by the number of frames in each section
-            print "Data shape: " + `d.shape`
-            print "Check shape: " + `frame_sum.shape`
-            # Note gumpy can't do transposes of more than two axes at once
-            e = d.transpose((2,0))  #array of [tubeno,stepno,section]
-            e = e.transpose((1,2))  #array of [tubeno,section,stepno]
-            gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
-                                                                                       iterate_data(e[ignore:],iter_no=iterno,unit_weights=unit_weights)
-            if dumpfile is not None:
-                dump_gain_file(dumpfile,raw=d[:,:,ignore:],gain=gain,model=interim_result,chisq=chisquared,stepsize=1)
         else:
-            # no sum required
-            e = c.transpose((2,0))  #array of [tubeno,step,section]
-            e = e.transpose((1,2))  #array of [tubeno,section,stepno]
-            print "Data shape: " + repr(e.shape)
-            print "Check shape: " + repr(frame_sum.shape)
-            print "Check entry 5: " + repr(e[5].storage)
-            print "Unreshaped was: " + repr(b[:,5].storage)
-            print "Variances: " + repr(b[:,5].var)
-            gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
+            d = c  #no op
+        # Note gumpy can't do transposes of more than two axes at once
+        e = d.transpose((2,0))  #array of [tubeno,stepno,section]
+        e = e.transpose((1,2))  #array of [tubeno,section,stepno]
+        print "Data shape: " + repr(e.shape)
+        print "Check shape: " + repr(frame_sum.shape)
+        print "Check entry 5: " + repr(e[5].storage)
+        print "Unreshaped was: " + repr(b[:,5].storage)
+        print "Variances: " + repr(b[:,5].var)
+        gain,dd,interim_result,residual_map,chisquared,oldesds,first_ave,weights = \
                                                                                        iterate_data(e[ignore:],iter_no=iterno,unit_weights=unit_weights)
-            if dumpfile is not None:
-                dump_gain_file(dumpfile,raw=c[:,:,ignore:],gain=gain,model=interim_result,chisq=chisquared)
+        if dumpfile is not None:
+                dump_gain_file(dumpfile,raw=d[:,:,ignore:],gain=gain,model=interim_result,chisq=chisquared)
     else:        #we have been provided with gains
         gain = use_gains
         chisquared=0.0
@@ -981,7 +974,7 @@ def iterate_data(dataset,iter_no=5,pixel_mask=None,plot_clear=True,algo="FordRol
     if algo == "FordRollett":
         gain,first_ave,ar,esds,k = overlap.find_gain_fr(dataset,weights,start_gain,pixel_mask=pixel_mask)
     else:
-        gain,first_ave,esds = overlap.find_gain(dataset,dataset.var,start_gain,pixel_mask=pixel_mask)
+        raise ValueError("No such algorithm: %s" % algo)
     chisquared,residual_map = overlap.get_statistics_fr(gain,first_ave,dataset,dataset.var,pixel_mask)
     old_result = first_ave    #store for later
     chisq_history = [chisquared]
@@ -996,8 +989,6 @@ def iterate_data(dataset,iter_no=5,pixel_mask=None,plot_clear=True,algo="FordRol
             esdflag = (esdflag or (abs(chisq_history[-2]-chisq_history[-1]))<0.005)
         if algo == "FordRollett":
             gain,interim_result,ar,esds,k = overlap.find_gain_fr(dataset,weights,gain,arminus1=ar,pixel_mask=pixel_mask,errors=esdflag)
-        else:
-            gain,interim_result,ar,esds = overlap.find_gain(dataset,dataset,gain,pixel_mask=pixel_mask,errors=esdflag)
         chisquared,residual_map = overlap.get_statistics_fr(gain,interim_result,dataset,dataset.var,pixel_mask)
         chisq_history.append(chisquared)
         k_history.append(k)
