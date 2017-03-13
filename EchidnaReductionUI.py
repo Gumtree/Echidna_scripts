@@ -139,10 +139,13 @@ regain_load = Par('bool','False')
 regain_load.title = 'Load gain from file'
 regain_load_filename = Par('file')
 regain_load_filename.title = 'Gain file'
-regain_dump_tubes = Par('bool','False')
-regain_dump_tubes.title = 'Dump values by tube'
+#regain_dump_tubes = Par('bool','False')
+#regain_dump_tubes.title = 'Dump values by tube'
+regain_nosum = Par('bool','False')
+regain_nosum.title = 'No sum before refinement'
 Group('Recalculate Gain').add(regain_apply,regain_iterno,regain_store,regain_store_filename,
-                              regain_load,regain_load_filename,regain_dump_tubes)
+                              regain_load,regain_load_filename,regain_nosum)
+
 
 # Allow summation of plots
 plh_sum = Act('plh_sum_proc()','Sum datasets')
@@ -648,18 +651,6 @@ def __run_script__(fns):
             print 'Code versions:' + `code_versions`
             ds = AddCifMetadata.extract_metadata(ds,codeversions=code_versions)
             AddCifMetadata.store_reduction_preferences(ds,prof_names,prof_values)
-            # Calculate filename: %s for sample name, %t for temperature
-            stem = str(output_stem.value)
-            stem = re.sub(r'[^\w+=()*^@~:{}\[\].%-]','_',stem)
-            if '%s' in stem:
-                 samplename = ds.harvest_metadata("CIF")['_pd_spec_special_details']
-                 name_front = samplename.split()[0]
-                 stem = stem.replace('%s',name_front)
-            if '%t' in stem:
-                 temperature = 'Unknown_temperature'
-                 stem = stem.replace('%t',temperature)
-            print 'Filename stem is now ' + stem
-            filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + stem)
             # remove redundant dimensions and convert to floating point
             rs = ds.get_reduced()*1.0
             rs.copy_cif_metadata(ds)
@@ -724,7 +715,8 @@ def __run_script__(fns):
                if regain_dump_tubes.value:
                    dumpfile = filename_base+".tubes"
                cs,gain,esds,chisquared,no_overlaps = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
-                                                                          exact_angles=htc,drop_frames=str(asm_drop_frames.value),drop_tubes=drop_tubes,use_gains=regain_data,dumpfile=dumpfile)
+                                                                          exact_angles=htc,drop_frames=str(asm_drop_frames.value),drop_tubes=drop_tubes,use_gains=regain_data,dumpfile=dumpfile,
+                                                                          no_sum=regain_nosum.value)
                if cs is not None:
                    print 'Have new gains at %f' % (time.clock() - elapsed)
                    fg = Dataset(gain)
@@ -751,7 +743,7 @@ def __run_script__(fns):
             if not regain_apply.value:  #already done
                 final_result = reduction.getVerticalIntegrated(stitched, axis=0, normalization=norm_const,
                                                      cluster=cluster,bottom = int(vig_lower_boundary.value),
-                                                               top=int(vig_upper_boundary.value))
+                                                     top=int(vig_upper_boundary.value))
                 print 'Finished vertical integration at %f' % (time.clock()-elapsed)
             else:
                 if str(vig_cluster.value) == 'Sum':  #simulate a sum for the gain recalculated value
@@ -768,6 +760,18 @@ def __run_script__(fns):
             if copy_acc.value:   #user wants us to accumulate it
                 plh_copy_proc()
             # Output datasets
+            # Calculate inserted string: %s for sample name, %t for temperature
+            stem = str(output_stem.value)
+            stem = re.sub(r'[^\w+=()*^@~:{}\[\].%-]','_',stem)
+            if '%s' in stem:
+                 samplename = final_result.harvest_metadata("CIF")['_pd_spec_special_details']
+                 name_front = samplename.split()[0]
+                 stem = stem.replace('%s',name_front)
+            if '%t' in stem:
+                 temperature = 'Unknown_temperature'
+                 stem = stem.replace('%t',temperature)
+            print 'Filename stem is now ' + stem
+            filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + stem)
             if output_xyd.value or output_fxye.value or output_topas.value:  #write CIF if other files written
                 output.write_cif_data(final_result,filename_base)
             if output_xyd.value:

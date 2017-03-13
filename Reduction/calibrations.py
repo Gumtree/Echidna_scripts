@@ -33,8 +33,8 @@ def scrub_vanad_pos(vanad,takeoff,crystal,nosteps=25):
               [63, 0,25],
               [75,35,50],   #220
               [76,10,25],
-#              [106,10,36],  #222 
-#              [107,0,11] 
+              [106,20,50],  #222 
+              [107,0,11] 
               ]
     elif crystal=="335" and takeoff==140 and nosteps==25:
         return [
