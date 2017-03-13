@@ -141,10 +141,10 @@ regain_load_filename = Par('file')
 regain_load_filename.title = 'Gain file'
 #regain_dump_tubes = Par('bool','False')
 #regain_dump_tubes.title = 'Dump values by tube'
-regain_nosum = Par('bool','False')
-regain_nosum.title = 'No sum before refinement'
+regain_sum = Par('bool','False')
+regain_sum.title = 'Sum before refinement'
 Group('Recalculate Gain').add(regain_apply,regain_iterno,regain_store,regain_store_filename,
-                              regain_load,regain_load_filename,regain_nosum)
+                              regain_load,regain_load_filename,regain_sum)
 
 
 # Allow summation of plots
@@ -716,7 +716,7 @@ def __run_script__(fns):
                    dumpfile = filename_base+".tubes"
                cs,gain,esds,chisquared,no_overlaps = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
                                                                           exact_angles=htc,drop_frames=str(asm_drop_frames.value),drop_tubes=drop_tubes,use_gains=regain_data,dumpfile=dumpfile,
-                                                                          no_sum=regain_nosum.value)
+                                                                          do_sum=regain_sum.value)
                if cs is not None:
                    print 'Have new gains at %f' % (time.clock() - elapsed)
                    fg = Dataset(gain)

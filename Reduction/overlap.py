@@ -54,29 +54,14 @@ def apply_gain(full_ds,weights,gain_array,calc_var=False,pixel_mask=None,bad_ste
    outdata = summed_data/summed_denominator #F_h^2 in original paper
    # Get a proper error for observations
    if calc_var is True:
+      # Until we get matrix inversion, we estimate the errors as being simply that obtained
+      # assuming no error in the gain, in which case assuming gains approx 1 and intensities
+      # similar to one another, sigma^2(F_h) = sum_p(sigma^2(F_hp))/N^2
+      final_variances = shift_tube_add_new(my_variance,pixel_mask)
+      contributor_count = shift_tube_add_new(ones_like(my_variance),pixel_mask)
+      final_variances = final_variances/(contributor_count**2)
+      # esds on gain are set at 0.01 pending matrix inversion
       esds = calc_error_rough(gain_array)
-      weighted_scales = zeros_like(weighted_data)
-   #   for section in range(weighted_data.shape[-1]):
-      weighted_scales = trans_gain*my_weights #(G_l * weights)
-      summed_vars = shift_tube_add_new(weighted_scales**2 * my_variance,pixel_mask) #Sum of variances
-      final_variances_fh = summed_vars/summed_denominator**2   #contribution for sig(F_h)
-      # now calculate the derivative with respect to G_p
-      # create an array like the input array with the observed intensities replaced by
-      # the expected intensites
-      outdata_by_tube = array.zeros_like(weighted_data)
-      steps_per_tube = weighted_data.shape[-1] # number of steps in each individual section
-      for section in range(weighted_data.shape[-2]):
-         outdata_by_tube[section] = outdata[section*steps_per_tube:(section*steps_per_tube)+weighted_data.shape[-1]]
-      fv_gp = (weighted_data - 2.0 * weighted_scales * outdata_by_tube)
-      # multiply through the gains and add
-      acc_gp = array.zeros_like(my_weights)
-      for section in range(my_weights.shape[-2]):
-         acc_gp[section,:] = (fv_gp[section,:] * esds[section])**2
-      #print 'Check df_H/dg_p for p=5:7, gain esd is '+ str(esds[5:7])
-      #print str(acc_gp.storage[5:7])
-      # now add up the contributions
-      final_variances_gp = shift_tube_add_new(acc_gp,pixel_mask)/summed_denominator**2
-      final_variances = final_variances_fh  + final_variances_gp
    else:
       final_variances = zeros_like(outdata)
       esds = zeros_like(gain_array)
@@ -197,7 +182,7 @@ def calc_error_new(obs,model,gain_vector):
     numslices = len(obs)
     for atubeno in range(numslices):
         mod_sec = model.get_section([offset*atubeno],[scanlen])
-        oin = oi.next().transpose().flatten()
+        oin = oi.next().flatten()
         ri.set_next(math.sqrt(sum((gi.next()-(oin/mod_sec))**2)/scanlen))
     return result
 

@@ -803,7 +803,7 @@ def calculate_average_angles(tube_steps,angular_file,pixel_step,tube_sep,extra_d
 # Calculate adjusted gain based on matching intensities between overlapping
 # sections of data from different detectors
 def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None,bottom=None,
-               exact_angles=None,drop_frames='',drop_tubes = '', use_gains = [],no_sum=False, dumpfile=None):
+               exact_angles=None,drop_frames='',drop_tubes = '', use_gains = [],do_sum=False, dumpfile=None):
     """Calculate rescaling factors for tubes based on overlapping data
     regions. The ignore parameter specifies the number of initial tubes for
     which data are unreliable and should be ignored. Specifying unit weights
@@ -816,7 +816,7 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None
     is a similarly-formatted string giving a list of detectors to be ignored. If 
     use_gains is not empty, these [val,esd] values will be used instead of those
     obtained from the iteration routine. Dumpfile, if set, will output
-    starting values for use by other routines. no_sum does not sum each
+    starting values for use by other routines. do_sum will sum each
     detector step before refining."""
     import time
     from Reduction import overlap
@@ -882,7 +882,7 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None
     if len(use_gains)==0:   #we have to calculate them
         if c.shape[0] == 1:   #can't be done, there is no overlap
             return None,None,None,None,None
-        if not no_sum:
+        if do_sum:
             # sum the individual unoverlapped sections. Reshape is required as the
             # intg function removes the dimension
             d = c.intg(axis=1).reshape([c.shape[0],1,c.shape[2]]) #array of [rangeno,stepno,tubeno]
