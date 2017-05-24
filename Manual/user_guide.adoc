@@ -28,8 +28,8 @@ image::neutron_camera_connections.png["Figure 1",align=left,title="Neutron camer
 
 === Electronic logbook
 
-http://www.nbi.ansto.gov.au/echidna/status/notebook.html[An interactive electronic logbook]
-is providedfor users and instrument scientists to document the experiment.  All
+http://www.nbi.ansto.gov.au/echidna/status/notebook.html[An interactive electronic logbook],
+accessible through a web browser, is provided for users and instrument scientists to document the experiment.  All
 plots generated during data analysis are instantly accessible for
 insertion into the main logbook through the "Database" tab at the far
 right of the browser page.  If a recent plot does not appear, scroll
@@ -337,10 +337,9 @@ the tick box to return to 2-theta display.
 How do I start Gumtree?::
 If Gumtree inadvertently closes, this will not affect any data collections that are running. Find
 the Gumtree icon on the desktop, and double click to execute. After a while you should be returned to
-a familiar screen.
+a familiar screen. Login details, if needed, are provided in the printed manual.
 I'm not getting an image from the neutron camera::
-Check that the power cable at the back of the camera is fully inserted (green light on camera control box
-slowly flashes) and that the camera cable is fully inserted. Check that the camera is actually in the
+Check that the camera cable is fully inserted. Check that the camera is actually in the
 beam.
 I press 'Run' to run data processing, and nothing happens:: There is
 probably an error during processing. Make sure you have the processing
@@ -349,6 +348,12 @@ text in the output terminal.  Common mistakes include non-printing
 characters in filenames after restarting Gumtree (check all filenames
 in the processing configuration panel), or attempting
 gain rerefinement when not enough frames have been collected.
+The analysis window has closed, how do I get it back?::
+The following procedure will restart the Analysis window over the top of the Experimental window. To switch back to the 
+experimental window, click on the appropriate name at the top right of the window (e.g. 'Low Temperature').
+1. To the left of the `Customised temperature` icon on the Experimental window is a vertical bar and then a window icon
+with a gold star. Click on this icon and choose 'Analysis Scripting'.
+2. Click the `Load Script` button and pick `EchidnaReductionUI.py`
 
 [[Appendix_I]]
 == Appendix I: User checklists
@@ -396,12 +401,13 @@ marked on the top of the stick for reference?
 *** Heavy water (freezes) or fluorosilicate (forms gel)
 * Is the sample holder labelled with proposal number/user name/sample name?
 * Has the height of the sample been indicated on the can?
-* Is the sample stick the right length (1251 mm from the base of the top flange)?
+* Is the sample stick the right length (1251 mm from the base of the top flange with no spacers)?
 * Is the correct input sensor (1 or 2) plugged in?
 
 === Checklist before executing a long run (user version)
 * Is the sample name correct for each scan?
 * Is the beam open?
+* Have you removed the camera?
 
 ==== CF7 (below RT)
 * Have you added exchange gas to the sample space?
@@ -444,7 +450,7 @@ user should consider doing. For user-only checklists, see xref:Appendix_I[Append
 * Slits set appropriately?
 * Primary/secondary collimators in/out as required?
 * Goniometer stage at sx/sy/schi/sphi = zero?
-* Sics configured for correct sample environment?
+* Sics configured for correct sample environment (command `configsics`)?
 * Sics communicating with sample environment?
 * User batch file directory created?
 * User analysis output directory created?
@@ -455,11 +461,13 @@ user should consider doing. For user-only checklists, see xref:Appendix_I[Append
 
 ==== Room temperature
 * Is the V can or lid labelled with proposal number/user name/sample name?
+* Is the vacuum pump on?
 
 ==== CF7
 * Is the sample holder labelled with proposal number/user name/sample name?
 * Has the height of the sample been indicated on the can?
 * Is the sample stick the right length (755mm or 755mm+25mm with spacer from the base of the top flange)?
+* Are the correct number of spacers installed for the sample height?
 * Do the temperature sensors work?
 * Do all heaters work?
 * If a C bracket is used, has the position of the vertical section been
@@ -493,7 +501,8 @@ marked on the top of the stick for reference?
 *** Heavy water (freezes) or fluorosilicate (forms gel)
 * Is the sample holder labelled with proposal number/user name/sample name?
 * Has the height of the sample been indicated on the can?
-* Is the sample stick the right length (1251 mm from the base of the top flange)?
+* Is the sample stick the right length (1251 mm from the base of the top flange with no spacers)?
+* Do sample spacers need to be installed/removed?
 * Do the temperature sensors work?
 * Is the correct input sensor (1 or 2) plugged in?
 
@@ -503,6 +512,7 @@ marked on the top of the stick for reference?
 * Are the correct temperature loops referenced (tc1_driveable/tc1_driveable2 etc.)?
 * Are the necessary heaters enabled?
 * Is the beam open?
+* Has the camera been removed?
 
 ==== CF7 (below RT)
 * Have you added exchange gas to the sample space?
