@@ -98,6 +98,11 @@ anything from 60 to 1200 or more. The total counting time for a scan is `(nnn+13
 `runscan stth 2.75 5.2 50 time 131`::: collect for two hours with a 0.05 degree step
 `runscan stth 4.0 5.125 10 time 60`::: collect for 12 minutes (one minute per point) and 0.125 degree step
 
+`runscan stth start stop npoints MONITOR_3 nnnnn`:: As above, except that each point is measured for `nnnnn` counts
+in Monitor 3.
+
+`runscan stth 4.0 4.05 1 MONITOR_3 180000 force true` ::: useful when waiting for beam to come up. 
+
 `hlist -val /sample/tc1/sensor/`:: List useful things about temperature controller one (e.g. temperatures and
 setpoints of all sensors). Also usually available in the status display.
 
@@ -337,23 +342,24 @@ the tick box to return to 2-theta display.
 How do I start Gumtree?::
 If Gumtree inadvertently closes, this will not affect any data collections that are running. Find
 the Gumtree icon on the desktop, and double click to execute. After a while you should be returned to
-a familiar screen. Login details, if needed, are provided in the printed manual.
+a familiar screen. Login details, if needed, are provided in the printed manual in the instrument cabin.
 I'm not getting an image from the neutron camera::
 Check that the camera cable is fully inserted. Check that the camera is actually in the
 beam.
 I press 'Run' to run data processing, and nothing happens:: There is
 probably an error during processing. Make sure you have the processing
-output terminal open, and press 'Run' again.  Errors will produce Red
+output log open, and press 'Run' again.  Errors will produce Red
 text in the output terminal.  Common mistakes include non-printing
 characters in filenames after restarting Gumtree (check all filenames
 in the processing configuration panel), or attempting
 gain rerefinement when not enough frames have been collected.
 The analysis window has closed, how do I get it back?::
-The following procedure will restart the Analysis window over the top of the Experimental window. To switch back to the 
-experimental window, click on the appropriate name at the top right of the window (e.g. 'Low Temperature').
-1. To the left of the `Customised temperature` icon on the Experimental window is a vertical bar and then a window icon
+1. Click on the orange 'New' button at the top of the Experimental window. 
+1. To the left of the `SICS Experiment` button at the top right of the new window is a vertical bar and then a window icon
 with a gold star. Click on this icon and choose 'Analysis Scripting'.
-2. Click the `Load Script` button and pick `EchidnaReductionUI.py`
+1. Move and resize this window to taste
+1. Click the `Load Script` button and pick `EchidnaReductionUI.py`
+1. If nothing appears to happen when you click 'Run', see the answer to the previous question.
 
 [[Appendix_I]]
 == Appendix I: User checklists
