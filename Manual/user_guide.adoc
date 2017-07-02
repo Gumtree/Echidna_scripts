@@ -93,15 +93,15 @@ within the sample name are acceptable.
 datapoints by stepping the detector from `start` to `stop` inclusive, measuring for `nnn` seconds at each point.
 For a quick scan, a good choice is `start` = 4.0, `stop` = 5.125, `npoints` = 10. For a proper data collection,
 a good choice is `start` = 2.75, `stop` = 5.2, `npoints` = 50. Counting time depends on your sample, and may be
-anything from 60 to 1200 or more. The total counting time for a scan is `(nnn+13)*npoints`. 
+anything from 60 to 1200 or more. The total counting time for a scan is `(nnn+16)*npoints`. The 
+http://www.ansto.gov.au/ResearchHub/OurInfrastructure/ACNS/Facilities/Instruments/Echidna/EchidnaSpecifications/index.htm[Echidna specifications] 
+webpage has a convenient time calculator at the bottom (Adobe Flash required).
 
 `runscan stth 2.75 5.2 50 time 131`::: collect for two hours with a 0.05 degree step
 `runscan stth 4.0 5.125 10 time 60`::: collect for 12 minutes (one minute per point) and 0.125 degree step
-
-`runscan stth start stop npoints MONITOR_3 nnnnn`:: As above, except that each point is measured for `nnnnn` counts
+`runscan stth start stop npoints MONITOR_3 nnnnn`::: As above, except that each point is measured for `nnnnn` counts
 in Monitor 3.
-
-`runscan stth 4.0 4.05 1 MONITOR_3 180000 force true` ::: useful when waiting for beam to come up. 
+`runscan stth 4.0 4.05 1 MONITOR_3 180000 force true`::: useful when waiting for beam to come up. 
 
 `hlist -val /sample/tc1/sensor/`:: List useful things about temperature controller one (e.g. temperatures and
 setpoints of all sensors). Also usually available in the status display.
@@ -177,6 +177,9 @@ is running. It will not be possible to continue a batch file from the
 point at which it stopped, so you will probably need to edit the batch file
 before restarting.
 
+=== Common sample environment commands
+
+
 === Monitoring progress
 
 The status panel gives information about temperatures, current sample
@@ -189,7 +192,6 @@ notebook (xref:_electronic_logbook[see above]).
 If away from the instrument, mobile-phone optimised Echidna status is
 available worldwide at
 http://www.nbi.ansto.gov.au/echidna/status/mobile.html[the Echidna Status Page].
-
 
 === Finishing an experiment
 
