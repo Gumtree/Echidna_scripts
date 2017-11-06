@@ -712,8 +712,8 @@ def __run_script__(fns):
                bottom = int(vig_lower_boundary.value)
                top = int(vig_upper_boundary.value)
                dumpfile = None
-               if regain_dump_tubes.value:
-                   dumpfile = filename_base+".tubes"
+#               if regain_dump_tubes.value:
+#                   dumpfile = filename_base+".tubes"
                cs,gain,esds,chisquared,no_overlaps = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
                                                                           exact_angles=htc,drop_frames=str(asm_drop_frames.value),drop_tubes=drop_tubes,use_gains=regain_data,dumpfile=dumpfile,
                                                                           do_sum=regain_sum.value)
