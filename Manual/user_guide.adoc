@@ -464,6 +464,8 @@ user should consider doing. For user-only checklists, see xref:Appendix_I[Append
 * User analysis output directory created?
 * Data processing configured with appropriate values?
 * Have users put a barcode on their samples?
+* Is everybody inducted?
+* Is BM3 in place?
 
 === Sample installation checklist (advanced version)
 
