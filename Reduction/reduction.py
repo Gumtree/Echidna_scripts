@@ -747,8 +747,10 @@ def getHorizontallyCorrected(ds, offsets_filename):
             if type(line) is str:
                 line = line.strip()
                 if (len(line) > 0) and not line.startswith('#'):
-                    axisX[index] += float(line)
-                    index        += 1
+                    # old format was single column, new is multi-column
+                    # new format is tube no, angle, error
+                    line_vals = [float(l) for l in line.split()]
+                    axisX[int(line_vals[0])] += float(line_vals[1])
 
         # finalize result
         rs.title = ds.title
