@@ -754,7 +754,7 @@ def getHorizontallyCorrected(ds, offsets_filename):
 
         # finalize result
         rs.title = ds.title
-        info_string = "Ideal detector tube positions were adjusted based on standard file."
+        info_string = "Ideal detector tube positions were adjusted based on standard file %s" % offsets_filename
         rs.add_metadata("_pd_proc_info_data_reduction",info_string,"CIF",append=True)
         print 'horizontally corrected:', ds.title
 
