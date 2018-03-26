@@ -839,11 +839,12 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None
     dropped_tubes = parse_ignore_spec(drop_tubes)
     # Drop frames from the end as far as we can
     for empty_no in range(b.shape[0]-1,0,-1):
+        print "Trying %d" % empty_no
         if empty_no not in dropped_frames:
             break
         dropped_frames.remove(empty_no)
     print "All frames after %d empty so dropped" % empty_no
-    b = b[:empty_no]
+    b = b[:empty_no+1]
     # Do we need to add dummy missing frames?
     extra_steps = b.shape[0]%pixel_step
     if extra_steps > 0:
