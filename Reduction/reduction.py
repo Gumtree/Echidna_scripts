@@ -723,7 +723,6 @@ def getHorizontallyCorrected(ds, offsets_filename):
 
     f = None
     try:
-        f = open(offsets_filename, 'r')
 
         rs = ds.__copy__()
         rs.copy_cif_metadata(ds)
@@ -742,16 +741,8 @@ def getHorizontallyCorrected(ds, offsets_filename):
             axisX.title = ds.axes[-1].title # preserve title of x-axis
 
         # read file
-        index = 0
-        for line in f:
-            if type(line) is str:
-                line = line.strip()
-                if (len(line) > 0) and not line.startswith('#'):
-                    # old format was single column, new is multi-column
-                    # new format is tube no, angle, error
-                    line_vals = [float(l) for l in line.split()]
-                    axisX[int(line_vals[0])] += float(line_vals[1])
-
+        corrections = read_horizontal_corrections(offsets_filename)
+        axisX = axisX + corrections
         # finalize result
         rs.title = ds.title
         info_string = "Ideal detector tube positions were adjusted based on standard file %s" % offsets_filename
@@ -764,15 +755,16 @@ def getHorizontallyCorrected(ds, offsets_filename):
         if f != None:
             f.close()
 
-def read_horizontal_corrections(filename):
-    """Read a file containing a simple list of offset values, 1 per line"""
-    axisX = []
+def read_horizontal_corrections(filename,no_of_tubes=128):
+    """Read a file containing offset values, tubeno + value per line"""
+    axisX = zeros(no_of_tubes)
     f = open(filename,'r')
     for line in f:
             if type(line) is str:
                 line = line.strip()
                 if (len(line) > 0) and not line.startswith('#'):
-                    axisX.append(float(line))
+                    line_vals = [float(l) for l in line.split()]
+                    axisX[int(line_vals[0])] += float(line_vals[1])
     return axisX
 
 def calculate_average_angles(tube_steps,angular_file,pixel_step,tube_sep,extra_dummy=[]):
