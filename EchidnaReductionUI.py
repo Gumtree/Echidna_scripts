@@ -370,6 +370,7 @@ def plh_plot_changed():
 
 def plh_delete_proc():
     # Plot 3 hard-coded for simplicity
+    import copy #make sure copy is the module
     target  = 'Plot 3'
     dataset = str(plh_dataset.value)
     
@@ -381,7 +382,7 @@ def plh_delete_proc():
         return
     
     target_plot = plots[target]
-    target_ds   = copy(target_plot.ds)
+    target_ds   = copy.copy(target_plot.ds)
     
     if (type(target_ds) is not list) or (len(target_ds) == 0):
         print 'target plot does not contain 1D datasets'
@@ -712,8 +713,8 @@ def __run_script__(fns):
                bottom = int(vig_lower_boundary.value)
                top = int(vig_upper_boundary.value)
                dumpfile = None
-               if regain_dump_tubes.value:
-                   dumpfile = filename_base+".tubes"
+               #if regain_dump_tubes.value:
+               #    dumpfile = filename_base+".tubes"
                cs,gain,esds,chisquared,no_overlaps = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
                                                                           exact_angles=htc,drop_frames=str(asm_drop_frames.value),drop_tubes=drop_tubes,use_gains=regain_data,dumpfile=dumpfile,
                                                                           do_sum=regain_sum.value)
