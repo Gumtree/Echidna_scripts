@@ -232,9 +232,9 @@ def getStitched(ds,ignore=None,drop_tubes=None):
         raise AttributeError('ds.ndim != 3')
     if ds.axes[0].title != 'azimuthal_angle':
         raise AttributeError('ds.axes[0].title != azimuthal_angle')
-    if ds.axes[2].title != 'x_pixel_angular_offset':
+    # Note old datasets had two theta instead of x pixel offset
+    if ds.axes[2].title != 'x_pixel_angular_offset' and ds.axes[2].title != 'two_theta':
         raise AttributeError('ds.axes[2].title != x_pixel_angular_offset')
-
     if ignore is not None:
         drop_frames = parse_ignore_spec(ignore)
     else:
@@ -723,7 +723,6 @@ def getHorizontallyCorrected(ds, offsets_filename):
 
     f = None
     try:
-        f = open(offsets_filename, 'r')
 
         rs = ds.__copy__()
         rs.copy_cif_metadata(ds)
@@ -742,17 +741,11 @@ def getHorizontallyCorrected(ds, offsets_filename):
             axisX.title = ds.axes[-1].title # preserve title of x-axis
 
         # read file
-        index = 0
-        for line in f:
-            if type(line) is str:
-                line = line.strip()
-                if (len(line) > 0) and not line.startswith('#'):
-                    axisX[index] += float(line)
-                    index        += 1
-
+        corrections = read_horizontal_corrections(offsets_filename)
+        axisX = axisX + corrections
         # finalize result
         rs.title = ds.title
-        info_string = "Ideal detector tube positions were adjusted based on standard file."
+        info_string = "Ideal detector tube positions were adjusted based on standard file %s" % offsets_filename
         rs.add_metadata("_pd_proc_info_data_reduction",info_string,"CIF",append=True)
         print 'horizontally corrected:', ds.title
 
@@ -762,15 +755,16 @@ def getHorizontallyCorrected(ds, offsets_filename):
         if f != None:
             f.close()
 
-def read_horizontal_corrections(filename):
-    """Read a file containing a simple list of offset values, 1 per line"""
-    axisX = []
+def read_horizontal_corrections(filename,no_of_tubes=128):
+    """Read a file containing offset values, tubeno + value per line"""
+    axisX = zeros(no_of_tubes)
     f = open(filename,'r')
     for line in f:
             if type(line) is str:
                 line = line.strip()
                 if (len(line) > 0) and not line.startswith('#'):
-                    axisX.append(float(line))
+                    line_vals = [float(l) for l in line.split()]
+                    axisX[int(line_vals[0])] += float(line_vals[1])
     return axisX
 
 def calculate_average_angles(tube_steps,angular_file,pixel_step,tube_sep,extra_dummy=[]):
@@ -827,6 +821,8 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None
     b = ds[:,bottom:top,:].intg(axis=1).get_reduced()
     # Determine pixels per tube interval
     tube_pos = ds.axes[-1]
+    if tube_pos.ndim == 2:   #very old data, just take one slice
+        tube_pos = tube_pos[0]
     tubesep = abs(tube_pos[0]-tube_pos[-1])/(len(tube_pos)-1)
     tube_steps = ds.axes[0]
     bin_size = abs(tube_steps[0]-tube_steps[-1])/(len(tube_steps)-1)
@@ -835,6 +831,14 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None
     print '%f tube separation, %d steps before overlap, ideal binsize %f' % (tubesep,pixel_step,bin_size)
     dropped_frames = parse_ignore_spec(drop_frames)
     dropped_tubes = parse_ignore_spec(drop_tubes)
+    # Drop frames from the end as far as we can
+    for empty_no in range(b.shape[0]-1,0,-1):
+        print "Trying %d" % empty_no
+        if empty_no not in dropped_frames:
+            break
+        dropped_frames.remove(empty_no)
+    print "All frames after %d empty so dropped" % empty_no
+    b = b[:empty_no+1]
     # Do we need to add dummy missing frames?
     extra_steps = b.shape[0]%pixel_step
     if extra_steps > 0:
@@ -1122,6 +1126,8 @@ def get_stepsize(ds):
     """A utility function to determine the step size of the given dataset. This
     will only work if the data have not yet been stitched."""
     tube_pos = ds.axes[-1]
+    if tube_pos.ndim == 2:   #very old data, just take one slice
+        tube_pos = tube_pos[0]
     tubesep = abs(tube_pos[0]-tube_pos[-1])/(len(tube_pos)-1)
     tube_steps = ds.axes[0]
     bin_size = abs(tube_steps[0]-tube_steps[-1])/(len(tube_steps)-1)

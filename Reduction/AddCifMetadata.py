@@ -81,13 +81,16 @@ def extract_metadata(rawfile,codeversions={}):
             coll_string = "A 10' primary collimator pre-monochromator"
             rawfile.add_metadata("_pd_instr_divg_eq_src/mono","0.1667",tag="CIF")
     else: coll_string = "No primary monochromator "
-    scr = average_metadata(rawfile['$entry/sample/secondary_collimator'])
-    if scr>0.5:
-        coll_string += " and a 10' secondary collimator post-monochromator."
-        rawfile.add_metadata("_pd_instr_divg_eq_mono/spec","0.1667",tag="CIF")
-    else:
-        coll_string += " and no secondary collimator."
+    try:
+        scr = average_metadata(rawfile['$entry/sample/secondary_collimator'])
+        if scr>0.5:
+            coll_string += " and a 10' secondary collimator post-monochromator."
+            rawfile.add_metadata("_pd_instr_divg_eq_mono/spec","0.1667",tag="CIF")
+        else:
+            coll_string += " and no secondary collimator."
         rawfile.add_metadata("_diffrn_radiation_collimation",coll_string,tag="CIF")
+    except AttributeError:         #some early files are missing secondary collimator
+        pass
     # These values were in the CIF writing area of the Java routines, best put here
     try:
         program_release = str(rawfile["$entry/program_revision"])
@@ -116,7 +119,10 @@ def extract_metadata(rawfile,codeversions={}):
     rawfile.add_metadata("_pd_instr_2theta_monochr_pre","%.3f" % tk_angle,"CIF")
     rawfile.add_metadata("_pd_instr_dist_mono/spec", "%.1f" % average_metadata(rawfile[ "$entry/sample/mono_sample_mm"]),"CIF")
     rawfile.add_metadata("_pd_instr_dist_spec/detc","%.1f" % average_metadata(rawfile["$entry/instrument/detector/radius"]),"CIF")
-    rawfile.add_metadata("_diffrn_source_power", "%.2f" % (average_metadata(rawfile["$entry/instrument/source/power"])*1000),"CIF")
+    try:
+        rawfile.add_metadata("_diffrn_source_power", "%.2f" % (average_metadata(rawfile["$entry/instrument/source/power"])*1000),"CIF")
+    except AttributeError:  #sometimes source power is missing
+        pass
     # imgCIF information about geometry
     # axis loop
     names = (('_axis.id','_axis.type','_axis.equipment','_axis.depends_on'),)
