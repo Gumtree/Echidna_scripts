@@ -284,34 +284,17 @@ def vtc_show_proc():
         print 'no valid filename was specified'
 # show Horizontal Tube Correction
 def htc_show_proc():
-    global Plot3
+    global Plot2
     if htc_file.value:
-        f = None
-        try:
-            # open file
-            f  = open(str(htc_file.value), 'r')
-            ds = zeros(128)
-            
-            # read file
-            index = 0
-            for line in f:
-                if type(line) is str:
-                    line = line.strip()
-                    if (len(line) > 0) and not line.startswith('#'):
-                        ds[index]     = float(line)
-                        ds.var[index] = 0
-                        index         += 1
-                            
+        #try:
+            corrections = reduction.read_horizontal_corrections(str(htc_file.value))
             # show result
-            ds.title = 'Horizontal Tube Correction'
-            
+            corrections.title = 'Horizontal Tube Correction'
             # show plot
-            Plot3.set_dataset(ds)
-            n_logger.log_plot(Plot3, footer = Plot3.title)
-
-        finally:
-            if f != None:
-                f.close()
+            Plot2.set_dataset(corrections)
+            n_logger.log_plot(Plot2, footer = Plot2.title)
+        #except:
+        #    print "Failed to read corrections file %s" % str(htc_file.value)
     else:
         print 'no valid filename was specified'
 
