@@ -1,5 +1,5 @@
 = Echidna User Manual
-November 2016
+May 2018
 :doctype: book
 ifdef::backend-pdf[]
 :title-logo-image: image:albino_echidna.jpg["Echidna"]
@@ -179,6 +179,7 @@ before restarting.
 
 === Common sample environment commands
 
+(To be added)
 
 === Monitoring progress
 
