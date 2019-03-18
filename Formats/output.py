@@ -144,8 +144,8 @@ def write_fxye_data(ds,filename,codeversions={}):
     avstep = (ds.axes[0][-1]-ds.axes[0][0])/(thlen - 1)
     ints = map(lambda a:"%7.4f" % a,ds)
     esds = map(lambda a:"%5.4f" % math.sqrt(a),ds.var)
-    if not filename[-3:]=='xye':
-        filename = filename+'.xye'
+    if not filename[-4:]=='fxye':
+        filename = filename+'.fxye'
     fh = open(filename,"w")
     fh.write("%-80s\n" % "# Data from file %s, written %s. GSAS FXYE format" % (ds.title[0:17],str(current_time)[0:22]))
     fh.write("%-80s\n" % "# Reduction code versions:" )

@@ -499,6 +499,7 @@ def save_user_prefs(prefix=''):
         p = globals().scope_keys()
     for name in p:
         if eval('isinstance('+ name + ',Par)'):
+            print "Now saving %s" % name
             prof_val = str(eval(name + '.value'))
             set_prof_value(prefix+name,prof_val)
             print 'Set %s to %s' % (prefix+name,str(get_prof_value(prefix+name)))
@@ -781,7 +782,7 @@ def __run_script__(fns):
             if output_fxye.value:
                 output.write_fxye_data(final_result,filename_base,codeversions=code_versions)
             if output_topas.value:
-                output.write_xyd_data(final_result,filename_base,codeversions=code_versions,comment_char="!",extension='topas')
+                output.write_xyd_data(final_result,filename_base,codeversions=code_versions,comment_char="'",extension='xye')
             # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
             print 'Finished writing data at %f' % (time.clock()-elapsed)
             prog_bar.selection = fn_idx * num_step + 8
