@@ -644,6 +644,9 @@ def __run_script__(fns):
     for fn in fns:
         # load dataset
         ds = df[fn]
+        # Handle temperature part of filename before we lose it
+        stem = get_temperature(ds,str(output_stem.value))
+        print("New filename stem is %s" % stem)
         if not norm_uniform.value:
             norm_tar = -1   #reinitialise
         try:
@@ -756,16 +759,12 @@ def __run_script__(fns):
                 final_result = cs
             prog_bar.selection = fn_idx * num_step + 7
             # Output datasets
-            # Calculate inserted string: %s for sample name, %t for temperature
-            stem = str(output_stem.value)
+            # Calculate inserted string: %s for sample name
             stem = re.sub(r'[^\w+=()*^@~:{}\[\].%-]','_',stem)
             if '%s' in stem:
                  samplename = final_result.harvest_metadata("CIF")['_pd_spec_special_details']
                  name_front = samplename.split()[0]
                  stem = stem.replace('%s',name_front)
-            if '%t' in stem:
-                 temperature = 'Unknown_temperature'
-                 stem = stem.replace('%t',temperature)
             print 'Filename stem is now ' + stem
             filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + stem)
             if output_xyd.value or output_fxye.value or output_topas.value:  #write CIF if other files written
@@ -790,6 +789,34 @@ def __run_script__(fns):
             df[fn].close()
             prog_bar.selection = 0
         
+''' Obtain and store temperature
+Any requested temperature is determined from the contents of the stem as follows:
+%tv: Vacuum furnace
+%ta: CF7 top
+%tb: CF7 bottom
+'''
+def get_temperature(dataset,stem):
+    temp_locs = {"%tv":("$entry/sample/tc1/sensor","C"),
+                 "%ta":("$entry/sample/tc1/sensor/sensorvalueA","K"),
+                 "%tb":("$entry/sample/tc1/sensor/sensorValueB","K")}
+    temperature = 'Unknown_temperature'
+    newname = stem
+    for sub in temp_locs:
+        if sub in stem:
+            loc,units = temp_locs[sub]
+            try:
+                all_temps = dataset[loc]
+                try:
+                    temperature = sum(all_temps)/len(all_temps)
+                except:
+                    temperature = all_temps 
+                newname = stem.replace(sub,str(temperature)+units)
+                break
+            except:
+                print("Accessing %s failed" % loc)
+                continue
+    return newname
+
 ''' Utility functions for plots '''
 def send_to_plot(dataset,plot,add=False,change_title=True,add_timestamp=True):
     """This routine appends a timestamp to the dataset title
