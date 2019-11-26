@@ -721,39 +721,31 @@ def getHorizontallyCorrected(ds, offsets_filename):
     if not offsets_filename:
         raise AttributeError('offsets_filename is empty')
 
-    f = None
-    try:
+    rs = ds.__copy__()
+    rs.copy_cif_metadata(ds)
 
-        rs = ds.__copy__()
-        rs.copy_cif_metadata(ds)
+    # get x-axis (last axis)
+    axisX = rs.axes[-1]
 
-        # get x-axis (last axis)
-        axisX = rs.axes[-1]
+    # check if x-axis needs to be converted from boundaries to centers
+    if len(axisX) == (rs.shape[-1] + 1):
+        axes = rs.axes[0:-1]                      # preserve other axes
+        axes.append(getCenters(axisX)) # add centered x-axis
 
-        # check if x-axis needs to be converted from boundaries to centers
-        if len(axisX) == (rs.shape[-1] + 1):
-            axes = rs.axes[0:-1]                      # preserve other axes
-            axes.append(getCenters(axisX)) # add centered x-axis
+        rs.set_axes(axes)
 
-            rs.set_axes(axes)
+        axisX       = rs.axes[-1]
+        axisX.title = ds.axes[-1].title # preserve title of x-axis
 
-            axisX       = rs.axes[-1]
-            axisX.title = ds.axes[-1].title # preserve title of x-axis
-
-        # read file
-        corrections = read_horizontal_corrections(offsets_filename)
-        axisX = axisX + corrections
-        # finalize result
-        rs.title = ds.title
-        info_string = "Ideal detector tube positions were adjusted based on standard file %s" % offsets_filename
-        rs.add_metadata("_pd_proc_info_data_reduction",info_string,"CIF",append=True)
-        print 'horizontally corrected:', ds.title
-
-        return rs
-
-    finally:
-        if f != None:
-            f.close()
+    # read file
+    corrections = read_horizontal_corrections(offsets_filename)
+    axisX = axisX + corrections
+    # finalize result
+    rs.title = ds.title
+    info_string = "Ideal detector tube positions were adjusted based on standard file %s" % offsets_filename
+    rs.add_metadata("_pd_proc_info_data_reduction",info_string,"CIF",append=True)
+    print 'horizontally corrected:', ds.title
+    return rs
 
 def read_horizontal_corrections(filename,no_of_tubes=128):
     """Read a file containing offset values, tubeno + value per line"""
