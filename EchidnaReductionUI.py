@@ -476,13 +476,12 @@ def load_user_prefs(prefix = ''):
     except AttributeError:
         p = globals().scope_keys()
     for name in p:
-        if eval('isinstance('+ name + ',Par)'):
-            execstring = name + '.value = "' + get_prof_value(prefix+name) + '"'
+        if isinstance(globals()[name],Par):
             try:
-                exec execstring in globals()
+                setattr(globals()[name],"value", get_prof_value(prefix+name))
             except:
                 print 'Failure setting %s to %s' % (name,str(get_prof_value(prefix+name)))
-            print 'Set %s to %s' % (name,str(eval(name+'.value')))
+            print 'Set %s to %s' % (name,str(globals()[name].value))
 
 def save_user_prefs(prefix=''):
     """Save user preferences, optionally prepending the value of
@@ -498,9 +497,9 @@ def save_user_prefs(prefix=''):
     except AttributeError:
         p = globals().scope_keys()
     for name in p:
-        if eval('isinstance('+ name + ',Par)'):
+        if isinstance(globals()[name],Par):
             print "Now saving %s" % name
-            prof_val = str(eval(name + '.value'))
+            prof_val = str(globals()[name].value)
             set_prof_value(prefix+name,prof_val)
             print 'Set %s to %s' % (prefix+name,str(get_prof_value(prefix+name)))
             prof_names.append(name)
