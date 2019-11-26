@@ -755,11 +755,6 @@ def __run_script__(fns):
                     reduction.rescale(cs,norm_const)
                 final_result = cs
             prog_bar.selection = fn_idx * num_step + 7
-            # Display reduced dataset
-            send_to_plot(final_result,Plot2)
-            n_logger.log_plot(Plot2, footer = Plot2.title)
-            if copy_acc.value:   #user wants us to accumulate it
-                plh_copy_proc()
             # Output datasets
             # Calculate inserted string: %s for sample name, %t for temperature
             stem = str(output_stem.value)
@@ -784,6 +779,11 @@ def __run_script__(fns):
                 output.write_xyd_data(final_result,filename_base,codeversions=code_versions,comment_char="'",extension='xye')
             # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
             print 'Finished writing data at %f' % (time.clock()-elapsed)
+            # Display reduced dataset
+            send_to_plot(final_result,Plot2)
+            n_logger.log_plot(Plot2, footer = Plot2.title)
+            if copy_acc.value:   #user wants us to accumulate it
+                plh_copy_proc()
             prog_bar.selection = fn_idx * num_step + 8
             fn_idx += 1
         finally:
