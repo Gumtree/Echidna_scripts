@@ -104,6 +104,9 @@ def write_xyd_data(ds,filename,codeversions={},naked=False,comment_char='#',exte
     fh = open(filename,"w")
     if not naked:
         fh.write(comment_char + "Data from file %s, written %s\n" % (ds.title[0:17],str(current_time)))
+        fh.write(comment_char + "Citation for instrument and data processing\n")
+        fh.write(comment_char + 'Avdeev, M. and Hester, J.R. (2018) J. Appl. Cryst. 51, 1597-1604\n')
+        fh.write(comment_char + 'https://doi.org/10.1107/S1600576718014048\n')
         fh.write(comment_char +" Code versions:\n")
         for key in codeversions.keys():
             fh.write(comment_char + " %s: %s\n" % (key,codeversions[key]))
