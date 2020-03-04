@@ -18,6 +18,7 @@ NeXuS standard, should be chosen from the following predefined set:
 These names are used by the d-spacing conversion to check which representation
 the dataset is currently in.
 """
+from copy import copy
 from gumpy.commons.logger import n_logger
 # Script control setup area
 __script__.title     = 'ECH Reduction'
@@ -780,7 +781,7 @@ Any requested temperature is determined from the contents of the stem as follows
 '''
 def get_temperature(dataset,stem):
     temp_locs = {"%tv":("$entry/sample/tc1/sensor","C"),
-                 "%ta":("$entry/sample/tc1/sensor/sensorvalueA","K"),
+                 "%ta":("$entry/sample/tc1/sensor/sensorValueA","K"),
                  "%tb":("$entry/sample/tc1/sensor/sensorValueB","K")}
     temperature = 'Unknown_temperature'
     newname = stem
@@ -793,7 +794,7 @@ def get_temperature(dataset,stem):
                     temperature = sum(all_temps)/len(all_temps)
                 except:
                     temperature = all_temps 
-                newname = stem.replace(sub,str(temperature)+units)
+                newname = stem.replace(sub,"%6.1f%s" % (temperature,units))
                 break
             except:
                 print("Accessing %s failed" % loc)
