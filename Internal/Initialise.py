@@ -31,7 +31,7 @@ else:
     __script__.title = 'Initialised'
     __script__.version = ''
     __data_folder__ = 'Z:/data/current'
-    __export_folder__ = 'Z:/data/current/reports'
+    __export_folder__ = 'Z:/gumtree/reports'
     __buffer_log_file__ = __export_folder__
     Dataset.__dicpath__ = get_absolute_path('/Internal/path_table')
     System.setProperty('sics.data.path', __data_folder__)

@@ -1,1 +1,0 @@
-hset /sics/tc1/setpoint 0

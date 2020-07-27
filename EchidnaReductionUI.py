@@ -353,6 +353,7 @@ def plh_plot_changed():
 
 def plh_delete_proc():
     # Plot 3 hard-coded for simplicity
+    import copy #make sure copy is the module
     target  = 'Plot 3'
     dataset = str(plh_dataset.value)
     
@@ -364,7 +365,7 @@ def plh_delete_proc():
         return
     
     target_plot = plots[target]
-    target_ds   = copy(target_plot.ds)
+    target_ds   = copy.copy(target_plot.ds)
     
     if (type(target_ds) is not list) or (len(target_ds) == 0):
         print 'target plot does not contain 1D datasets'
@@ -458,13 +459,12 @@ def load_user_prefs(prefix = ''):
     except AttributeError:
         p = globals().scope_keys()
     for name in p:
-        if eval('isinstance('+ name + ',Par)'):
-            execstring = name + '.value = "' + get_prof_value(prefix+name) + '"'
+        if isinstance(globals()[name],Par):
             try:
-                exec execstring in globals()
+                setattr(globals()[name],"value", get_prof_value(prefix+name))
             except:
                 print 'Failure setting %s to %s' % (name,str(get_prof_value(prefix+name)))
-            print 'Set %s to %s' % (name,str(eval(name+'.value')))
+            print 'Set %s to %s' % (name,str(globals()[name].value))
 
 def save_user_prefs(prefix=''):
     """Save user preferences, optionally prepending the value of
@@ -480,8 +480,9 @@ def save_user_prefs(prefix=''):
     except AttributeError:
         p = globals().scope_keys()
     for name in p:
-        if eval('isinstance('+ name + ',Par)'):
-            prof_val = str(eval(name + '.value'))
+        if isinstance(globals()[name],Par):
+            print "Now saving %s" % name
+            prof_val = str(globals()[name].value)
             set_prof_value(prefix+name,prof_val)
             print 'Set %s to %s' % (prefix+name,str(get_prof_value(prefix+name)))
             prof_names.append(name)
@@ -626,6 +627,9 @@ def __run_script__(fns):
     for fn in fns:
         # load dataset
         ds = df[fn]
+        # Handle temperature part of filename before we lose it
+        stem = get_temperature(ds,str(output_stem.value))
+        print("New filename stem is %s" % stem)
         if not norm_uniform.value:
             norm_tar = -1   #reinitialise
         try:
@@ -695,8 +699,8 @@ def __run_script__(fns):
                bottom = int(vig_lower_boundary.value)
                top = int(vig_upper_boundary.value)
                dumpfile = None
-#               if regain_dump_tubes.value:
-#                   dumpfile = filename_base+".tubes"
+               #if regain_dump_tubes.value:
+               #    dumpfile = filename_base+".tubes"
                cs,gain,esds,chisquared,no_overlaps = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
                                                                           exact_angles=htc,drop_frames=str(asm_drop_frames.value),drop_tubes=drop_tubes,use_gains=regain_data,dumpfile=dumpfile,
                                                                           do_sum=regain_sum.value)
@@ -737,22 +741,13 @@ def __run_script__(fns):
                     reduction.rescale(cs,norm_const)
                 final_result = cs
             prog_bar.selection = fn_idx * num_step + 7
-            # Display reduced dataset
-            send_to_plot(final_result,Plot2)
-            n_logger.log_plot(Plot2, footer = Plot2.title)
-            if copy_acc.value:   #user wants us to accumulate it
-                plh_copy_proc()
             # Output datasets
-            # Calculate inserted string: %s for sample name, %t for temperature
-            stem = str(output_stem.value)
+            # Calculate inserted string: %s for sample name
             stem = re.sub(r'[^\w+=()*^@~:{}\[\].%-]','_',stem)
             if '%s' in stem:
                  samplename = final_result.harvest_metadata("CIF")['_pd_spec_special_details']
                  name_front = samplename.split()[0]
                  stem = stem.replace('%s',name_front)
-            if '%t' in stem:
-                 temperature = 'Unknown_temperature'
-                 stem = stem.replace('%t',temperature)
             print 'Filename stem is now ' + stem
             filename_base = join(str(out_folder.value),basename(str(fn))[:-7] + '_' + stem)
             if output_xyd.value or output_fxye.value or output_topas.value:  #write CIF if other files written
@@ -763,15 +758,48 @@ def __run_script__(fns):
             if output_fxye.value:
                 output.write_fxye_data(final_result,filename_base,codeversions=code_versions)
             if output_topas.value:
-                output.write_xyd_data(final_result,filename_base,codeversions=code_versions,comment_char="!",extension='topas')
+                output.write_xyd_data(final_result,filename_base,codeversions=code_versions,comment_char="'",extension='xye')
             # ds.save_copy(join(str(out_folder.value), 'reduced_' + basename(str(fn))))
             print 'Finished writing data at %f' % (time.clock()-elapsed)
+            # Display reduced dataset
+            send_to_plot(final_result,Plot2)
+            n_logger.log_plot(Plot2, footer = Plot2.title)
+            if copy_acc.value:   #user wants us to accumulate it
+                plh_copy_proc()
             prog_bar.selection = fn_idx * num_step + 8
             fn_idx += 1
         finally:
             df[fn].close()
             prog_bar.selection = 0
         
+''' Obtain and store temperature
+Any requested temperature is determined from the contents of the stem as follows:
+%tv: Vacuum furnace
+%ta: CF7 top
+%tb: CF7 bottom
+'''
+def get_temperature(dataset,stem):
+    temp_locs = {"%tv":("$entry/sample/tc1/sensor","C"),
+                 "%ta":("$entry/sample/tc1/sensor/sensorvalueA","K"),
+                 "%tb":("$entry/sample/tc1/sensor/sensorValueB","K")}
+    temperature = 'Unknown_temperature'
+    newname = stem
+    for sub in temp_locs:
+        if sub in stem:
+            loc,units = temp_locs[sub]
+            try:
+                all_temps = dataset[loc]
+                try:
+                    temperature = sum(all_temps)/len(all_temps)
+                except:
+                    temperature = all_temps 
+                newname = stem.replace(sub,str(temperature)+units)
+                break
+            except:
+                print("Accessing %s failed" % loc)
+                continue
+    return newname
+
 ''' Utility functions for plots '''
 def send_to_plot(dataset,plot,add=False,change_title=True,add_timestamp=True):
     """This routine appends a timestamp to the dataset title
