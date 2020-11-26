@@ -97,10 +97,8 @@ eff_map.title = 'Efficiency File'
 eff_map.ext = '*.*'
 eff_custom = Par('bool','False')
 eff_custom.title = 'Custom (transposed)'
-eff_reload = Par('bool','False')
-eff_reload.title = 'Force reload of efficiency file'
 eff_show  = Act('eff_show_proc()', 'Show') 
-Group('Efficiency Correction').add(eff_apply, eff_custom, eff_reload, eff_map, eff_show)
+Group('Efficiency Correction').add(eff_apply, eff_custom, eff_map, eff_show)
 
 # Horizontal Tube Correction
 htc_apply = Par('bool', 'True')
@@ -243,14 +241,9 @@ def eff_show_proc():
     custom = eff_custom.value
     if eff_map.value[0:5] != 'file:':
         eff_map_canonical = 'file:' + eff_map.value
-    if eff_reload.value:
-        eff_map_cache = {}
-    if not eff_map_canonical in eff_map_cache:
-        eff_map_cache[eff_map_canonical] = reduction.read_efficiency_cif(eff_map_canonical,do_transpose=custom)
-    else:
-        print 'Found in cache ' + `eff_map_cache[eff_map_canonical]`
+    my_efficiency = reduction.read_efficiency_cif(eff_map_canonical,do_transpose=custom)
     Plot1.clear()
-    Plot1.set_dataset(eff_map_cache[eff_map_canonical][0])
+    Plot1.set_dataset(my_efficiency[0])
     Plot1.title = 'Efficiency map'  #add info to this title!
 
 # For HDF files
@@ -589,17 +582,11 @@ def __run_script__(fns):
             custom = eff_custom.value
             if eff_map_canonical[0:5] != 'file:':
                 eff_map_canonical = 'file:' + eff_map_canonical
-            if eff_reload.value:
-                eff_map_cache = {}
-            if not eff_map_canonical in eff_map_cache:
                 try:
-                    eff_map_cache[eff_map_canonical] = reduction.read_efficiency_cif(eff_map_canonical,do_transpose=custom)
+                    eff = reduction.read_efficiency_cif(eff_map_canonical,do_transpose=custom)
                 except:
                     open_error("Failed to read efficiency file %s" % eff_map_canonical)
                     return
-            else:
-                print 'Found in cache ' + `eff_map_canonical`
-        eff = eff_map_cache[eff_map_canonical]
     else:
         eff = None
     
