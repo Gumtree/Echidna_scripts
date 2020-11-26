@@ -4,6 +4,7 @@
 Routines appended with '_fr_' for routines derived from 
 Fox and Rollet, Acta Cryst. B24, p293(1968).
 """
+from copy import copy
 from gumpy.nexus import *
 
 def timeit(relativeto,message):

@@ -43,6 +43,7 @@ Group('Vertical Tube Correction List').add(vtc_make, vtc_algorithm, vtc_name)
 eff_make = Par('bool'  , 'True')
 eff_name = Par('string', "eff_"+str(nowtime)+".cif")
 eff_transpose = Par('bool', 'False')
+eff_transpose.title = "Output transposed result also"
 eff_std_range      = Par('float' , '1.8' )
 Group('Efficiency Correction Map').add(eff_make, eff_name, eff_std_range,eff_transpose)
 

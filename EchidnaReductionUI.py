@@ -95,8 +95,12 @@ eff_apply.title = 'Apply'
 eff_map   = Par('file', '')
 eff_map.title = 'Efficiency File'
 eff_map.ext = '*.*'
+eff_custom = Par('bool','False')
+eff_custom.title = 'Custom (transposed)'
+eff_reload = Par('bool','False')
+eff_reload.title = 'Force reload of efficiency file'
 eff_show  = Act('eff_show_proc()', 'Show') 
-Group('Efficiency Correction').add(eff_apply, eff_map, eff_show)
+Group('Efficiency Correction').add(eff_apply, eff_custom, eff_reload, eff_map, eff_show)
 
 # Horizontal Tube Correction
 htc_apply = Par('bool', 'True')
@@ -236,10 +240,13 @@ def bkg_show_proc():
 def eff_show_proc():
     from Reduction import reduction
     eff_map_canonical = eff_map.value
+    custom = eff_custom.value
     if eff_map.value[0:5] != 'file:':
         eff_map_canonical = 'file:' + eff_map.value
+    if eff_reload.value:
+        eff_map_cache = {}
     if not eff_map_canonical in eff_map_cache:
-        eff_map_cache[eff_map_canonical] = reduction.read_efficiency_cif(eff_map_canonical)
+        eff_map_cache[eff_map_canonical] = reduction.read_efficiency_cif(eff_map_canonical,do_transpose=custom)
     else:
         print 'Found in cache ' + `eff_map_cache[eff_map_canonical]`
     Plot1.clear()
@@ -579,11 +586,14 @@ def __run_script__(fns):
             print 'WARNING: no eff-map was specified'
         else:
             eff_map_canonical = str(eff_map.value)
+            custom = eff_custom.value
             if eff_map_canonical[0:5] != 'file:':
                 eff_map_canonical = 'file:' + eff_map_canonical
+            if eff_reload.value:
+                eff_map_cache = {}
             if not eff_map_canonical in eff_map_cache:
                 try:
-                    eff_map_cache[eff_map_canonical] = reduction.read_efficiency_cif(eff_map_canonical)
+                    eff_map_cache[eff_map_canonical] = reduction.read_efficiency_cif(eff_map_canonical,do_transpose=custom)
                 except:
                     open_error("Failed to read efficiency file %s" % eff_map_canonical)
                     return
