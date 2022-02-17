@@ -1,0 +1,30 @@
+# Measure at 4K 70K 200 and 300K
+samplename TmCrO3 at 5K
+hset /sample/tc2/sensor/setpoint1 4
+drive tc1_driveable 5
+wait 300
+
+runscan stth 2.75 5.2 50 time 347
+
+samplename TmCrO3 at 70K
+hset /sample/tc1/sensor/setpoint1 70
+drive tc2_driveable 70
+wait 300
+
+runscan stth 2.75 5.2 50 time 347
+
+# probably wont make it to here
+
+samplename TmCrO3 at 200K
+hset /sample/tc1/sensor/setpoint1 200
+drive tc2_driveable 200
+wait 300
+
+runscan stth 2.75 5.2 50 time 347
+
+hset /sample/tc1/sensor/setpoint1 300
+drive tc2_driveable 300
+wait 300
+
+samplename TmCrO3 at 300K
+runscan stth 2.75 5.2 50 time 347

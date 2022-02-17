@@ -1,0 +1,119 @@
+<workflow>
+  <task classname="au.gov.ansto.bragg.echidna.exp.task.HeaderInformationBlockTask">
+    <parameters/>
+    <dataModel class="org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock">
+      <commands>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>drive sc</sicsVariable>
+          <value>0</value>
+          <isQuoted>false</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>title</sicsVariable>
+          <isQuoted>true</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>sampledescription</sicsVariable>
+          <isQuoted>true</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+        <org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+          <sicsVariable>user</sicsVariable>
+          <value>Fujii</value>
+          <isQuoted>true</isQuoted>
+        </org.gumtree.gumnix.sics.batch.ui.commands.SicsVariableCommand>
+      </commands>
+    </dataModel>
+  </task>
+  <task classname="au.gov.ansto.bragg.echidna.exp.task.SicsScriptBlockTask">
+    <parameters/>
+    <dataModel class="org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock">
+      <commands>
+        <org.gumtree.gumnix.sics.batch.ui.commands.ScriptCommand>
+          <text></text>
+        </org.gumtree.gumnix.sics.batch.ui.commands.ScriptCommand>
+      </commands>
+    </dataModel>
+  </task>
+  <task classname="au.gov.ansto.bragg.echidna.exp.task.DoRTScanTask">
+    <parameters/>
+    <dataModel class="org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock">
+      <commands>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <overlaps>0</overlaps>
+          <stepsize>0.125</stepsize>
+          <size>9</size>
+          <sampname>Al2O3</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>1</sampposNumber>
+          <tot__time>0.2</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <overlaps>0</overlaps>
+          <stepsize>0.125</stepsize>
+          <size>9</size>
+          <sampname>Ba6Y2Ti4O17</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>41</sampposNumber>
+          <tot__time>0.2</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <overlaps>0</overlaps>
+          <stepsize>0.125</stepsize>
+          <size>9</size>
+          <sampname>HoGa09Ti21O705</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>42</sampposNumber>
+          <tot__time>0.2</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <overlaps>0</overlaps>
+          <stepsize>0.125</stepsize>
+          <size>9</size>
+          <sampname>BaNdZn3InO7</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>43</sampposNumber>
+          <tot__time>0.2</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <overlaps>0</overlaps>
+          <stepsize>0.125</stepsize>
+          <size>9</size>
+          <sampname>BaNLaZn3InO7</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>44</sampposNumber>
+          <tot__time>0.2</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <overlaps>0</overlaps>
+          <stepsize>0.125</stepsize>
+          <size>9</size>
+          <sampname>Ca2Ge7O16</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>45</sampposNumber>
+          <tot__time>0.2</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+        <au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+          <overlaps>0</overlaps>
+          <stepsize>0.125</stepsize>
+          <size>9</size>
+          <sampname>Ca19Sm01Ge7O1605</sampname>
+          <sampposAB>B</sampposAB>
+          <sampposNumber>46</sampposNumber>
+          <tot__time>0.2</tot__time>
+        </au.gov.ansto.bragg.echidna.exp.command.DoRTCommand>
+      </commands>
+    </dataModel>
+  </task>
+  <context>
+    <org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+      <org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+        <blocks>
+          <org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock reference="../../../../../task/dataModel"/>
+          <org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock reference="../../../../../task[2]/dataModel"/>
+          <org.gumtree.gumnix.sics.batch.ui.model.SicsCommandBlock reference="../../../../../task[3]/dataModel"/>
+        </blocks>
+      </org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+    </org.gumtree.gumnix.sics.batch.ui.model.SicsBatchScript>
+  </context>
+  <parameters/>
+</workflow>

@@ -26,7 +26,7 @@ __script__.version   = '1.0'
 # For direct access to the selected filenames
 __datasource__ = __register__.getDataSourceViewer()
 # Git will embed the blob here
-__UI_gitversion = "$Id$"
+__UI_gitversion = "$Id: e02c052e98716fe08e0daf8faf907f92b9d94782 $"
 
 ''' User Interface '''
 # Progress bar, shared with single or multi file reduction
