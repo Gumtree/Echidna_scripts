@@ -1,0 +1,13 @@
+# Measure at 200 and 300K
+samplename TmCr0.9Mn0.1O3 at 200K
+drive tc2_driveable 200
+wait 300
+
+runscan stth 2.75 5.2 50 time 347
+
+samplename TmCr0.9Mn0.1O3 at 300K
+hset /sample/tc1/sensor/setpoint1 300
+drive tc2_driveable 300
+wait 300
+
+runscan stth 2.75 5.2 50 time 347

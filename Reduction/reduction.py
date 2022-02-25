@@ -10,6 +10,7 @@
 
 from ECH import *
 
+from copy import copy
 from gumpy.nexus import *
 from gumpy.commons.jutils import jintcopy
 
@@ -365,7 +366,7 @@ def parse_ignore_spec(ignore_string):
             pass
     return set(final)   # a set to avoid duplications
 
-def read_efficiency_cif(filename):
+def read_efficiency_cif(filename,do_transpose=False):
     """Return a dataset,variance stored in a CIF file as efficiency values"""
     import time
     from Formats import CifFile
@@ -375,10 +376,15 @@ def read_efficiency_cif(filename):
     eff_cif = eff_cif['efficiencies']
     eff_data = map(float,eff_cif['_[local]_efficiency_data']) 
     eff_var = map(float,eff_cif['_[local]_efficiency_variance']) 
-    final_data = Dataset(Data(eff_data).reshape([128,128]))
-    final_data.var = (Array(eff_var).reshape([128,128]))
+    if do_transpose:
+        base_data = Dataset(Data(eff_data).reshape([128,128]).transpose())
+        base_data.var = (Array(eff_var).reshape([128,128]).transpose())
+        print "Efficiency transposed"
+    else:
+        base_data = Dataset(Data(eff_data).reshape([128,128]))
+        base_data.var = Array(eff_var).reshape([128,128])
     print 'Finished reading at %s' % time.asctime()
-    return final_data,eff_cif
+    return base_data,eff_cif
 
 # The following routine can be called with unstitched data, in
 # which case we will return the data with the 'axis' dimension
