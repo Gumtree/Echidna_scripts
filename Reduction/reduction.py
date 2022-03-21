@@ -795,7 +795,8 @@ def calculate_average_angles(tube_steps,angular_file,pixel_step,tube_sep,extra_d
 # Calculate adjusted gain based on matching intensities between overlapping
 # sections of data from different detectors
 def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None,bottom=None,
-               exact_angles=None,drop_frames='',drop_tubes = '', use_gains = [],do_sum=False, dumpfile=None):
+               exact_angles=None,drop_frames='',drop_tubes = '', use_gains = [],do_sum=False,
+               do_interp = False, dumpfile=None):
     """Calculate rescaling factors for tubes based on overlapping data
     regions. The ignore parameter specifies the number of initial tubes for
     which data are unreliable and should be ignored. Specifying unit weights
@@ -809,15 +810,21 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None
     use_gains is not empty, these [val,esd] values will be used instead of those
     obtained from the iteration routine. Dumpfile, if set, will output
     starting values for use by other routines. do_sum will sum each
-    detector step before refining."""
+    detector step before refining. do_interp will interpolate values onto
+    a regular grid before performing the gain interpolation."""
     import time
-    from Reduction import overlap
+    from Reduction import overlap,interpolate
     # Get sensible values
     if top is None: top = ds.shape[1]-1
     if bottom is None: bottom = 0
+
+    # Vertically integrate
     # Dimensions are step,vertical,tube
+
     b = ds[:,bottom:top,:].intg(axis=1).get_reduced()
+
     # Determine pixels per tube interval
+
     tube_pos = ds.axes[-1]
     if tube_pos.ndim == 2:   #very old data, just take one slice
         tube_pos = tube_pos[0]
@@ -829,7 +836,9 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None
     print '%f tube separation, %d steps before overlap, ideal binsize %f' % (tubesep,pixel_step,bin_size)
     dropped_frames = parse_ignore_spec(drop_frames)
     dropped_tubes = parse_ignore_spec(drop_tubes)
+
     # Drop frames from the end as far as we can
+
     for empty_no in range(b.shape[0]-1,0,-1):
         print "Trying %d" % empty_no
         if empty_no not in dropped_frames:
@@ -837,7 +846,9 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None
         dropped_frames.remove(empty_no)
     print "All frames after %d empty so dropped" % empty_no
     b = b[:empty_no+1]
+
     # Do we need to add dummy missing frames?
+
     extra_steps = b.shape[0]%pixel_step
     if extra_steps > 0:
         start_drop = b.shape[0]
@@ -850,12 +861,18 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None
         dropped_frames |= set(extra_dropped_frames)
     else:
         extra_dropped_frames = []
+        
     # Zero out dropped frames
+
     print 'Dropped frames: ' + `dropped_frames`
     b_zeroed = copy(b)
+
     # Make a simple array to work out which sectors are missing frames
+
     frame_check = array.ones(b.shape[0])
-    # Additionally zero out all matching steps
+
+    # Zero out all matching steps
+
     all_zeroed = copy(b)
     region_starts = [a*pixel_step for a in range(b.shape[0]/pixel_step)]
     for frame_no in dropped_frames:
@@ -867,18 +884,36 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None
             frame_check[drop_step] = 0
             all_zeroed[drop_step] = 0
             all_zeroed.var[drop_step] = 0
+
     # Now drop out whole detectors
+
     for tube_no in dropped_tubes:
         b_zeroed[:,tube_no] = 0
         b_zeroed.var[:,tube_no] = 0
         all_zeroed[:,tube_no] = 0
         all_zeroed.var[:,tube_no] = 0
+
+    # Interpolation. If requested, we first interpolate the data onto a regular angular grid,
+    # which is the assumption underlying the regain calculation. However, as the deviations
+    # from regularity are usually minor, this step can usually be skipped
+    
+    if do_interp:
+        if exact_angles != None:
+            h_correction = read_horizontal_corrections(exact_angles)
+        else:
+            h_correction = None
+        
+        all_zeroed = interpolate.interpolate(all_zeroed,dropped_frames,tube_steps,tube_steps[0],
+                                             bin_size,len(tube_pos),h_correction=h_correction)
+
     c = all_zeroed.reshape([b.shape[0]/pixel_step,pixel_step,b.shape[-1]])
     frame_check = frame_check.reshape([b.shape[0]/pixel_step,pixel_step])
     frame_sum = frame_check.intg(axis=1)
     print `b.shape` + "->" + `c.shape`
     print 'Relative no of frames: ' + `frame_sum`
+
     # Output the starting data for external use
+
     if dumpfile is not None:
         dump_tube_intensities(dumpfile,raw=b_zeroed)
     if len(use_gains)==0:   #we have to calculate them
@@ -912,18 +947,26 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None
     start_ds = reshape_ds.transpose((2,0))[ignore:] #array of [tubeno,stepno,section]
     start_ds = start_ds.transpose((1,2))
     start_var = start_ds.var
+
     # Our new pixel mask has to have all of the steps in
+
     pixel_mask = array.ones_like(start_ds)
     for one_tube in range(len(start_ds)):
         if not start_ds[one_tube].any():   #all zero
             pixel_mask[one_tube] = 0      #mask it out
-   # Normalise gains so that average is 1.0
+
+    # Normalise gains so that average is 1.0
+
     gain = gain*len(gain)/gain.sum()
     model,wd,model_var,esds = overlap.apply_gain(start_ds,1.0/start_var,gain,
                                             calc_var=True,bad_steps=dropped_frames,pixel_mask=pixel_mask)
+
     # model and model_var have shape tubeno*pixel_step + no_steps (see shift_tube_add_new)
+
     print 'Have full model and errors at %f' % time.clock()
+
     # step size could be less than pixel_step if we have a short non-overlap scan
+
     real_step = pixel_step
     if len(tube_steps)< pixel_step:
         real_step = len(tube_steps)
@@ -937,15 +980,23 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None
         model_var = holeless_var
     cs = Dataset(model)
     cs.var = model_var
+
     # Now build up the important information
+
     cs.title = ds.title
     cs.copy_cif_metadata(ds)
+
     # construct the axes
-    if exact_angles is None:
+
+    if exact_angles is None or do_interp:
         axis = arange(len(model))
         new_axis = axis*bin_size + ds.axes[0][0] + ignore*pixel_step*bin_size
-        axis_string = """Following application of gain correction, two theta values were recalculated assuming a step size of %8.3f 
-and a tube separation of %8.3f starting at %f.""" % (bin_size,tubesep,ds.axes[0][0]+ignore*pixel_step*bin_size)
+        if not do_interp:
+            axis_string = """Following application of gain correction, two theta values were recalculated assuming a step size of %8.3f 
+            and a tube separation of %8.3f starting at %f.""" % (bin_size,tubesep,ds.axes[0][0]+ignore*pixel_step*bin_size)
+        else:
+            axis_string = """Gain correction was performed after interpolating observed values onto a
+        regular angular grid with a step size of %8.3f and a tube separation of %8.3f starting at %f.""" % (bin_size,tubesep,ds.axes[0][0]+ignore*pixel_step*bin_size)
     else:
         new_axis = calculate_average_angles(tube_steps,exact_angles,pixel_step,tubesep,
                                             extra_dummy=extra_dropped_frames)

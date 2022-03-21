@@ -135,6 +135,8 @@ regain_apply = Par('bool','False')
 regain_apply.title = 'Apply'
 regain_iterno = Par('int','5')
 regain_iterno.title = 'Iterations'
+regain_interp = Par('bool','False')
+regain_interp.title = 'Interpolate?'
 regain_store = Par('bool','False')
 regain_store.title = 'Store gain result'
 regain_store_filename = Par('file')
@@ -147,7 +149,8 @@ regain_load_filename.title = 'Gain file'
 #regain_dump_tubes.title = 'Dump values by tube'
 regain_sum = Par('bool','False')
 regain_sum.title = 'Sum before refinement'
-Group('Recalculate Gain').add(regain_apply,regain_iterno,regain_store,regain_store_filename,
+Group('Recalculate Gain').add(regain_apply,regain_iterno,regain_interp,
+                              regain_store,regain_store_filename,
                               regain_load,regain_load_filename,regain_sum)
 
 
@@ -702,8 +705,9 @@ def __run_script__(fns):
                #if regain_dump_tubes.value:
                #    dumpfile = filename_base+".tubes"
                cs,gain,esds,chisquared,no_overlaps = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
-                                                                          exact_angles=htc,drop_frames=str(asm_drop_frames.value),drop_tubes=drop_tubes,use_gains=regain_data,dumpfile=dumpfile,
-                                                                          do_sum=regain_sum.value)
+                                                                          exact_angles=htc,drop_frames=str(asm_drop_frames.value),drop_tubes=drop_tubes,
+                                                                          use_gains=regain_data,dumpfile=dumpfile,
+                                                                          do_sum=regain_sum.value,do_interp=regain_interp.value)
                if cs is not None:
                    print 'Have new gains at %f' % (time.clock() - elapsed)
                    fg = Dataset(gain)
