@@ -12,15 +12,19 @@ def interpolate(full_data,dropped,real_steps,start_ang,binsize,npoints,h_correct
     print "Actual pt: " + repr(real_steps)
     new_data = array.zeros(full_data.shape)
     for one_tube in range(0,full_data.shape[1]):
+        #debug = one_tube == 54
         if h_correction == None: h_shift = 0
         else:
             h_shift = h_correction[one_tube]
 
         real_pts = Array(real_steps) + h_shift
         interp_pts = find_interp_pts(real_pts,ideal_pts,binsize,dropped,max_dist=binsize*1.1)
-        #print "Act pts " + repr(real_pts)
-        #print "Interp: " + repr(interp_pts)
-        new_data[:,one_tube] = apply_interp(full_data.storage[:,one_tube],real_pts,ideal_pts,interp_pts,dropped)
+        if debug:
+            print "Act pts " + repr(real_pts+one_tube*1.25)
+            print "Ideal pts" + repr(Array(ideal_pts) + one_tube*1.25)
+            print "Interp: " + repr(interp_pts)
+            
+        new_data[:,one_tube] = apply_interp(full_data.storage[:,one_tube],real_pts,ideal_pts,interp_pts,dropped,debug=debug)
     full_data.storage = new_data
     return full_data
 
@@ -58,6 +62,7 @@ def find_interp_pts(real_pts,ideal_pts,ideal_sep,dropped,max_dist=0.1):
             if abs(ideal_pts[i] - real_pts[test_pt]) < max_dist:
                 adjusts.append((test_pt,next_pt))
             else:
+                print "No interpolation for pt %d" % i
                 adjusts.append((0,0))
             continue
         
@@ -77,7 +82,7 @@ def find_interp_pts(real_pts,ideal_pts,ideal_sep,dropped,max_dist=0.1):
 
     return adjusts
 
-def apply_interp(full_data,tube_steps,ideal_pts,interp_pts,dropped):
+def apply_interp(full_data,tube_steps,ideal_pts,interp_pts,dropped,debug=False):
     """Interpolate the data in full_data onto a regular grid. Full_data
     is an array [step,tube_no] and tube_steps is the position of each
     step as recorded by the encoder.
@@ -91,7 +96,9 @@ def apply_interp(full_data,tube_steps,ideal_pts,interp_pts,dropped):
             continue
         l,u = interp_pts[pt]
         shift = (full_data[u] - full_data[l])/(tube_steps[u]-tube_steps[l]) * (ideal_pts[pt]-tube_steps[u])
-        # print "Shift for %d is %s" % (pt,repr(shift))
+        if debug:
+            print "Shift for %d: from %f by %f to %f" % (pt,full_data[u],shift, full_data[u]+shift)
+
         new_data[pt] = full_data[u]+ shift
 
     return new_data

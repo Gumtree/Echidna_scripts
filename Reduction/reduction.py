@@ -905,7 +905,10 @@ def do_overlap(ds,iterno,algo="FordRollett",ignore=1,unit_weights=False,top=None
         
         all_zeroed = interpolate.interpolate(all_zeroed,dropped_frames,tube_steps,tube_steps[0],
                                              bin_size,len(tube_pos),h_correction=h_correction)
+        b_zeroed = interpolate.interpolate(b_zeroed,dropped_frames,tube_steps,tube_steps[0],
+                                             bin_size,len(tube_pos),h_correction=h_correction)
 
+        
     c = all_zeroed.reshape([b.shape[0]/pixel_step,pixel_step,b.shape[-1]])
     frame_check = frame_check.reshape([b.shape[0]/pixel_step,pixel_step])
     frame_sum = frame_check.intg(axis=1)
