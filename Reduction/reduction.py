@@ -19,7 +19,7 @@ import os.path as path
 import AddCifMetadata
 
 # Following is updated by git checkout
-gitversion = "$Id: 4984303d6b1a89af94eb07dce292a670d3d982d8 $"
+gitversion = "$Id$"
 
 def copy_metadata_deep(ds, dfrom):
     ds.__copy_metadata__(dfrom, deep=True)
