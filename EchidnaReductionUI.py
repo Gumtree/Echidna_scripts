@@ -66,10 +66,11 @@ norm_uniform = Par('bool','False')
 norm_uniform.title = 'Common to all datasets'
 norm_reference = Par('string', 'Monitor 3', options = norm_table.keys())
 norm_reference.title = 'Source'
-norm_target    = 'auto'
+norm_target    = Par('int',-1)
+norm_target.title = 'Normalise to (-1 for auto):'
 norm_plot = Act('plot_norm_proc()','Plot')
 norm_plot_all = Act('plot_all_norm_proc()','Plot all')
-Group('Normalization').add(norm_apply, norm_uniform, norm_reference,norm_plot_all,norm_plot)
+Group('Normalization').add(norm_apply, norm_uniform, norm_reference,norm_target,norm_plot_all,norm_plot)
 
 # Background Correction
 bkg_apply = Par('bool', 'False')
@@ -134,6 +135,8 @@ regain_apply = Par('bool','False')
 regain_apply.title = 'Apply'
 regain_iterno = Par('int','5')
 regain_iterno.title = 'Iterations'
+regain_interp = Par('bool','False')
+regain_interp.title = 'Interpolate?'
 regain_store = Par('bool','False')
 regain_store.title = 'Store gain result'
 regain_store_filename = Par('file')
@@ -146,7 +149,8 @@ regain_load_filename.title = 'Gain file'
 #regain_dump_tubes.title = 'Dump values by tube'
 regain_sum = Par('bool','False')
 regain_sum.title = 'Sum before refinement'
-Group('Recalculate Gain').add(regain_apply,regain_iterno,regain_store,regain_store_filename,
+Group('Recalculate Gain').add(regain_apply,regain_iterno,regain_interp,
+                              regain_store,regain_store_filename,
                               regain_load,regain_load_filename,regain_sum)
 
 
@@ -540,14 +544,13 @@ def __run_script__(fns):
         if norm_ref.strip() == '':
             open_error("You have asked to apply normalisation but not specified any normalisation reference")
             return
-        norm_tar = str(norm_target).lower()
+        if len(str(norm_target.value)) == 0:
+            norm_tar = -1
+        else:
+            norm_tar = int(str(norm_target.value))
 
         # check if normalization target needs to be determined
-        if len(norm_tar) == 0:
-            norm_ref = None
-            norm_tar = None
-            print 'WARNING: no reference for normalization was specified'
-        elif norm_tar == 'auto':
+        if norm_tar < 0:
             # set flag
             norm_tar = -1
             # iterate through input datasets
@@ -557,6 +560,7 @@ def __run_script__(fns):
         # use provided reference value
         else:
             norm_tar = float(norm_tar)
+            norm_uniform.value = True
             
     else:
         norm_ref = None
@@ -642,6 +646,7 @@ def __run_script__(fns):
             # check if normalized is required 
             if norm_ref:
                 ds,norm_tar = reduction.applyNormalization(rs, reference=norm_table[norm_ref], target=norm_tar)
+                print 'Normalised to %f' % norm_tar
             else:
                 ds = rs
             if bkg:
@@ -700,8 +705,9 @@ def __run_script__(fns):
                #if regain_dump_tubes.value:
                #    dumpfile = filename_base+".tubes"
                cs,gain,esds,chisquared,no_overlaps = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
-                                                                          exact_angles=htc,drop_frames=str(asm_drop_frames.value),drop_tubes=drop_tubes,use_gains=regain_data,dumpfile=dumpfile,
-                                                                          do_sum=regain_sum.value)
+                                                                          exact_angles=htc,drop_frames=str(asm_drop_frames.value),drop_tubes=drop_tubes,
+                                                                          use_gains=regain_data,dumpfile=dumpfile,
+                                                                          do_sum=regain_sum.value,do_interp=regain_interp.value)
                if cs is not None:
                    print 'Have new gains at %f' % (time.clock() - elapsed)
                    fg = Dataset(gain)
