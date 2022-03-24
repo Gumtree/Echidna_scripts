@@ -11,6 +11,7 @@ def interpolate(full_data,dropped,real_steps,start_ang,binsize,npoints,h_correct
     print "Ideal pts: " + repr(ideal_pts)
     print "Actual pt: " + repr(real_steps)
     new_data = array.zeros(full_data.shape)
+    debug = False
     for one_tube in range(0,full_data.shape[1]):
         #debug = one_tube == 54
         if h_correction == None: h_shift = 0
