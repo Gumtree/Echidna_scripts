@@ -1,5 +1,5 @@
 = Echidna User Manual
-May 2023
+June 2023
 :doctype: book
 ifdef::backend-pdf[]
 :title-logo-image: image:albino_echidna.jpg["Echidna"]
@@ -26,24 +26,18 @@ you should choose "Capture Device" from the "Media" menu, and then
 configure the "Video Device" to be USB. Once this is done, just press
 "Play". There is no need to close this program after use.
 
-image::neutron_camera_connections.png["Figure 1",align=left,title="Neutron camera connections"]
+image:neutron_camera_connections.png["Figure 1",title="Neutron camera connections"]
 
 === Electronic logbook
 
 http://www.nbi.ansto.gov.au/echidna/status/notebook.html[An interactive electronic logbook],
-accessible through a web browser, is provided for users and instrument scientists to document the experiment.  All
-plots generated during data analysis are instantly accessible for
-insertion into the main logbook through the "Database" tab at the far
-right of the browser page.  If a recent plot does not appear, scroll
-down and up again to the top to initiate a refresh.
+accessible through a web browser, is provided for users and instrument scientists to document the experiment.
 
-Note that all Gumtree plots also have a 'send to logbook database'
-icon (see Figure 2) which can be used to place the plot into the
-database tab ready for insertion into the logbook.  This is
-particularly useful for placing temperature traces into the logbook.
+To insert a plot into the logbook, choose 'Copy to Clipboard' icon above the plot,
+and then use `Ctrl-V` to paste into the logbook.
 
 Logbook snapshots are recorded every ten minutes in a backed-up
-version control system to there is no danger of any loss of notes. PDF
+version control system so there is no danger of any loss of notes. PDF
 versions can be generated at the end of the experiment as a permanent
 record.
 
@@ -116,7 +110,7 @@ to Queue' and a pre-prepared batch file will be inserted into the
 'buffer queue' (see following section).  Press the 'Play' button in
 the batch buffer queue to start data collection.
 
-image::RT_setup.JPG["Figure 3",align=left,title="Room temperature setup"]
+image::RT_setup.JPG["Figure 3",500,500,title="Room temperature setup",align=center]
 
 Advice and additional information about the fields in the form:
 
@@ -182,6 +176,9 @@ before restarting.
 Ramp a temperature:: If using a Lakeshore, `hset /sample/tc1/control/ramp_loop_1 1,+<ramprate>` where `<ramprate>`
 is the ramp rate in degrees per minute. Note that ramping while collecting data on Echidna is not advised,
 as different angular positions will be collected at different temperatures.
+
+Set up dilution:: Run `oldconfigsics` and choose the 12T magnet. Then temperatures can
+be set via `hset /sample/magnet1/set_DiluxTemp <temperature>`
 
 (More to be added)
 
@@ -368,6 +365,10 @@ with a gold star. Click on this icon and choose 'Analysis Scripting'.
 1. Move and resize this window to taste
 1. Click the `Load Script` button and pick `EchidnaReductionUI.py`
 1. If nothing appears to happen when you click 'Run', see the answer to the previous question.
+The plots have disappeared or are not working:: Restart the
+"Analysis Scripting" perspective by first
+closing it (right click on "Analysis Scripting" button at top right) and then
+following the above instructions to open it again.
 
 [[Appendix_I]]
 == Appendix I: User checklists
