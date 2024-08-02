@@ -128,7 +128,9 @@ vig_rescale_target = Par('float', '10000.0')
 vig_rescale_target.title = 'Rescale target:'
 vig_cluster = Par('string','Sum',options=['Sum','Merge','None'])
 vig_cluster.title = 'Treatment of close points:'
-Group('Vertical Integration').add(vig_lower_boundary, vig_upper_boundary, vig_cluster, vig_apply_rescale, vig_rescale_target)
+vig_straighten = Par('bool','False')
+vig_straighten.title = 'Straighten?'
+Group('Vertical Integration').add(vig_lower_boundary, vig_upper_boundary, vig_cluster, vig_apply_rescale, vig_rescale_target, vig_straighten)
 
 # Recalculate gain
 regain_apply = Par('bool','False')
@@ -691,7 +693,14 @@ def __run_script__(fns):
             if ds.ndim > 2:
                 # See if we are ignoring any tubes
                 stitched = reduction.getStitched(ds,ignore=str(asm_drop_frames.value),drop_tubes=drop_tubes)
+            # Straighten: currently not taking account of gain
+
+            if vig_straighten.value:
+                straight = reduction.doStraighten(stitched, stepsize)
+                print 'Finished straightening at %f' % (time.clock() - elapsed)
+
             # Display dataset
+
             print 'Finished stitching at %f' % (time.clock()-elapsed)
             prog_bar.selection = fn_idx * num_step + 6
             Plot1.set_dataset(stitched)

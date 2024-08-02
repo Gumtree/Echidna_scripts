@@ -1107,6 +1107,37 @@ def test_iterate_data():
     g,d,ir,rm,hist,esds,fa,wts = iterate_data(start_data,10,20)
     return g,true_gains,ir,true_vals
 
+def doStraighten(ds, stepsize):
+    """
+    Calculate the true two-theta value for every pixel and assign to the
+    appropriate angular bin
+    """
+    from Reduction import straightening
+    
+    radius = float(ds.harvest_metadata("CIF")["_pd_instr_dist_spec/detc"])
+
+    # print 'Radius is %f' % radius
+    # print 'Axes are %s, %s' % (`ds.axes[0]`, `ds.axes[1]`)
+    if ds.axes[1].title != 'x_pixel_angular_offset':
+        print 'Dataset is not stitched? Axis 0 is %s' % ds.axes[1].title
+        return ds
+
+    # Calculate ideal angles
+
+    angles = ds.axes[1]
+    numsteps = (angles[-1] - angles[0])/stepsize
+    new_angles = [angles[0] + stepsize*i for i in range(round(numsteps)+1)]
+    print 'Largest angle %f, was %f' % (new_angles[-1], angles[-1])
+
+    # Calculate vertical positions
+
+    vert_size = len(ds.axes[0]) - 1
+    vert_pos = getCenters(ds.axes[0]).storage - ds.axes[0][vert_size/2]
+    print 'Vertical positions at centre %f, %f' % (vert_pos[63], vert_pos[64])
+
+    contribs = zeros(ds.shape, dtype=int)
+    dcdat, dcvar, new_contribs = straightening.correctGeometrypy(ds, radius, new_angles, vert_pos, contribs)
+
 def make_peak(width):
     import math
     """Return a Gaussian peak"""
