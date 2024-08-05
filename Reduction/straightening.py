@@ -7,7 +7,7 @@ from ECH import *
 from au.gov.ansto.bragg.echidna.dra.core import GeometryCorrection
 import time
 
-def correctGeometryjv(ds, radius, thetaVect, Zpvertic):
+def correctGeometryjv(ds, radius, thetaVect, Zpvertic, bottom, top):
 
     # Use the built-in Java routine
 
@@ -29,7 +29,7 @@ def correctGeometryjv(ds, radius, thetaVect, Zpvertic):
     
     contjv = contribs.__iArray__
 
-    cg.correctGeometry(dsjv, all_angles, radius, thetaVect.__iArray__, zpjv, varjv, contjv,
+    cg.correctGeometry(dsjv, all_angles, radius, thetaVect.__iArray__, zpjv, varjv, bottom, top, contjv,
                        new_ds.__iArray__, new_ds.var.__iArray__)
     print("Finished correcting geometry")
 

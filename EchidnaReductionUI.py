@@ -679,29 +679,74 @@ def __run_script__(fns):
             stepsize = reduction.get_stepsize(ds)
             print 'Ideal stepsize determined to be %f' % stepsize
             prog_bar.selection = fn_idx * num_step + 4
+
             # check if horizontal tube correction is required
+
             if htc:
                 ds = reduction.getHorizontallyCorrected(ds, htc)
     
             print 'Finished horizontal correction at %f' % (time.clock()-elapsed)
             prog_bar.selection = fn_idx * num_step + 5
 
+            drop_tubes = str(asm_drop_tubes.value)
+
+            # check if we are recalculating gain 
+
+            if regain_apply.value:
+               bottom = int(vig_lower_boundary.value)
+               top = int(vig_upper_boundary.value)
+               ignore = 1 # default value, used later
+               dumpfile = None
+               #if regain_dump_tubes.value:
+               #    dumpfile = filename_base+".tubes"
+               cs,gain,esds,chisquared,no_overlaps = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
+                                                                          exact_angles=htc,drop_frames=str(asm_drop_frames.value),drop_tubes=drop_tubes,
+                                                                          use_gains=regain_data,dumpfile=dumpfile,
+                                                                          do_sum=regain_sum.value,do_interp=regain_interp.value)
+               if cs is not None:
+                   
+                   print 'Have new gains at %f' % (time.clock() - elapsed)
+                   fg = Dataset(gain)
+                   fg.var = esds**2
+                   # set horizontal axis (ideal values)
+                   Plot4.set_dataset(Dataset(chisquared))   #chisquared history
+                   Plot5.set_dataset(fg)   #final gain plot
+                   # now save the file if requested
+                   if regain_store.value and not regain_load.value:
+                       gain_comment = "Gains refined from file %s" % fn
+                       reduction.store_regain_values(str(regain_store_filename.value),gain,gain_comment)
+                   if vig_straighten.value:
+                       print 'Back-applying to full data set'
+                       if len(gain) + ignore != ds.shape[-1]:
+                           print 'Fail to back-apply gain, %d gain values %d tubes' % (len(gain), ds.shape[-1])
+
+                       # The first ignore tubes are not included in the gain result,
+                       # therefore we have to ignore them when back-applying.
+                    
+                       for tube in range(ignore,ds.shape[-1]):
+                           ds[:,:,tube] *= gain[tube - ignore]
+               else:
+                   open_error("Cannot do gain recalculation as the scan ranges do not overlap.")
+                   return
+
             # Stitching. If we are recalculating gain, this is purely for
             # informational purposes. We don't want to take the 100x time penalty of
             # multiplying a 2D array by the gain factor for each tube, so we
             # stitch using a 1D array after doing the gain re-refinement.
-
-            drop_tubes = str(asm_drop_tubes.value)
 
             if ds.ndim > 2:
 
                 # See if we are ignoring any tubes
 
                 stitched = reduction.getStitched(ds,ignore=str(asm_drop_frames.value),drop_tubes=drop_tubes)
-            # Straighten: currently not taking account of gain
 
+            # Straighten: regain has been applied if necessary
+
+            contribs = None  #Only straightening provides this
+            
             if vig_straighten.value:
-                stitched, contribs = reduction.doStraighten(stitched, stepsize)
+                stitched, contribs = reduction.doStraighten(stitched, stepsize, int(vig_lower_boundary.value),
+                                                            int(vig_upper_boundary.value))
                 print 'Finished straightening at %f' % (time.clock() - elapsed)
 
             # Display dataset
@@ -713,32 +758,6 @@ def __run_script__(fns):
             Plot1.title = stitched.title
             n_logger.log_plot(Plot1, footer = Plot1.title)
 
-            # check if we are recalculating gain 
-
-            if regain_apply.value:
-               bottom = int(vig_lower_boundary.value)
-               top = int(vig_upper_boundary.value)
-               dumpfile = None
-               #if regain_dump_tubes.value:
-               #    dumpfile = filename_base+".tubes"
-               cs,gain,esds,chisquared,no_overlaps = reduction.do_overlap(ds,regain_iterno.value,bottom=bottom,top=top,
-                                                                          exact_angles=htc,drop_frames=str(asm_drop_frames.value),drop_tubes=drop_tubes,
-                                                                          use_gains=regain_data,dumpfile=dumpfile,
-                                                                          do_sum=regain_sum.value,do_interp=regain_interp.value)
-               if cs is not None:
-                   print 'Have new gains at %f' % (time.clock() - elapsed)
-                   fg = Dataset(gain)
-                   fg.var = esds**2
-                   # set horizontal axis (ideal values)
-                   Plot4.set_dataset(Dataset(chisquared))   #chisquared history
-                   Plot5.set_dataset(fg)   #final gain plot
-                   # now save the file if requested
-                   if regain_store.value and not regain_load.value:
-                       gain_comment = "Gains refined from file %s" % fn
-                       reduction.store_regain_values(str(regain_store_filename.value),gain,gain_comment)
-               else:
-                   open_error("Cannot do gain recalculation as the scan ranges do not overlap.")
-                   return
             if not vig_apply_rescale.value:
                 norm_const = -1.0
             else:
@@ -748,10 +767,10 @@ def __run_script__(fns):
                 cluster = (stepsize * 0.6,str(vig_cluster.value))  #60 percent of ideal
             else:
                 cluster = (0.0,'None')
-            if not regain_apply.value:  #already done
+            if not regain_apply.value or (regain_apply.value and vig_straighten.value):
                 final_result = reduction.getVerticalIntegrated(stitched, axis=0, normalization=norm_const,
                                                      cluster=cluster,bottom = int(vig_lower_boundary.value),
-                                                     top=int(vig_upper_boundary.value))
+                                                               top=int(vig_upper_boundary.value), contribs = contribs)
                 print 'Finished vertical integration at %f' % (time.clock()-elapsed)
             else:
                 if str(vig_cluster.value) == 'Sum':  #simulate a sum for the gain recalculated value
