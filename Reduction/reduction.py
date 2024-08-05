@@ -1125,18 +1125,19 @@ def doStraighten(ds, stepsize):
     # Calculate ideal angles
 
     angles = ds.axes[1]
-    numsteps = (angles[-1] - angles[0])/stepsize
-    new_angles = [angles[0] + stepsize*i for i in range(round(numsteps)+1)]
-    print 'Largest angle %f, was %f' % (new_angles[-1], angles[-1])
+    new_angles = arange(angles[0], angles[-1], stepsize)
 
     # Calculate vertical positions
 
     vert_size = len(ds.axes[0]) - 1
     vert_pos = getCenters(ds.axes[0]).storage - ds.axes[0][vert_size/2]
+    vert_pos.title = "Vertical offset"
+    new_angles.title = "True two theta"
+    
     print 'Vertical positions at centre %f, %f' % (vert_pos[63], vert_pos[64])
 
-    contribs = zeros(ds.shape, dtype=int)
-    dcdat, dcvar, new_contribs = straightening.correctGeometrypy(ds, radius, new_angles, vert_pos, contribs)
+    new_ds, new_contribs = straightening.correctGeometryjv(ds, radius, new_angles, vert_pos)
+    return new_ds, new_contribs
 
 def make_peak(width):
     import math

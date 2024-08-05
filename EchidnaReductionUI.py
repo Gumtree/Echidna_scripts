@@ -466,7 +466,7 @@ def load_user_prefs(prefix = ''):
     except AttributeError:
         p = globals().scope_keys()
     for name in p:
-        if isinstance(globals()[name],Par):
+        if hasattr(globals()[name],'value'):
             try:
                 setattr(globals()[name],"value", get_prof_value(prefix+name))
             except:
@@ -487,7 +487,7 @@ def save_user_prefs(prefix=''):
     except AttributeError:
         p = globals().scope_keys()
     for name in p:
-        if isinstance(globals()[name],Par):
+        if hasattr(globals()[name],'value') and name[0] != '_':
             print "Now saving %s" % name
             prof_val = str(globals()[name].value)
             set_prof_value(prefix+name,prof_val)
@@ -685,28 +685,36 @@ def __run_script__(fns):
     
             print 'Finished horizontal correction at %f' % (time.clock()-elapsed)
             prog_bar.selection = fn_idx * num_step + 5
+
             # Stitching. If we are recalculating gain, this is purely for
             # informational purposes. We don't want to take the 100x time penalty of
             # multiplying a 2D array by the gain factor for each tube, so we
             # stitch using a 1D array after doing the gain re-refinement.
+
             drop_tubes = str(asm_drop_tubes.value)
+
             if ds.ndim > 2:
+
                 # See if we are ignoring any tubes
+
                 stitched = reduction.getStitched(ds,ignore=str(asm_drop_frames.value),drop_tubes=drop_tubes)
             # Straighten: currently not taking account of gain
 
             if vig_straighten.value:
-                straight = reduction.doStraighten(stitched, stepsize)
+                stitched, contribs = reduction.doStraighten(stitched, stepsize)
                 print 'Finished straightening at %f' % (time.clock() - elapsed)
 
             # Display dataset
 
             print 'Finished stitching at %f' % (time.clock()-elapsed)
+
             prog_bar.selection = fn_idx * num_step + 6
             Plot1.set_dataset(stitched)
             Plot1.title = stitched.title
             n_logger.log_plot(Plot1, footer = Plot1.title)
+
             # check if we are recalculating gain 
+
             if regain_apply.value:
                bottom = int(vig_lower_boundary.value)
                top = int(vig_upper_boundary.value)
