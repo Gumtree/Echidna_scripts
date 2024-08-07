@@ -1111,11 +1111,12 @@ def test_iterate_data():
     g,d,ir,rm,hist,esds,fa,wts = iterate_data(start_data,10,20)
     return g,true_gains,ir,true_vals
 
-def doStraighten(ds, stepsize, bottom, top):
+def doStraighten(ds, stepsize, bottom, top, interp=False):
     """
     Calculate the true two-theta value for every pixel and assign to the
     appropriate angular bin. `bottom` and `top` are the minimum and maximum
-    vertical pixels to consider.
+    vertical pixels to consider. If `interp` is true, pixel intensity is
+    linearly interpolated to the ideal value.
     """
     from Reduction import straightening
     
@@ -1141,7 +1142,15 @@ def doStraighten(ds, stepsize, bottom, top):
     
     print 'Vertical positions at centre %f, %f' % (vert_pos[63], vert_pos[64])
 
-    new_ds, new_contribs = straightening.correctGeometryjv(ds, radius, new_angles, vert_pos, bottom, top)
+    new_ds, new_contribs = straightening.correctGeometryjv(ds, radius, new_angles, vert_pos, bottom, top, interp=interp)
+
+    # Add metadata record
+
+    if not interp:
+        info_string = """Geometry was corrected by assigning each pixel to a new two theta bin based on true two theta angle, leaving vertical height unchanged."""
+    else:
+        info_string = """Geometry was corrected by dividing pixel intensity and variance between ideal true two-theta bins based on deviation from ideal bin centre. Vertical height was unchanged."""
+    new_ds.add_metadata('_pd_proc_info_data_reduction', info_string, append=True)
     return new_ds, new_contribs
 
 def make_peak(width):
