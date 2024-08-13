@@ -43,6 +43,18 @@ def scrub_vanad_pos(vanad,takeoff,crystal,nosteps=25):
                [62,0,20],
                [75,10,25]
                ]
+    elif crystal == "331" and takeoff==140 and nosteps==50:
+        return [
+               [53, 0, 19],
+               [52, 22, 44],
+               [51, 48, 50],
+               [83, 12, 29],
+               [82, 37, 50],
+               [84, 0,   4],
+               [127, 0, 48],   #-32 to +48
+               [126, 10, 50],
+               [125, 35, 50]
+               ]
     else:
        raise ValueError,"No V peak data found for %s at %s" % (crystal,takeoff)
 
@@ -77,11 +89,13 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=[(0,50),(1,25)],norm_ref="bm3_counts"
     omega = vanad.mom[0]  # for reference
     takeoff = vanad.mtth[0]
     crystal = AddCifMetadata.pick_hkl(omega-takeoff/2.0,"335")  #post April 2009 used 335 only
+    
     #
     # Get important information from the basic files
     #
     # Get file times from timestamps as older NeXuS files had bad values here
     #
+
     wl = AddCifMetadata.calc_wavelength(crystal,takeoff)
     vtime = os.stat(vanad.location)[stat.ST_CTIME]
     vtime = datetime.datetime.fromtimestamp(vtime)
@@ -91,30 +105,41 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=[(0,50),(1,25)],norm_ref="bm3_counts"
     btime = btime.strftime("%Y-%m-%dT%H:%M:%S%z")
     v_loc = str(vanad.location)
     b_loc = str(backgr.location)
+
     # Check for missed steps
+
     b_missing = determine_missed_steps(backgr,tolerance=0.5)
     v_missing = determine_missed_steps(vanad,tolerance=0.85)
     all_missing = set(b_missing) | set(v_missing)
+
     # This step required to insert our metadata hooks into the dataset object
+
     AddCifMetadata.add_metadata_methods(vanad)
     AddCifMetadata.add_metadata_methods(backgr)
+
     # Fail early
+
     print 'Using %s and %s' % (v_loc,b_loc)
+
     # Subtract the background
+
     vanad,norm_target = reduction.applyNormalization(vanad,norm_ref,-1)
+
     # store for checking later
+
     check_val = backgr[12,64,64]
     backgr,nn = reduction.applyNormalization(backgr,norm_ref,norm_target)
-    # 
+
     print 'Normalising background to %f'  % norm_target
     pure_vanad = (vanad - backgr).get_reduced()    #remove the annoying 2nd dimension
     pure_vanad.copy_cif_metadata(vanad)
     print 'Check: %f, %f -> %f' % (vanad[12,64,64],check_val,pure_vanad[12,64,64])
-    #
+
     # move the vertical pixels to correct positions
-    #
+
     pure_vanad = reduction.getVerticallyCorrected(pure_vanad,v_off)
     nosteps = pure_vanad.shape[0]
+    
     # now we have to get some efficiency numbers out.  We will have nosteps 
     # observations of each value, if nothing is blocked or scrubbed.   We obtain a
     # relative efficiency for every pixel at each height, and then average to
@@ -125,78 +150,119 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=[(0,50),(1,25)],norm_ref="bm3_counts"
     #
     # remember the structure of our data: the leftmost index is the vertical
     # pixel number, the right is the angle,
+
     eff_array = array.zeros(pure_vanad[0].shape)
     eff_error = array.zeros(pure_vanad[0].shape)
+
     # keep a track of excluded tubes by step to work around lack of count_zero
     # support
+
     tube_count = array.ones(pure_vanad.shape[0]) * pure_vanad.shape[-1]
+
     # Now zero out blocked areas. The first bs steps are blocked on tube bt.
     # We are assuming no overlap with V peaks later
+
     for bt,bs in edge:
         pure_vanad[0:bs,:,bt] = 0
         tube_count[0:bs] = tube_count[0:bs] - 1
+
     # Now zero out vanadium peaks
+
     sv_boundaries = scrub_vanad_pos(pure_vanad,takeoff,crystal,nosteps=nosteps)
-    for bt,bstart,bfinish in sv_boundaries:
-        pure_vanad[bstart:bfinish,:,bt] = 0
+    for bt, bstart, bfinish in sv_boundaries:
+        pure_vanad[bstart:bfinish, : , bt] = 0
         tube_count[bstart:bfinish] = tube_count[bstart:bfinish] - 1
+
     # Now remove any steps (for all tubes) where there was no signal
     # Gumpy doesn't provide delete method, so we create a new array
-    new_shape = pure_vanad.shape
-    new_shape[0] = new_shape[0]-len(all_missing)
-    new_vanad = zeros(new_shape)
-    new_tubecount = array.zeros(new_shape[0])
-    keepers = list(set(range(nosteps))-all_missing)
-    keepers.sort()   #to put things in the right order
-    new_stepno = 0
-    for keeper in keepers:
-        new_vanad[new_stepno,:,:] = pure_vanad[keeper,:,:]
-        new_tubecount[new_stepno] = tube_count[keeper]
-        new_stepno += 1
-    # And move everything back to the original names...
-    pure_vanad = new_vanad
-    tube_count = new_tubecount
-    print 'Removed %d steps due to low monitor counts: %s' % (len(all_missing),`all_missing`)
+
+    if len(all_missing) > 0:
+        new_shape = pure_vanad.shape
+        new_shape[0] = new_shape[0]-len(all_missing)
+        new_vanad = zeros(new_shape)
+        new_tubecount = array.zeros(new_shape[0])
+        keepers = list(set(range(nosteps))-all_missing)
+        keepers.sort()   #to put things in the right order
+        new_stepno = 0
+        for keeper in keepers:
+            new_vanad[new_stepno,:,:] = pure_vanad[keeper,:,:]
+            new_tubecount[new_stepno] = tube_count[keeper]
+            new_stepno += 1
+            
+            # And move everything back to the original names...
+            
+        pure_vanad = new_vanad
+        tube_count = new_tubecount
+        print 'Removed %d steps due to low monitor counts: %s' % (len(all_missing),`all_missing`)
+
     # Now zero out excluded regions
+
     pure_vanad = pure_vanad[:,bottom:top,:]
     print "Tube count by step: " + `tube_count.tolist()`
-     # For each detector position, calculate a factor relative to the mean observed intensity
+
+    # For each detector position, calculate a factor relative to the mean observed intensity
     # at that step.
+
     step_sum = pure_vanad.sum(0) #total counts at each step - meaning is different to numpy
     average = step_sum/(tube_count * (top - bottom))  #average value for gain normalisation
     print "Average intensity seen at each step: " + `average.tolist()`
+
     # No broadcasting, have to be clever.  We have to keep our storage in
     # gumpy, not Jython, so we avoid creating large jython lists by not
     # using map.
+
     step_gain = ones(pure_vanad.shape)
-    for new,old,av in zip(range(len(step_gain)),pure_vanad,average):
+    for new, old, av in zip(range(len(step_gain)), pure_vanad, average):
         step_gain[new] = old/av
-    step_gain = step_gain.transpose()  # so now have [tubeno,vertical,step]
+    step_gain = step_gain.transpose()  # so now have [tubeno, vertical, step]
+    
     # Now each point in step gain is the gain of this pixel at that step, using
     # the total counts at that step as normalisation
     # We add the individual observations to obtain the total gain...
     # Note that we have to reshape in order to make the arrays an array of vectors so that
     # mean and covariance will work correctly.  After the reshape + transpose below, we
     # have shape[1]*shape[2] vectors that are shape[0] (ie number of steps) long.
+
     gain_as_vectors = step_gain.reshape([step_gain.shape[0],step_gain.shape[1]*step_gain.shape[2]]) 
     gain_as_vectors = gain_as_vectors.transpose()
+
     # count the non-zero contributions
+
     nonzero_contribs = zeros(gain_as_vectors.shape,dtype=float)
     nonzero_contribs[gain_as_vectors>0] = 1.0
     nz_sum = nonzero_contribs.sum(axis=0)
+    print 'Total observations for tube 107:'
+    for i in range(0,80):
+        print '%d    %d' % (i, nz_sum[107*80+i])
+        
     gain_sum = gain_as_vectors.sum(axis=0)
     total_gain = array.ones_like(gain_sum)
     total_gain[nz_sum>0] = gain_sum/nz_sum
     final_gain = total_gain.reshape([step_gain.shape[1],step_gain.shape[2]])
+
+    # Debug
+
+    ave_107 = ave_110 = 0
+    print 'For tube 107'
+    print 'Vert pix  total   gain   total(110)   gain(110)'
+    for i in range(0,80):
+        print '%d    %f    %f    %f    %f    %f' % (i, gain_sum[107*80 + i], total_gain[107*80 + i], gain_sum[110*80 + i], total_gain[110*80 + i], final_gain[107,i])
+        ave_107 += total_gain[107*80 + i]
+        ave_110 += total_gain[110*80 + i]
+
+    print 'Ave   -   %f    -    %f' % (ave_107/80, ave_110/80)
+    
     print 'We have total gain: ' + `final_gain`
     print 'Shape ' + `final_gain.shape`
     print 'Min observations per point: %f' % nz_sum.min()
     print 'nz_sum beginning: ' + str(nz_sum.storage[0:200])
     import time
     elapsed = time.clock()
+
     # efficiency speedup; we would like to write
     # eff_array[:,bottom:top] = 1.0/final_gain
     # but anything in gumpy with square brackets goes crazy slow.
+
     eff_array_sect = eff_array.get_section([0,bottom],[eff_array.shape[0],top-bottom])
     eas_iter = eff_array_sect.item_iter()
     fgi = final_gain.item_iter()
@@ -204,41 +270,53 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=[(0,50),(1,25)],norm_ref="bm3_counts"
         eas_iter.set_next(1.0/fgi.next())
     print 'Efficiency array setting took %f' % (time.clock() - elapsed)
     print 'Check: element (64,64) is %f' % (eff_array[64,64])
+
     # Calculate the covariance of the final sum as the covariance of the
     # series of observations, divided by the number of observations
+
     cov_array = zeros(gain_as_vectors.shape,dtype=float)
+
     # Following is necessary to match dimensions
+
     total_gain = total_gain.reshape([total_gain.shape[0],1])
     print 'Shapes: ' + `cov_array[:,0].shape` + `gain_as_vectors[:,0].shape` + `total_gain.shape`
     for step in xrange(gain_as_vectors.shape[1]):
         # print 'Covariance step %d' % step
         cov_array[:,step] = (gain_as_vectors[:,step] - total_gain)**2
+
     # Now ignore the points that are not observed before summing
+
     cov_array[gain_as_vectors<=0] = 0
     cov_sum = cov_array.sum(axis=0)
     cov_result = cov_sum/(nz_sum - 1)
     covariances = cov_result.reshape([step_gain.shape[1],step_gain.shape[2]])
     print 'We have covariances too! ' + `covariances.shape`
     print 'Writing to eff_error, shape ' + `eff_error[:,bottom:top].shape`
+
     #   eff_error[tube_no] = (variance*(inverse_val**4))
     # We want to write...
     # eff_error[:,bottom:top] = covariances*(eff_array[:,bottom:top]**4)
     # but for a speed-up we write...
+
     eff_error_sect = eff_error.get_section([0,bottom],[eff_error.shape[0],top-bottom])
     easi = eff_error_sect.item_iter()
     covi = covariances.item_iter()
     effi = eff_array_sect.item_iter()
     while easi.has_next():
         easi.set_next(covi.next()*(effi.next()**4))
+
     # pixel OK map...anything with positive efficiency but variance is no 
     # greater than the efficiency (this latter is arbitrary)return eff_array
+
     ok_pixels = zeros(eff_array.shape,dtype=int)
     ok_pixels[eff_array>0]=1
     pix_ok_map = zeros(eff_error.shape,dtype=int)
     pix_ok_map[eff_error > eff_array]=1
     print "OK pixels %d" % ok_pixels.sum() 
     print "Variance not OK pixels %d" % pix_ok_map.sum()
+
     # Now fix our output arrays to put dodgy pixels to one
+
     eff_array[eff_error>eff_array] = 1.0
     if splice: 
         backgr_str = backgr[0]+" + " + backgr[1]
@@ -246,7 +324,9 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=[(0,50),(1,25)],norm_ref="bm3_counts"
     else: 
         backgr_str = backgr
         add_str = ""
+
     # create blocked tube information table
+
     ttable = ""
     for btube,bstep in edge:
        ttable = ttable + "  %5d%5d\n" % (btube,bstep) 

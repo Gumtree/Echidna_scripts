@@ -1,5 +1,5 @@
 = Echidna User Manual
-May 2018
+June 2023
 :doctype: book
 ifdef::backend-pdf[]
 :title-logo-image: image:albino_echidna.jpg["Echidna"]
@@ -20,28 +20,24 @@ when installed. Note that the power and camera cables can easily come
 loose, so check that they are fully inserted once the camera is positioned.
 Verify that the green light on the control box (lying on the
 floor by the sample stage is flashing (with an interval of several
-seconds, be patient).  The camera viewer program is executed by
-clicking the 'D' icon in the Windows taskbar of the computer. No other
-action should be necessary.
+seconds, be patient).  The camera output is viewed using "VLC media player"
+(traffic cone icon). If this program is not running, after executing it
+you should choose "Capture Device" from the "Media" menu, and then
+configure the "Video Device" to be USB. Once this is done, just press
+"Play". There is no need to close this program after use.
 
-image::neutron_camera_connections.png["Figure 1",align=left,title="Neutron camera connections"]
+image:neutron_camera_connections.png["Figure 1",title="Neutron camera connections"]
 
 === Electronic logbook
 
 http://www.nbi.ansto.gov.au/echidna/status/notebook.html[An interactive electronic logbook],
-accessible through a web browser, is provided for users and instrument scientists to document the experiment.  All
-plots generated during data analysis are instantly accessible for
-insertion into the main logbook through the "Database" tab at the far
-right of the browser page.  If a recent plot does not appear, scroll
-down and up again to the top to initiate a refresh.
+accessible through a web browser, is provided for users and instrument scientists to document the experiment.
 
-Note that all Gumtree plots also have a 'send to logbook database'
-icon (see Figure 2) which can be used to place the plot into the
-database tab ready for insertion into the logbook.  This is
-particularly useful for placing temperature traces into the logbook.
+To insert a plot into the logbook, choose 'Copy to Clipboard' icon above the plot,
+and then use `Ctrl-V` to paste into the logbook.
 
 Logbook snapshots are recorded every ten minutes in a backed-up
-version control system to there is no danger of any loss of notes. PDF
+version control system so there is no danger of any loss of notes. PDF
 versions can be generated at the end of the experiment as a permanent
 record.
 
@@ -93,9 +89,7 @@ within the sample name are acceptable.
 datapoints by stepping the detector from `start` to `stop` inclusive, measuring for `nnn` seconds at each point.
 For a quick scan, a good choice is `start` = 4.0, `stop` = 5.125, `npoints` = 10. For a proper data collection,
 a good choice is `start` = 2.75, `stop` = 5.2, `npoints` = 50. Counting time depends on your sample, and may be
-anything from 60 to 1200 or more. The total counting time for a scan is `(nnn+16)*npoints`. The 
-http://www.ansto.gov.au/ResearchHub/OurInfrastructure/ACNS/Facilities/Instruments/Echidna/EchidnaSpecifications/index.htm[Echidna specifications] 
-webpage has a convenient time calculator at the bottom (Adobe Flash required).
+anything from 60 to 1200 or more. The total counting time for a scan is `(nnn+13)*npoints`.
 
 `runscan stth 2.75 5.2 50 time 131`::: collect for two hours with a 0.05 degree step
 `runscan stth 4.0 5.125 10 time 60`::: collect for 12 minutes (one minute per point) and 0.125 degree step
@@ -116,7 +110,7 @@ to Queue' and a pre-prepared batch file will be inserted into the
 'buffer queue' (see following section).  Press the 'Play' button in
 the batch buffer queue to start data collection.
 
-image::RT_setup.JPG["Figure 3",align=left,title="Room temperature setup"]
+image::RT_setup.JPG["Figure 3",500,500,title="Room temperature setup",align=center]
 
 Advice and additional information about the fields in the form:
 
@@ -177,9 +171,16 @@ is running. It will not be possible to continue a batch file from the
 point at which it stopped, so you will probably need to edit the batch file
 before restarting.
 
-=== Common sample environment commands
+=== Some sample environment commands
 
-(To be added)
+Ramp a temperature:: If using a Lakeshore, `hset /sample/tc1/control/ramp_loop_1 1,+<ramprate>` where `<ramprate>`
+is the ramp rate in degrees per minute. Note that ramping while collecting data on Echidna is not advised,
+as different angular positions will be collected at different temperatures.
+
+Set up dilution:: Run `oldconfigsics` and choose the 12T magnet. Then temperatures can
+be set via `hset /sample/magnet1/set_DiluxTemp <temperature>`
+
+(More to be added)
 
 === Monitoring progress
 
@@ -247,8 +248,9 @@ special characters defined: `%s`,
 if present, will be replaced by the sample name. So if your samplename
 is `tnt_01` and you enter `%s_10K` here, the filename will be
 `ECH0012345_tnt_01_10K.xyd` (with the extension dependent on the file
-format chosen).  The other shortcut is `%t1` which will be replaced by
-the average temperature of the CF7 top thermocouple.
+format chosen).  Shortcuts for inserting the average temperature during
+the run are`%ta` - Lakeshore top thermocouple; `%tv` - vacuum furnace; 
+`%tb` - bottom thermocouple.
 
 Normalisation:: This should always be applied.
 Source;; Monitor 1 is in the
@@ -363,6 +365,10 @@ with a gold star. Click on this icon and choose 'Analysis Scripting'.
 1. Move and resize this window to taste
 1. Click the `Load Script` button and pick `EchidnaReductionUI.py`
 1. If nothing appears to happen when you click 'Run', see the answer to the previous question.
+The plots have disappeared or are not working:: Restart the
+"Analysis Scripting" perspective by first
+closing it (right click on "Analysis Scripting" button at top right) and then
+following the above instructions to open it again.
 
 [[Appendix_I]]
 == Appendix I: User checklists
@@ -381,6 +387,7 @@ complete checklists, see xref:Appendix_II[Appendix II].
 ==== CF7
 * Is the sample holder labelled with proposal number/user name/sample name?
 * Has the height of the sample been indicated on the can?
+* Is the sample stick the right length (755mm or 755mm+25mm with spacer from the base of the top flange)?
 * If a C bracket is used, has the position of the vertical section been
 marked on the top of the stick for reference?
 
@@ -392,6 +399,10 @@ marked on the top of the stick for reference?
 ** Has an Al heat shield been installed (recommended)?
 ** Is there sufficient heatsink compound on the lid and base?
 ** If the sample is sealed, could it become overpressurised and explode? Consider evolution of water.
+
+==== CF11
+* Sample height 1285mm
+* As for CF7
 
 ==== Vacuum furnace
 * Is the sample holder inert with respect to anything the sample might evolve at high temperature?
@@ -451,7 +462,7 @@ user should consider doing. For user-only checklists, see xref:Appendix_I[Append
 
 * Experiment safety sheet and any additional SWMES in place?
 * `prop-scheduler` run to change experiment number? The command at the `ics1-echidna` prompt is:
-** `prop-scheduler --start db` to run the scheduled experiment
+** `prop-scheduler --start auto` to run the scheduled experiment
 ** `prop-scheduler --start <proposal number>` to run `<proposal number>`
 * Electronic logbook initialised to new page?  This can be done be (re)loading http://www.nbi.ansto.gov.au/echidna/status/notebook.html after running `prop-scheduler`
 * mom/mchi/mf1 set to correct values for wavelength?
@@ -459,7 +470,7 @@ user should consider doing. For user-only checklists, see xref:Appendix_I[Append
 * Slits set appropriately?
 * Primary/secondary collimators in/out as required?
 * Goniometer stage at sx/sy/schi/sphi = zero?
-* Sics configured for correct sample environment (command `configsics`)?
+* Sics configured for correct sample environment (command `configsics` and/or `oldconfigsics`)?
 * Sics communicating with sample environment?
 * User batch file directory created?
 * User analysis output directory created?
@@ -480,6 +491,7 @@ user should consider doing. For user-only checklists, see xref:Appendix_I[Append
 * Is the sample stick the right length (755mm or 755mm+25mm with spacer from the base of the top flange)?
 * Are the correct number of spacers installed for the sample height?
 * Do the temperature sensors work?
+* Are the temperature sensors configured for the correct sensor type?
 * Do all heaters work?
 * If a C bracket is used, has the position of the vertical section been
 marked on the top of the stick for reference?
@@ -494,6 +506,10 @@ marked on the top of the stick for reference?
 ** Is there sufficient heatsink compound on the lid and base?
 ** If the sample is sealed, could it become overpressurised and explode? Consider evolution of water.
 
+==== CF11
+* Sample height 1285mm
+* As for CF7
+
 ==== Vacuum furnace
 * Is the sample holder inert with respect to anything the sample might evolve at high temperature?
 * Will the sample holder and attachment wire survive the maximum temperature?
@@ -503,6 +519,7 @@ marked on the top of the stick for reference?
 * If sample is not sealed:
 ** Could the powder sample be extracted by the vacuum pump?
 * Is the temperature sensor type correct?
+* Is the maximum temperature appropriate?
 
 ==== Magnet
 * Are all screws non-magnetic?
@@ -512,10 +529,9 @@ marked on the top of the stick for reference?
 *** Heavy water (freezes) or fluorosilicate (forms gel)
 * Is the sample holder labelled with proposal number/user name/sample name?
 * Has the height of the sample been indicated on the can?
-* Is the sample stick the right length (1251 mm from the base of the top flange with no spacers)?
+* Is the sample stick the right length (1265 mm from the base of the top flange with no spacers)?
 * Do sample spacers need to be installed/removed?
 * Do the temperature sensors work?
-* Is the correct input sensor (1 or 2) plugged in?
 
 === Checklist before executing a long run (advanced version)
 * Is the sample name correct for each scan?
@@ -548,12 +564,13 @@ each measurement point?
 * Has all data been processed and transferred to appropriate storage?
 * Has a PDF copy of the online logbook been generated?
 * Has `prop-scheduler` been run to terminate the current experiment? Either the next experiment can be started (see startup instructions) or `prop-scheduler --stop`.
+* Have any induction forms been signed by the users?
 
 == About this document
 
 This document is maintained in plain-text http://asciidoc.org[Asciidoc] format, from which HTML and
 printed versions are created.  The source version may be viewed at
-https://github.com/Gumtree/Echidna_scripts/blob/master/Manual/user_guide.adoc[Github]
+https://github.com/Gumtree/Echidna_scripts/blob/master/Manual/user_guide.adoc.
 
 Please annotate the printed version in the cabin with corrections, or else use Github to clone the
 manual and send a pull request after editing the raw text.

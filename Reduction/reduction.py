@@ -389,46 +389,50 @@ def read_efficiency_cif(filename,do_transpose=False):
 # The following routine can be called with unstitched data, in
 # which case we will return the data with the 'axis' dimension
 # summed. The default is for axis=1
-def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=(0.0,'None'),top=None,bottom=None):
+def getVerticalIntegrated(ds, okMap=None, normalization=-1, axis=1, cluster=(0.0,'None'),top=None,bottom=None, contribs=None):
     """
-    Sum the provided data vertically. okMap is a mask of contributing pixels.
+    Sum the provided data vertically. `contribs` is a mask of contributing pixels.
     """
     print 'vertical integration of', ds.title
     start_dim = ds.ndim
 
-    if (okMap is not None) and (okMap.ndim != 2):
-        raise AttributeError('okMap.ndim != 2')
+    if (contribs is not None) and (contribs.ndim != 2):
+        raise AttributeError('contribs.ndim != 2')
 
     # check shape
-    if (okMap is not None) and (ds.shape != okMap.shape):
-        raise AttributeError('ds.shape != okMap.shape')    
+    if (contribs is not None) and (ds.shape != contribs.shape):
+        raise AttributeError('Dataset shape does not match contributor shape')    
 
     # JRH strategy: we need to sum vertically, accumulating individual pixel
     # errors as we go, and counting the contributions.
     #
-    # The okmap should give us contributions by summing vertically
+    # Contribs should give us contributions by summing vertically
     # Note that we are assuming at least 0.1 count in every valid pixel
     
     import time
     if bottom is None or bottom < 0: bottom = 0
     if top is None or top >= ds.shape[0]: top = ds.shape[0]-1
+
     working_slice = ds[bottom:top,:]
     totals = working_slice.intg(axis=axis)
-    contrib_map = zeros(working_slice.shape,dtype=int)
-    contrib_map[working_slice>-1] = 1  #Disabled
-    contribs = contrib_map.intg(axis=axis)
+    if contribs == None:
+        contrib_map = zeros(working_slice.shape,dtype=int)
+        contrib_map[working_slice>-1] = 1  #Disabled
+        contrib_flat = contrib_map.intg(axis=axis)
+    else:
+        contrib_flat = contribs.intg(axis=axis)
     #
     # We have now reduced the scale of the problem by 100
     #
     # Normalise to the maximum number of contributors
     print 'Axes labels:' + `ds.axes[0].title` + ' ' + `ds.axes[1].title`
-    max_contribs = float(contribs.max())
+    max_contribs = float(contrib_flat.max())
     #
     print 'Maximum no of contributors %f' % max_contribs
-    contribs = contribs/max_contribs  #
+    contrib_norm = contrib_flat/max_contribs  #
     save_var = totals.var
-    totals = totals / contribs        #Any way to avoid error propagation here?
-    totals.var = save_var/contribs
+    totals = totals / contrib_norm        #Any way to avoid error propagation here?
+    totals.var = save_var/contrib_norm
 
     # finalize result
     totals.title = ds.title
@@ -1106,6 +1110,48 @@ def test_iterate_data():
     print 'Starting array, first 3: ' + repr(start_data.storage[:3])
     g,d,ir,rm,hist,esds,fa,wts = iterate_data(start_data,10,20)
     return g,true_gains,ir,true_vals
+
+def doStraighten(ds, stepsize, bottom, top, interp=False):
+    """
+    Calculate the true two-theta value for every pixel and assign to the
+    appropriate angular bin. `bottom` and `top` are the minimum and maximum
+    vertical pixels to consider. If `interp` is true, pixel intensity is
+    linearly interpolated to the ideal value.
+    """
+    from Reduction import straightening
+    
+    radius = float(ds.harvest_metadata("CIF")["_pd_instr_dist_spec/detc"])
+
+    # print 'Radius is %f' % radius
+    # print 'Axes are %s, %s' % (`ds.axes[0]`, `ds.axes[1]`)
+    if ds.axes[1].title != 'x_pixel_angular_offset':
+        print 'Dataset is not stitched? Axis 0 is %s' % ds.axes[1].title
+        return ds
+
+    # Calculate ideal angles
+
+    angles = ds.axes[1]
+    new_angles = arange(angles[0], angles[-1], stepsize)
+
+    # Calculate vertical positions
+
+    vert_size = len(ds.axes[0]) - 1
+    vert_pos = getCenters(ds.axes[0]).storage - ds.axes[0][vert_size/2]
+    vert_pos.title = "Vertical offset"
+    new_angles.title = "True two theta"
+    
+    print 'Vertical positions at centre %f, %f' % (vert_pos[63], vert_pos[64])
+
+    new_ds, new_contribs = straightening.correctGeometryjv(ds, radius, new_angles, vert_pos, bottom, top, interp=interp)
+
+    # Add metadata record
+
+    if not interp:
+        info_string = """Geometry was corrected by assigning each pixel to a new two theta bin based on true two theta angle, leaving vertical height unchanged."""
+    else:
+        info_string = """Geometry was corrected by dividing pixel intensity and variance between ideal true two-theta bins based on deviation from ideal bin centre. Vertical height was unchanged."""
+    new_ds.add_metadata('_pd_proc_info_data_reduction', info_string, append=True)
+    return new_ds, new_contribs
 
 def make_peak(width):
     import math
