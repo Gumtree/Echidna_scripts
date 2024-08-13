@@ -48,15 +48,27 @@ set last_field 0.0
 }
 
 #---stuff happens after this line ---
+
+wait 300
+
+samplename Sr2HoNbO6 at base
+
+runscan stth 2.75 5.2 50 time 347
+
 set last_field 0
-set fieldlist [list 0.5 1]
+set fieldlist [list 0.5 0.8 0.65 ]
+
+#---Holmium----#
+# Fields 0.0 0.5 0.8 
  
+
 foreach one_field $fieldlist {
 	gotofield $last_field $one_field 0.45
 	set last_field $one_field
-	title TbCr0.95Mn0.05O3 in 6 mm V can, $one_field T
-	
+	samplename Sr2HoNbO6_1pt7_ $one_field T
+	runscan stth 2.75 5.2 50 time 347
 }
 
-
+gotofield 5 0 0.45
+hset /sample/tc1/temp6/setpoint 20
 
