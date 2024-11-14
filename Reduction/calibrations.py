@@ -86,25 +86,34 @@ def calc_eff_mark2(vanad,backgr,v_off,edge=[(0,50),(1,25)],norm_ref="bm3_counts"
     common scale. Top and bottom are the upper and lower limits for a sensible signal."""
 
     import stat,datetime
-    omega = vanad.mom[0]  # for reference
-    takeoff = vanad.mtth[0]
-    crystal = AddCifMetadata.pick_hkl(omega-takeoff/2.0,"335")  #post April 2009 used 335 only
-    
     #
     # Get important information from the basic files
     #
     # Get file times from timestamps as older NeXuS files had bad values here
     #
 
-    wl = AddCifMetadata.calc_wavelength(crystal,takeoff)
     vtime = os.stat(vanad.location)[stat.ST_CTIME]
-    vtime = datetime.datetime.fromtimestamp(vtime)
-    vtime = vtime.strftime("%Y-%m-%dT%H:%M:%S%z")
+    vtime_dt = datetime.datetime.fromtimestamp(vtime)
+    vtime = vtime_dt.strftime("%Y-%m-%dT%H:%M:%S%z")
     btime = os.stat(backgr.location)[stat.ST_CTIME]
     btime = datetime.datetime.fromtimestamp(btime)
     btime = btime.strftime("%Y-%m-%dT%H:%M:%S%z")
     v_loc = str(vanad.location)
     b_loc = str(backgr.location)
+
+    # Wavelength for gain determination
+
+    omega = vanad.mom[0]  # for reference
+    takeoff = vanad.mtth[0]
+    new_mono = datetime.datetime(2024,10,01) #new mono from Oct 2024
+    if vtime_dt > new_mono:
+        crystal_cut = "115"
+    else:
+        crystal_cut = "335"
+
+    crystal = AddCifMetadata.pick_hkl(omega-takeoff/2.0, crystal_cut)
+    wl = AddCifMetadata.calc_wavelength(crystal,takeoff)
+    print "Crystal cut %s, wl %f" % (crystal_cut, wl)
 
     # Check for missed steps
 

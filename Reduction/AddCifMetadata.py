@@ -55,11 +55,13 @@ def extract_metadata(rawfile,codeversions={}):
     # get the date
     date_form = datetime.datetime.strptime(str(rawfile['$entry/start_time']),"%Y-%m-%d %H:%M:%S")
     mono_change = datetime.datetime(2009,04,01)
-    if date_form < mono_change:
+    new_mono_change = datetime.datetime(2024,10,01)
+    if date_form < mono_change or date_form > new_mono_change:
         monotype = "115"
     else:
         monotype = "335"
     hklval = pick_hkl(mom - tk_angle/2.0,monotype)
+     
     if len(hklval)==3:      # i.e. h,k,l found
         rawfile.add_metadata("_pd_instr_monochr_pre_spec",
                   hklval + " reflection from Ge crystal, "+monotype+" cut",tag="CIF")
@@ -71,16 +73,21 @@ def extract_metadata(rawfile,codeversions={}):
         # The following is changed later if the primary collimator is found to be inserted
         rawfile.add_metadata("_pd_instr_divg_eq_src/mono","%.3f" % (0.099*2.0*wavelength),tag="CIF")
     # Do some logic to obtain collimator positions
-    pcr = average_metadata(rawfile["$entry/instrument/collimator/primary_collimator_rotation"])
-    pcx = average_metadata(rawfile["$entry/instrument/collimator/primary_collimator_translation"])
-    if pcx > 120:
-        if abs(pcr-360.0)<5 or abs(pcr) < 5:  # 5' collimator
-            coll_string = "A 5' primary collimator pre-monochromator"
-            rawfile.add_metadata("_pd_instr_divg_eq_src/mono","0.0833",tag="CIF")
-        else:
-            coll_string = "A 10' primary collimator pre-monochromator"
-            rawfile.add_metadata("_pd_instr_divg_eq_src/mono","0.1667",tag="CIF")
-    else: coll_string = "No primary monochromator "
+    try:
+        pcr = average_metadata(rawfile["$entry/instrument/collimator/primary_collimator_rotation"])
+        pcx = average_metadata(rawfile["$entry/instrument/collimator/primary_collimator_translation"])
+    except AttributeError:   # No pcr after October 2024
+        coll_string = "No primary collimator"
+    else:
+       if pcx > 120 and pcr is not None: 
+          if abs(pcr-360.0)<5 or abs(pcr) < 5:  # 5' collimator
+             coll_string = "A 5' primary collimator pre-monochromator"
+             rawfile.add_metadata("_pd_instr_divg_eq_src/mono","0.0833",tag="CIF")
+          else:
+             coll_string = "A 10' primary collimator pre-monochromator"
+             rawfile.add_metadata("_pd_instr_divg_eq_src/mono","0.1667",tag="CIF")
+       else: coll_string = "No primary collimator "
+
     try:
         scr = average_metadata(rawfile['$entry/sample/secondary_collimator'])
         if scr>0.5:
@@ -91,7 +98,7 @@ def extract_metadata(rawfile,codeversions={}):
         rawfile.add_metadata("_diffrn_radiation_collimation",coll_string,tag="CIF")
     except AttributeError:         #some early files are missing secondary collimator
         pass
-    # These values were in the CIF writing area of the Java routines, best put here
+#    # These values were in the CIF writing area of the Java routines, best put here
     try:
         program_release = str(rawfile["$entry/program_revision"])
     except AttributeError:
@@ -183,10 +190,12 @@ def calc_wavelength(hklval, twotheta):
 
 def pick_hkl(offset,monotype):
     """A simple routine to guess the monochromator hkl angle. The
-    offset values can be found by taking the dot product of the 335
+    offset values can be found by taking the dot product of the monotype
     with the hkl values """
-    if monotype == "115": return monotype
-    offset_table = {"004":40.31,"113":15.08,"115":24.52,"117":28.89,
+    if monotype == "115": 
+        offset_table = {"337":15.43, "335":24.52, "331":60.94, "115":0.0}
+    else:
+        offset_table = {"004":40.31,"113":15.08,"115":24.52,"117":28.89,
                     "224":5.05,"228":20.84,"331":36.42,"333":14.42,
                     "337":9.096,"335":0.0}
     best = filter(lambda a:abs(abs(offset) - offset_table[a])<2.5,offset_table.keys())
