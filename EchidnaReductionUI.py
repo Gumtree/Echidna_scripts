@@ -175,6 +175,12 @@ ps_plotname = Par('string','Plot 2',options=['Plot 2','Plot 3'])
 ps_dspacing = Par('bool',False,command='dspacing_change()')
 Group('Plot settings').add(ps_plotname,ps_dspacing)
 
+# Load from pdCIF file
+pdcif_load = Act('pdcif_load_proc()', 'Load')
+pdcif_loc = Par('file')
+pdcif_loc.title = "pdCIF location"
+Group('Load parameters from pdCIF').add(pdcif_loc, pdcif_load)
+
 # Storage for efficiency map
 if not 'eff_map_cache' in globals():
     eff_map_cache = {}
@@ -422,6 +428,23 @@ def plh_sum_proc():
                 output.write_fxye_data(newds,filename)
             if output_topas.value:
                 output.write_xyd_data(newds,filename,comment_char="!")
+
+def pdcif_load_proc():
+
+    from Formats import inputs
+    pd_loc = str(pdcif_loc.value)
+    pardic = inputs.load_params_from_pdcif(pd_loc)
+    # Run through our parameters, looking for the corresponding
+    # preferences
+    g = globals()
+    p = g.keys()
+    for name in p:
+        if pardic.has_key(name) and hasattr(g[name], 'value'):
+            try:
+                setattr(g[name], 'value', pardic[name])
+            except:
+                print 'Failure setting %s to %s' % (name,str(pardic[name]))
+            print 'Set %s to %s' % (name, str(globals()[name].value))
 
 def dspacing_change():
     """Toggle the display of d spacing on the horizontal axis"""
