@@ -128,11 +128,9 @@ vig_rescale_target = Par('float', '10000.0')
 vig_rescale_target.title = 'Rescale target:'
 vig_cluster = Par('string','Sum',options=['Sum','Merge','None'])
 vig_cluster.title = 'Treatment of close points:'
-vig_straighten = Par('bool','False')
+vig_straighten = Par('bool', 'False')
 vig_straighten.title = 'Straighten?'
-vig_str_interp = Par('bool', 'False')
-vig_str_interp.title = 'Straighten with interpolation?'
-Group('Vertical Integration').add(vig_lower_boundary, vig_upper_boundary, vig_cluster, vig_apply_rescale, vig_rescale_target, vig_straighten, vig_str_interp)
+Group('Vertical Integration').add(vig_lower_boundary, vig_upper_boundary, vig_cluster, vig_apply_rescale, vig_rescale_target, vig_straighten)
 
 # Recalculate gain
 regain_apply = Par('bool','False')
@@ -776,8 +774,7 @@ def __run_script__(fns):
             
             if vig_straighten.value:
                 stitched, contribs = reduction.doStraighten(stitched, stepsize, int(vig_lower_boundary.value),
-                                                            int(vig_upper_boundary.value),
-                                                            interp=vig_str_interp.value)
+                                                            int(vig_upper_boundary.value))
                 print 'Finished straightening at %f' % (time.clock() - elapsed)
 
             # Display dataset

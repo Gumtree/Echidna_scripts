@@ -1111,7 +1111,7 @@ def test_iterate_data():
     g,d,ir,rm,hist,esds,fa,wts = iterate_data(start_data,10,20)
     return g,true_gains,ir,true_vals
 
-def doStraighten(ds, stepsize, bottom, top, interp=False):
+def doStraighten(ds, stepsize, bottom, top, interp=True):
     """
     Calculate the true two-theta value for every pixel and assign to the
     appropriate angular bin. `bottom` and `top` are the minimum and maximum
