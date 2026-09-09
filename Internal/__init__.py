@@ -1,5 +1,5 @@
 HISTORY_KEY_WORDS = ['drive',
-                     'run'
+                     'run',
                      'runscan', 
                      'Scan start',
                      'ERROR', 
