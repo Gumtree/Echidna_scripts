@@ -74,7 +74,7 @@ def format_esd(number,var):
     # The idea is to multiply the error until we have a number between
     # 2 and 20, and the number of significant figures after the
     # decimal point is adjusted according to the size of the error and
-    # and the number of multiplications
+    # the number of multiplications
     err = math.sqrt(var)
     if err<0.000000001: return "%.5f(0)" % number
     err_as_int = err
